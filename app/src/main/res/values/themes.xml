@@ -1,0 +1,4 @@
+<resources>
+
+    <style name="Theme.JavaZone" parent="Theme.MaterialComponents.Light" />
+</resources>

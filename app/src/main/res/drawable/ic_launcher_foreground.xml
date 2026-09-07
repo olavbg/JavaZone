@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Stylized Coffee Cup Body Outline (Electric Blue / Neon Green) -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M38,44 L70,44 C70,44 68,64 54,64 C40,64 38,44 38,44 Z"
+        android:strokeWidth="3.5"
+        android:strokeColor="#00E676"
+        android:strokeLineJoin="round" />
+
+    <!-- Coffee Cup Rim -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M35,44 L73,44"
+        android:strokeWidth="3.5"
+        android:strokeColor="#38BDF8"
+        android:strokeLineCap="round" />
+
+    <!-- Cup Handle -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M68,48 C76,48 77,58 66,60"
+        android:strokeWidth="3"
+        android:strokeColor="#38BDF8"
+        android:strokeLineCap="round" />
+
+    <!-- Saucer Plate -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M32,68 C44,72 64,72 76,68"
+        android:strokeWidth="3"
+        android:strokeColor="#38BDF8"
+        android:strokeLineCap="round" />
+
+    <!-- Glowing Steam Waves (Neon Green / Blue) -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M46,38 C44,32 50,28 48,22"
+        android:strokeWidth="2.5"
+        android:strokeColor="#00E676"
+        android:strokeLineCap="round" />
+
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,36 C52,30 58,26 56,20"
+        android:strokeWidth="2.5"
+        android:strokeColor="#38BDF8"
+        android:strokeLineCap="round" />
+
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M62,38 C60,32 66,28 64,22"
+        android:strokeWidth="2.5"
+        android:strokeColor="#00E676"
+        android:strokeLineCap="round" />
+
+    <!-- Timeline Nodes across the Cup (Timeline Theme) -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M42,54 L66,54"
+        android:strokeWidth="2"
+        android:strokeColor="#00E676" />
+
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M44,54 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M54,54 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M64,54 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+
+</vector>
