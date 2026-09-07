@@ -8,7 +8,7 @@ Dette er en uoffisiell applikasjon for å holde oversikt over programmet på Jav
 *   **Favoritter:** Marker sesjoner du vil få med deg for å lage din egen personlige tidsplan.
 *   **Påminnelser:** Lokale varslinger som gir deg beskjed i god tid før favorittsesjonene dine starter.
 *   **Sesjonsdetaljer:** Se detaljert informasjon om foredragsholdere og les sammendrag av sesjonene.
-*   **Arkiv:** Tilgang til programmet fra tidligere år.
+*   **Arkiv:** Tilgang til programmet fra tidligere år, inkludert link til video.
 
 ## Teknologier
 Appen er bygget med:
