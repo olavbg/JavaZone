@@ -197,9 +197,10 @@ private fun TimelineList(
     contentPadding: PaddingValues
 ) {
     LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 32.dp + contentPadding.calculateBottomPadding()), modifier = Modifier.fillMaxSize()) {
-        grouped.forEach { (time, sessions) ->
+        grouped.forEach { (dayAndTime, sessions) ->
+            val time = dayAndTime.substringAfter('|', dayAndTime)
             val live = sessions.any { isActive(it, currentTime) }
-            stickyHeader(key = "time-$time") {
+            stickyHeader(key = "time-$dayAndTime") {
                 Surface(color = MaterialTheme.colorScheme.background.copy(alpha = .96f)) {
                     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Surface(shape = RoundedCornerShape(14.dp), color = if (live) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant) {
@@ -279,6 +280,11 @@ private fun languageLabel(lang: String) = if (lang.contains("no", true)) "ðŸ‡³ðŸ
 private fun formatTime(zulu: String): String = try { java.time.Instant.parse(zulu).atZone(java.time.ZoneId.of("Europe/Oslo")).toLocalTime().toString().take(5) } catch (_: Exception) { "--:--" }
 private fun isActive(s: Session, now: Instant) = try { now >= Instant.parse(s.startTimeZulu) && now < Instant.parse(s.endTimeZulu) } catch (_: Exception) { false }
 private fun isPast(s: Session, now: Instant) = try { now > Instant.parse(s.endTimeZulu) } catch (_: Exception) { false }
-private fun progress(s: Session, now: Instant): Float = try { val a=Instant.parse(s.startTimeZulu); val b=Instant.parse(s.endTimeZulu); (Duration.between(a, now).toMillis().toFloat()/Duration.between(a,b).toMillis()).coerceIn(0f,1f) } catch (_: Exception) { 0f }
+private fun progress(s: Session, now: Instant): Float = try {
+    val a = Instant.parse(s.startTimeZulu)
+    val b = Instant.parse(s.endTimeZulu)
+    val duration = Duration.between(a, b).toMillis()
+    if (duration <= 0L) 0f else (Duration.between(a, now).toMillis().toFloat() / duration).coerceIn(0f, 1f)
+} catch (_: Exception) { 0f }
 private fun remaining(s: Session, now: Instant): Long = try { Duration.between(now, Instant.parse(s.endTimeZulu)).toMinutes().coerceAtLeast(0) } catch (_: Exception) { 0 }
 private fun findFirstActiveOrUpcomingIndex(grouped: Map<String,List<Session>>, now: Instant): Int { var index=0; var future=-1; for ((_, list) in grouped) { if (list.any { isActive(it,now) }) return index; if (future<0 && list.firstOrNull()?.let { try { Instant.parse(it.startTimeZulu)>now } catch (_:Exception){false} } == true) future=index; index += 1+list.size }; return future.coerceAtLeast(0) }
