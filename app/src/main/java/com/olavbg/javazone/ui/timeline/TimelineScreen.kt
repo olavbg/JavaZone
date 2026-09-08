@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -112,7 +113,13 @@ fun TimelineScreen(
                         onValueChange = viewModel::setSearchQuery,
                         placeholder = { Text("Søk foredrag, foredragsholder eller rom…") },
                         leadingIcon = { Icon(Icons.Default.Search, null) },
-                        trailingIcon = if (searchQuery.isNotEmpty()) ({ IconButton(onClick = { viewModel.setSearchQuery("") }) { Icon(Icons.Default.Clear, "Nullstill") } }) else null,
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                                    Icon(Icons.Default.Clear, "Nullstill")
+                                }
+                            }
+                        },
                         singleLine = true,
                         shape = RoundedCornerShape(18.dp),
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
