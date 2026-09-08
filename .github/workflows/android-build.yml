@@ -28,4 +28,4 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: bash ./gradlew assembleDebug --stacktrace
