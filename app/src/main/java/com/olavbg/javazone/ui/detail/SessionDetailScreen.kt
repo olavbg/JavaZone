@@ -1,7 +1,7 @@
 package com.olavbg.javazone.ui.detail
 
+import android.content.Intent
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -11,39 +11,35 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
-import android.content.Intent
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
+import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.model.Speaker
 import com.olavbg.javazone.ui.components.FormatBadge
 import com.olavbg.javazone.ui.components.resolveVideoUrl
-import com.olavbg.javazone.ui.theme.*
-import com.olavbg.javazone.util.*
-import kotlinx.coroutines.flow.map
+import com.olavbg.javazone.ui.theme.JavaGreen
+import com.olavbg.javazone.ui.theme.WorkshopPurple
+import com.olavbg.javazone.ui.theme.JavaBlue
+import com.olavbg.javazone.util.calculateSessionDurationMinutes
+import com.olavbg.javazone.util.formatDay
+import com.olavbg.javazone.util.formatTime
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionDetailScreen(
     sessionId: String,
+    year: Int,
     repository: SessionRepository,
     settingsRepository: SettingsRepository,
     onBackClick: () -> Unit,
@@ -52,435 +48,209 @@ fun SessionDetailScreen(
     contentPadding: PaddingValues = PaddingValues(),
 ) {
     val scope = rememberCoroutineScope()
-    val sessionFlow = remember(sessionId) {
-        repository.getSessions().map { it.find { s -> s.id == sessionId } }
-    }
-    val session by sessionFlow.collectAsState(initial = null)
+    val context = LocalContext.current
+    val isCurrentYear = year == 2026
+    var session by remember(sessionId, year) { mutableStateOf<Session?>(null) }
+    var loading by remember(sessionId, year) { mutableStateOf(true) }
+    var simulatedTime by remember { mutableStateOf(Instant.now()) }
 
     val offset by settingsRepository.simulatedTimeOffset.collectAsState(initial = 0L)
-    var simulatedTime by remember { mutableStateOf(Instant.now().plusMillis(offset)) }
+    LaunchedEffect(offset) { simulatedTime = Instant.now().plusMillis(offset) }
 
-    // Update time when offset changes or when screen resumes
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, offset) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                simulatedTime = Instant.now().plusMillis(offset)
-            }
+    LaunchedEffect(sessionId, year) {
+        loading = true
+        session = if (isCurrentYear) {
+            repository.getSessions().first().find { it.id == sessionId }
+        } else {
+            repository.getArchiveSessions(year).find { it.id == sessionId }
         }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
+        loading = false
     }
-
-    LaunchedEffect(offset) {
-        simulatedTime = Instant.now().plusMillis(offset)
-    }
-
-    var isRefreshing by remember { mutableStateOf(false) }
-    val pullToRefreshState = rememberPullToRefreshState()
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "Foredrag",
-                        fontWeight = FontWeight.Black,
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Tilbake")
+                    Column {
+                        Text("Foredrag", fontWeight = FontWeight.Black)
+                        Text("JavaZone $year", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Tilbake") }
+                },
                 actions = {
-                    session?.let { s ->
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    repository.toggleFavorite(s.id, !s.isFavorite)
-                                }
-                            }
-                        ) {
+                    val current = session
+                    if (current != null && isCurrentYear) {
+                        IconButton(onClick = { scope.launch { repository.toggleFavorite(current.id, !current.isFavorite) } }) {
                             Icon(
-                                imageVector = if (s.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = null,
-                                tint = if (s.isFavorite) MaterialTheme.colorScheme.tertiary else LocalContentColor.current
+                                if (current.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                "Favoritt",
+                                tint = if (current.isFavorite) MaterialTheme.colorScheme.tertiary else LocalContentColor.current
                             )
                         }
                     }
                 }
             )
-        },
-        modifier = modifier
+        }
     ) { padding ->
-        session?.let { s ->
-            val startTime = remember(s.startTimeZulu) { Instant.parse(s.startTimeZulu) }
-            val endTime = remember(s.endTimeZulu) { Instant.parse(s.endTimeZulu) }
-            
-            val isFinished = endTime.isBefore(simulatedTime)
-            val isLive = !isFinished && simulatedTime.isAfter(startTime)
-            val minutesUntilStart = Duration.between(simulatedTime, startTime).toMinutes()
-            val startsSoon = !isFinished && (minutesUntilStart in 0..60)
-
-            PullToRefreshBox(
-                state = pullToRefreshState,
-                isRefreshing = isRefreshing,
-                onRefresh = {
-                    scope.launch {
-                        isRefreshing = true
-                        repository.refreshSessions()
-                        isRefreshing = false
-                    }
+        when {
+            loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            session == null -> EmptyDetail(onBackClick, padding, year)
+            else -> DetailContent(
+                session = session!!,
+                simulatedTime = simulatedTime,
+                isCurrentYear = isCurrentYear,
+                onSpeakerClick = onSpeakerClick,
+                onVideoClick = {
+                    val url = session?.videoUrl?.let(::resolveVideoUrl) ?: return@DetailContent
+                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) }
                 },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = padding.calculateTopPadding())
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    if (isFinished) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Default.Info,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Dette foredraget er allerede avsluttet",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                    
-                                    if (s.videoUrl != null) {
-                                        val context = LocalContext.current
-                                        Surface(
-                                            onClick = {
-                                                try {
-                                                    val videoUrl = resolveVideoUrl(s.videoUrl)
-                                                    val intent = Intent(Intent.ACTION_VIEW, videoUrl.toUri()).apply {
-                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                    }
-                                                    context.startActivity(intent)
-                                                } catch (_: Exception) {}
-                                            },
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
-                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.2f)),
-                                            modifier = Modifier.padding(top = 8.dp)
-                                        ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.PlayCircle,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(16.dp),
-                                                    tint = MaterialTheme.colorScheme.error
-                                                )
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Text(
-                                                    text = "Se videoopptak",
-                                                    style = MaterialTheme.typography.labelLarge,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.error
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else if (isLive) {
-                        val minutesRemaining = Duration.between(simulatedTime, endTime).toMinutes().coerceAtLeast(0)
-                        Surface(
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Default.PlayCircle,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(
-                                    text = "Går nå i ${s.room} – $minutesRemaining min igjen",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        }
-                    } else if (startsSoon) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Default.Timer,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(
-                                    text = "Starter om $minutesUntilStart minutter i ${s.room}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                        }
-                    }
-
-                    // Header Area
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                            .padding(vertical = 24.dp, horizontal = 20.dp)
-                    ) {
-                        Column {
-                            Text(
-                                text = s.title,
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Black,
-                                lineHeight = 32.sp
-                            )
-                            
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                FormatBadge(format = s.format)
-                                if (s.language != null) {
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                                    ) {
-                                        Text(
-                                            text = if (s.language.contains("no", ignoreCase = true)) "🇳🇴 Norsk" else "🇬🇧 Engelsk",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.Medium,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        // Time and Room Card
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            tonalElevation = 2.dp,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = "${formatDay(s.startTimeZulu)}, ${formatTime(s.startTimeZulu)} – ${formatTime(s.endTimeZulu)}",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.secondary)
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = s.room,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                                
-                                val duration = calculateSessionDurationMinutes(s)
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                                ) {
-                                    Text(
-                                        text = "$duration min",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Text(
-                            text = "Om foredraget",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = s.abstract,
-                            style = MaterialTheme.typography.bodyLarge,
-                            lineHeight = 26.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
-                        )
-
-                        if (s.speakers.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(32.dp))
-                            Text(
-                                text = if (s.speakers.size > 1) "Foredragsholdere" else "Foredragsholder",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
-                            s.speakers.forEach { speaker ->
-                                SpeakerItem(
-                                    speaker = speaker,
-                                    onClick = { onSpeakerClick(speaker.name) }
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(48.dp + contentPadding.calculateBottomPadding()))
-                    }
-                }
-            }
-        } ?: Box(modifier = Modifier.fillMaxSize()) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                modifier = Modifier.fillMaxSize().padding(top = padding.calculateTopPadding()),
+                bottomPadding = padding.calculateBottomPadding() + contentPadding.calculateBottomPadding()
+            )
         }
     }
 }
 
 @Composable
-fun SpeakerItem(
-    speaker: Speaker,
-    onClick: () -> Unit
+private fun DetailContent(
+    session: Session,
+    simulatedTime: Instant,
+    isCurrentYear: Boolean,
+    onSpeakerClick: (String) -> Unit,
+    onVideoClick: () -> Unit,
+    modifier: Modifier,
+    bottomPadding: Dp,
 ) {
-    val context = LocalContext.current
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-        modifier = Modifier.fillMaxWidth()
+    val start = runCatching { Instant.parse(session.startTimeZulu) }.getOrNull()
+    val end = runCatching { Instant.parse(session.endTimeZulu) }.getOrNull()
+    val live = start != null && end != null && simulatedTime >= start && simulatedTime < end
+    val finished = end != null && simulatedTime >= end
+    val upcoming = start != null && simulatedTime < start
+    val minutesToStart = start?.let { Duration.between(simulatedTime, it).toMinutes().coerceAtLeast(0) }
+
+    Column(
+        modifier = modifier.verticalScroll(rememberScrollState()).padding(bottom = bottomPadding + 32.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Placeholder for Avatar
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = speaker.name.firstOrNull()?.toString() ?: "?",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = speaker.name,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    if (speaker.twitter != null) {
-                        TextButton(
-                            onClick = {
-                                try {
-                                    val twitterUrl = "https://twitter.com/${speaker.twitter.removePrefix("@")}"
-                                    val intent = Intent(Intent.ACTION_VIEW, twitterUrl.toUri()).apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    context.startActivity(intent)
-                                } catch (_: Exception) {}
-                            },
-                            contentPadding = PaddingValues(0.dp),
-                            modifier = Modifier.height(32.dp)
-                        ) {
-                            Text(
-                                text = "@${speaker.twitter.removePrefix("@")}",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    }
+        if (live) StatusBanner("GÅR NÅ", "${session.room} · ${Duration.between(simulatedTime, end).toMinutes().coerceAtLeast(0)} min igjen", MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
+        else if (upcoming && minutesToStart != null && minutesToStart <= 60) StatusBanner("STARTER SNART", "Om $minutesToStart min · ${session.room}", MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer)
+        else if (finished && session.videoUrl != null) StatusBanner("AVSLUTTET", "Opptak er tilgjengelig", MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer, onVideoClick)
+
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 24.dp)) {
+                Text("JavaZone $sessionYearLabel", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(10.dp))
+                Text(session.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                Spacer(Modifier.height(16.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    FormatBadge(session.format)
+                    session.language?.let { AssistChip(onClick = {}, enabled = false, label = { Text(if (it.contains("no", true)) "🇳🇴 Norsk" else "🇬🇧 English") }) }
                 }
             }
-            
-            if (!speaker.bio.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = speaker.bio,
-                    style = MaterialTheme.typography.bodyMedium,
-                    lineHeight = 22.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        }
+
+        Column(Modifier.padding(20.dp)) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f))
+            ) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    InfoRow(Icons.Default.Schedule, "Tid", "${formatDay(session.startTimeZulu)}, ${formatTime(session.startTimeZulu)}–${formatTime(session.endTimeZulu)}")
+                    InfoRow(Icons.Default.LocationOn, "Rom", session.room)
+                    InfoRow(Icons.Default.Timer, "Varighet", "${calculateSessionDurationMinutes(session)} min")
+                }
             }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Se alle foredrag fra denne foreleseren",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
+
+            Spacer(Modifier.height(28.dp))
+            Text("Om foredraget", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+            Spacer(Modifier.height(10.dp))
+            Text(session.abstract.ifBlank { "Ingen beskrivelse er tilgjengelig." }, style = MaterialTheme.typography.bodyLarge, lineHeight = 26.sp)
+
+            if (session.speakers.isNotEmpty()) {
+                Spacer(Modifier.height(30.dp))
+                Text(if (session.speakers.size == 1) "Foredragsholder" else "Foredragsholdere", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                Spacer(Modifier.height(12.dp))
+                session.speakers.forEach { speaker ->
+                    SpeakerCard(speaker, onClick = { onSpeakerClick(speaker.name) })
+                    Spacer(Modifier.height(10.dp))
+                }
+            }
+
+            if (finished && session.videoUrl != null) {
+                Spacer(Modifier.height(18.dp))
+                Button(onClick = onVideoClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+                    Icon(Icons.Default.PlayCircle, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Se videoopptak")
+                }
             }
         }
     }
 }
 
+private const val sessionYearLabel = "Program"
 
+@Composable
+private fun StatusBanner(title: String, text: String, container: androidx.compose.ui.graphics.Color, content: androidx.compose.ui.graphics.Color, onClick: (() -> Unit)? = null) {
+    Surface(color = container, onClick = onClick ?: {}, enabled = onClick != null, modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(if (title == "GÅR NÅ") Icons.Default.PlayCircle else Icons.Default.Info, null, tint = content)
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black, color = content)
+                Text(text, style = MaterialTheme.typography.bodyMedium, color = content)
+            }
+        }
+    }
+}
 
+@Composable
+private fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(40.dp)) {
+            Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp)) }
+        }
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun SpeakerCard(speaker: Speaker, onClick: () -> Unit) {
+    Surface(onClick = onClick, shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.size(48.dp)) {
+                Box(contentAlignment = Alignment.Center) { Text(speaker.name.firstOrNull()?.uppercase() ?: "?", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSecondaryContainer) }
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(speaker.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                speaker.twitter?.let { Text("@${it.removePrefix("@")}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary) }
+                if (!speaker.bio.isNullOrBlank()) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(speaker.bio, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 20.sp)
+                }
+                Spacer(Modifier.height(6.dp))
+                Text("Se foredrag fra denne foredragsholderen", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyDetail(onBackClick: () -> Unit, padding: PaddingValues, year: Int) {
+    Column(Modifier.fillMaxSize().padding(padding).padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Icon(Icons.Default.EventBusy, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(16.dp))
+        Text("Foredraget ble ikke funnet", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text("Programmet for JavaZone $year kan ha endret seg.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(16.dp))
+        FilledTonalButton(onClick = onBackClick) { Text("Tilbake") }
+    }
+}
