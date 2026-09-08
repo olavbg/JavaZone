@@ -47,7 +47,7 @@ fun JavaZoneApp(
                     NavDestination.Timeline -> NavEntry(key = key) {
                         TimelineScreen(
                             viewModel = timelineViewModel,
-                            onSessionClick = { id -> backStack.add(NavDestination.SessionDetail(id)) },
+                            onSessionClick = { id -> backStack.add(NavDestination.SessionDetail(id, timelineViewModel.selectedYear.value)) },
                             onSettingsClick = { backStack.add(NavDestination.Settings) },
                             onYearClick = { yearPickerVisible = true },
                             contentPadding = innerPadding
@@ -56,6 +56,7 @@ fun JavaZoneApp(
                     is NavDestination.SessionDetail -> NavEntry(key = key) {
                         SessionDetailScreen(
                             sessionId = key.sessionId,
+                            year = key.year,
                             repository = repository,
                             settingsRepository = settingsRepository,
                             onBackClick = { backStack.removeAt(backStack.size - 1) },
