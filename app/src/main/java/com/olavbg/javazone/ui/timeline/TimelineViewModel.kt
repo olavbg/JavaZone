@@ -2,6 +2,7 @@ package com.olavbg.javazone.ui.timeline
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.olavbg.javazone.JavaZoneConfig
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.model.Session
@@ -15,7 +16,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 class TimelineViewModel(private val repository: SessionRepository, private val settingsRepository: SettingsRepository) : ViewModel() {
-    companion object { const val CURRENT_YEAR = 2026 }
+    companion object { const val CURRENT_YEAR = JavaZoneConfig.CURRENT_YEAR }
     private val _selectedYear = MutableStateFlow(CURRENT_YEAR)
     val selectedYear = _selectedYear.asStateFlow()
     private val _selectedDay = MutableStateFlow<String?>(null)
@@ -75,8 +76,10 @@ class TimelineViewModel(private val repository: SessionRepository, private val s
         if (query.isNotBlank()) { val q = query.trim().lowercase(); filtered = filtered.filter { it.title.lowercase().contains(q) || it.room.lowercase().contains(q) || it.abstract.lowercase().contains(q) || it.speakers.any { s -> s.name.lowercase().contains(q) } } }
         filtered
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val groupedSessions = sessions.map { list -> list.sortedWith(compareBy<Session> { it.startTimeZulu }.thenBy { extractRoomNumber(it.room) }.thenBy { it.room }).groupBy { formatTime(it.startTimeZulu) } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+    val groupedSessions = sessions.map { list ->
+        list.sortedWith(compareBy<Session> { it.startTimeZulu }.thenBy { extractRoomNumber(it.room) }.thenBy { it.room })
+            .groupBy { "${getDayFromZulu(it.startTimeZulu)}|${formatTime(it.startTimeZulu)}" }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     init {
         viewModelScope.launch { try { repository.refreshSessions() } finally { _isLoading.value = false } }
