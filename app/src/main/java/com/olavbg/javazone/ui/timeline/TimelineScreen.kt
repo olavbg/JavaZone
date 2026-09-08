@@ -38,8 +38,6 @@ import com.olavbg.javazone.ui.components.RoomTag
 import java.time.Duration
 import java.time.Instant
 
-private val DayOptions = listOf(null, "Wednesday", "Thursday")
-
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TimelineScreen(
@@ -61,6 +59,7 @@ fun TimelineScreen(
     val selectedRoom by viewModel.selectedRoom.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val currentTime by viewModel.currentTime.collectAsState()
+    val availableDays by viewModel.availableDays.collectAsState()
     val availableFormats by viewModel.availableFormats.collectAsState()
     val availableLanguages by viewModel.availableLanguages.collectAsState()
     val availableRooms by viewModel.availableRooms.collectAsState()
@@ -68,6 +67,7 @@ fun TimelineScreen(
     var searchVisible by rememberSaveable { mutableStateOf(false) }
     var filtersVisible by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    val favoritesEnabled = selectedYear == TimelineViewModel.CURRENT_YEAR
 
     LaunchedEffect(groupedSessions, selectedDay, selectedYear) {
         if (groupedSessions.isNotEmpty() && viewModel.shouldScrollToNow()) {
@@ -94,7 +94,10 @@ fun TimelineScreen(
                             IconButton(onClick = { searchVisible = !searchVisible; if (!searchVisible) viewModel.setSearchQuery("") }) {
                                 Icon(if (searchVisible) Icons.Default.Clear else Icons.Default.Search, "Søk")
                             }
-                            IconButton(onClick = { viewModel.setOnlyFavorites(!onlyFavorites) }) {
+                            IconButton(
+                                onClick = { if (favoritesEnabled) viewModel.setOnlyFavorites(!onlyFavorites) },
+                                enabled = favoritesEnabled
+                            ) {
                                 Icon(if (onlyFavorites) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "Favoritter", tint = if (onlyFavorites) MaterialTheme.colorScheme.tertiary else LocalContentColor.current)
                             }
                             IconButton(onClick = onSettingsClick) { Icon(Icons.Rounded.Settings, "Innstillinger") }
@@ -117,18 +120,28 @@ fun TimelineScreen(
                 }
 
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    SingleChoiceSegmentedButtonRow(Modifier.weight(1f)) {
-                        DayOptions.forEachIndexed { index, day ->
+                    if (availableDays.isNotEmpty()) {
+                        SingleChoiceSegmentedButtonRow(Modifier.weight(1f)) {
                             SegmentedButton(
-                                selected = selectedDay == day,
-                                onClick = { viewModel.setDay(day) },
-                                shape = SegmentedButtonDefaults.itemShape(index, DayOptions.size)
-                            ) { Text(dayLabel(day), fontSize = 12.sp, maxLines = 1) }
+                                selected = selectedDay == null,
+                                onClick = { viewModel.setDay(null) },
+                                shape = SegmentedButtonDefaults.itemShape(0, availableDays.size + 1)
+                            ) { Text("Alle", fontSize = 12.sp, maxLines = 1) }
+                            availableDays.forEachIndexed { index, day ->
+                                SegmentedButton(
+                                    selected = selectedDay == day,
+                                    onClick = { viewModel.setDay(day) },
+                                    shape = SegmentedButtonDefaults.itemShape(index + 1, availableDays.size + 1)
+                                ) { Text(dayLabel(day), fontSize = 12.sp, maxLines = 1) }
+                            }
                         }
+                    } else {
+                        Spacer(Modifier.weight(1f))
                     }
                     Spacer(Modifier.width(8.dp))
                     IconButton(onClick = { filtersVisible = !filtersVisible }) {
-                        BadgedBox(badge = { if (viewModel.activeFilterCount() > 0) Badge { Text(viewModel.activeFilterCount().toString()) } }) {
+                        val count = viewModel.activeFilterCount()
+                        BadgedBox(badge = { if (count > 0) Badge { Text(count.toString()) } }) {
                             Icon(Icons.Default.FilterList, "Filtre")
                         }
                     }
@@ -151,7 +164,7 @@ fun TimelineScreen(
             } else if (sessions.isEmpty()) {
                 EmptyStateView(searchQuery.isNotBlank() || viewModel.activeFilterCount() > 0, viewModel::clearFilters)
             } else {
-                TimelineList(groupedSessions, currentTime, listState, onSessionClick, viewModel::toggleFavorite, contentPadding)
+                TimelineList(groupedSessions, currentTime, listState, onSessionClick, viewModel::toggleFavorite, favoritesEnabled, contentPadding)
             }
 
             if (filterSpeaker != null) {
@@ -173,6 +186,7 @@ private fun TimelineList(
     listState: androidx.compose.foundation.lazy.LazyListState,
     onSessionClick: (String) -> Unit,
     onFavoriteClick: (Session) -> Unit,
+    favoritesEnabled: Boolean,
     contentPadding: PaddingValues
 ) {
     LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 32.dp + contentPadding.calculateBottomPadding()), modifier = Modifier.fillMaxSize()) {
@@ -194,14 +208,14 @@ private fun TimelineList(
             items(sessions, key = { it.id }) { session ->
                 val active = isActive(session, currentTime)
                 val past = isPast(session, currentTime)
-                SessionCard(session, active, past, currentTime, onFavoriteClick, { onSessionClick(session.id) })
+                SessionCard(session, active, past, currentTime, onFavoriteClick, favoritesEnabled, { onSessionClick(session.id) })
             }
         }
     }
 }
 
 @Composable
-private fun SessionCard(session: Session, active: Boolean, past: Boolean, currentTime: Instant, onFavoriteClick: (Session) -> Unit, onClick: () -> Unit) {
+private fun SessionCard(session: Session, active: Boolean, past: Boolean, currentTime: Instant, onFavoriteClick: (Session) -> Unit, favoritesEnabled: Boolean, onClick: () -> Unit) {
     val alpha by androidx.compose.animation.core.animateFloatAsState(if (past) .48f else 1f, label = "pastAlpha")
     Card(onClick = onClick, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp).alpha(alpha), shape = RoundedCornerShape(if (active) 24.dp else 18.dp), colors = CardDefaults.cardColors(containerColor = if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow), border = if (active) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = .7f)) else null) {
         Column(Modifier.padding(14.dp)) {
@@ -212,7 +226,7 @@ private fun SessionCard(session: Session, active: Boolean, past: Boolean, curren
                 Spacer(Modifier.width(6.dp))
                 FormatBadge(session.format)
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = { onFavoriteClick(session) }, modifier = Modifier.size(32.dp)) { Icon(if (session.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "Favoritt", tint = if (session.isFavorite) MaterialTheme.colorScheme.tertiary else LocalContentColor.current, modifier = Modifier.size(18.dp)) }
+                IconButton(onClick = { if (favoritesEnabled) onFavoriteClick(session) }, enabled = favoritesEnabled, modifier = Modifier.size(32.dp)) { Icon(if (session.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "Favoritt", tint = if (session.isFavorite) MaterialTheme.colorScheme.tertiary else LocalContentColor.current, modifier = Modifier.size(18.dp)) }
             }
             Spacer(Modifier.height(8.dp))
             Text(session.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -243,7 +257,16 @@ private fun EmptyStateView(active: Boolean, clear: () -> Unit) {
     }
 }
 
-private fun dayLabel(day: String?) = when (day) { null -> "Alle"; "Wednesday" -> "Onsdag"; "Thursday" -> "Torsdag"; else -> day }
+private fun dayLabel(day: String) = when (day) {
+    "Monday" -> "Man"
+    "Tuesday" -> "Tir"
+    "Wednesday" -> "Ons"
+    "Thursday" -> "Tor"
+    "Friday" -> "Fre"
+    "Saturday" -> "Lør"
+    "Sunday" -> "Søn"
+    else -> day.take(3)
+}
 private fun formatLabel(format: String) = when { format.contains("presentation", true) -> "Foredrag"; format.contains("lightning", true) -> "Lynforedrag"; format.contains("workshop", true) -> "Workshop"; else -> format }
 private fun languageLabel(lang: String) = if (lang.contains("no", true)) "🇳🇴 NO" else "🇬🇧 EN"
 private fun formatTime(zulu: String): String = try { java.time.Instant.parse(zulu).atZone(java.time.ZoneId.of("Europe/Oslo")).toLocalTime().toString().take(5) } catch (_: Exception) { "--:--" }
