@@ -106,8 +106,8 @@ class TimelineViewModel(private val repository: SessionRepository, private val s
     fun setRoom(value: String?) { _selectedRoom.value = value }
     fun setFilterSpeaker(value: String?) { _filterSpeaker.value = value; if (value != null) _selectedDay.value = null }
     fun setSearchQuery(value: String) { _searchQuery.value = value }
-    fun clearFilters() { _onlyFavorites.value = false; _selectedFormat.value = null; _selectedLanguage.value = null; _selectedRoom.value = null; _searchQuery.value = "" }
-    fun activeFilterCount() = listOf(_onlyFavorites.value, _selectedFormat.value != null, _selectedLanguage.value != null, _selectedRoom.value != null, _searchQuery.value.isNotBlank()).count { it }
+    fun clearFilters() { _onlyFavorites.value = false; _selectedFormat.value = null; _selectedLanguage.value = null; _selectedRoom.value = null; _filterSpeaker.value = null; _searchQuery.value = "" }
+    fun activeFilterCount() = listOf(_onlyFavorites.value, _selectedFormat.value != null, _selectedLanguage.value != null, _selectedRoom.value != null, _filterSpeaker.value != null, _searchQuery.value.isNotBlank()).count { it }
     fun shouldScrollToNow() = !hasScrolledForContext
     fun markScrolledToNow() { hasScrolledForContext = true }
     fun toggleFavorite(session: Session) { if (_selectedYear.value == CURRENT_YEAR) viewModelScope.launch { repository.toggleFavorite(session.id, !session.isFavorite) } }
