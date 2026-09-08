@@ -30,7 +30,6 @@ import com.olavbg.javazone.ui.components.resolveVideoUrl
 import com.olavbg.javazone.util.calculateSessionDurationMinutes
 import com.olavbg.javazone.util.formatDay
 import com.olavbg.javazone.util.formatTime
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
@@ -61,7 +60,7 @@ fun SessionDetailScreen(
         if (isCurrentYear) {
             repository.getSessions().collect { sessions ->
                 session = sessions.find { it.id == sessionId }
-                if (session != null) loading = false
+                loading = false
             }
         } else {
             session = repository.getArchiveSessions(year).find { it.id == sessionId }
