@@ -9,6 +9,7 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
+import com.olavbg.javazone.JavaZoneConfig
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.notifications.ReminderManager
@@ -30,7 +31,7 @@ fun JavaZoneApp(
 ) {
     val timelineViewModel: TimelineViewModel = viewModel(factory = TimelineViewModelFactory(repository, settingsRepository))
     var yearPickerVisible by rememberSaveable { mutableStateOf(false) }
-    val years = remember { (2014..TimelineViewModel.CURRENT_YEAR).toList().reversed() }
+    val years = remember { (JavaZoneConfig.FIRST_ARCHIVE_YEAR..JavaZoneConfig.CURRENT_YEAR).toList().reversed() }
 
     val backStack = if (initialSessionId != null) {
         rememberNavBackStack(NavDestination.Timeline, NavDestination.SessionDetail(initialSessionId))
