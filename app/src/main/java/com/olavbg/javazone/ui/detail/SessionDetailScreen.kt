@@ -25,9 +25,6 @@ import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.model.Speaker
 import com.olavbg.javazone.ui.components.FormatBadge
 import com.olavbg.javazone.ui.components.resolveVideoUrl
-import com.olavbg.javazone.ui.theme.JavaGreen
-import com.olavbg.javazone.ui.theme.WorkshopPurple
-import com.olavbg.javazone.ui.theme.JavaBlue
 import com.olavbg.javazone.util.calculateSessionDurationMinutes
 import com.olavbg.javazone.util.formatDay
 import com.olavbg.javazone.util.formatTime
@@ -53,17 +50,13 @@ fun SessionDetailScreen(
     var session by remember(sessionId, year) { mutableStateOf<Session?>(null) }
     var loading by remember(sessionId, year) { mutableStateOf(true) }
     var simulatedTime by remember { mutableStateOf(Instant.now()) }
-
     val offset by settingsRepository.simulatedTimeOffset.collectAsState(initial = 0L)
-    LaunchedEffect(offset) { simulatedTime = Instant.now().plusMillis(offset) }
 
+    LaunchedEffect(offset) { simulatedTime = Instant.now().plusMillis(offset) }
     LaunchedEffect(sessionId, year) {
         loading = true
-        session = if (isCurrentYear) {
-            repository.getSessions().first().find { it.id == sessionId }
-        } else {
-            repository.getArchiveSessions(year).find { it.id == sessionId }
-        }
+        session = if (isCurrentYear) repository.getSessions().first().find { it.id == sessionId }
+        else repository.getArchiveSessions(year).find { it.id == sessionId }
         loading = false
     }
 
@@ -77,18 +70,11 @@ fun SessionDetailScreen(
                         Text("JavaZone $year", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Tilbake") }
-                },
+                navigationIcon = { IconButton(onClick = onBackClick) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Tilbake") } },
                 actions = {
-                    val current = session
-                    if (current != null && isCurrentYear) {
+                    session?.takeIf { isCurrentYear }?.let { current ->
                         IconButton(onClick = { scope.launch { repository.toggleFavorite(current.id, !current.isFavorite) } }) {
-                            Icon(
-                                if (current.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                "Favoritt",
-                                tint = if (current.isFavorite) MaterialTheme.colorScheme.tertiary else LocalContentColor.current
-                            )
+                            Icon(if (current.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "Favoritt", tint = if (current.isFavorite) MaterialTheme.colorScheme.tertiary else LocalContentColor.current)
                         }
                     }
                 }
@@ -100,12 +86,12 @@ fun SessionDetailScreen(
             session == null -> EmptyDetail(onBackClick, padding, year)
             else -> DetailContent(
                 session = session!!,
+                year = year,
                 simulatedTime = simulatedTime,
-                isCurrentYear = isCurrentYear,
                 onSpeakerClick = onSpeakerClick,
                 onVideoClick = {
-                    val url = session?.videoUrl?.let(::resolveVideoUrl) ?: return@DetailContent
-                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) }
+                    val videoUrl = session?.videoUrl?.let(::resolveVideoUrl) ?: return@DetailContent
+                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, videoUrl.toUri())) }
                 },
                 modifier = Modifier.fillMaxSize().padding(top = padding.calculateTopPadding()),
                 bottomPadding = padding.calculateBottomPadding() + contentPadding.calculateBottomPadding()
@@ -117,8 +103,8 @@ fun SessionDetailScreen(
 @Composable
 private fun DetailContent(
     session: Session,
+    year: Int,
     simulatedTime: Instant,
-    isCurrentYear: Boolean,
     onSpeakerClick: (String) -> Unit,
     onVideoClick: () -> Unit,
     modifier: Modifier,
@@ -131,16 +117,14 @@ private fun DetailContent(
     val upcoming = start != null && simulatedTime < start
     val minutesToStart = start?.let { Duration.between(simulatedTime, it).toMinutes().coerceAtLeast(0) }
 
-    Column(
-        modifier = modifier.verticalScroll(rememberScrollState()).padding(bottom = bottomPadding + 32.dp)
-    ) {
+    Column(modifier.verticalScroll(rememberScrollState()).padding(bottom = bottomPadding + 32.dp)) {
         if (live) StatusBanner("GÅR NÅ", "${session.room} · ${Duration.between(simulatedTime, end).toMinutes().coerceAtLeast(0)} min igjen", MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
         else if (upcoming && minutesToStart != null && minutesToStart <= 60) StatusBanner("STARTER SNART", "Om $minutesToStart min · ${session.room}", MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer)
         else if (finished && session.videoUrl != null) StatusBanner("AVSLUTTET", "Opptak er tilgjengelig", MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer, onVideoClick)
 
         Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(horizontal = 20.dp, vertical = 24.dp)) {
-                Text("JavaZone $sessionYearLabel", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text("JavaZone $year", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(10.dp))
                 Text(session.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                 Spacer(Modifier.height(16.dp))
@@ -152,11 +136,7 @@ private fun DetailContent(
         }
 
         Column(Modifier.padding(20.dp)) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f))
-            ) {
+            Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f))) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     InfoRow(Icons.Default.Schedule, "Tid", "${formatDay(session.startTimeZulu)}, ${formatTime(session.startTimeZulu)}–${formatTime(session.endTimeZulu)}")
                     InfoRow(Icons.Default.LocationOn, "Rom", session.room)
@@ -174,7 +154,7 @@ private fun DetailContent(
                 Text(if (session.speakers.size == 1) "Foredragsholder" else "Foredragsholdere", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
                 Spacer(Modifier.height(12.dp))
                 session.speakers.forEach { speaker ->
-                    SpeakerCard(speaker, onClick = { onSpeakerClick(speaker.name) })
+                    SpeakerCard(speaker) { onSpeakerClick(speaker.name) }
                     Spacer(Modifier.height(10.dp))
                 }
             }
@@ -190,8 +170,6 @@ private fun DetailContent(
         }
     }
 }
-
-private const val sessionYearLabel = "Program"
 
 @Composable
 private fun StatusBanner(title: String, text: String, container: androidx.compose.ui.graphics.Color, content: androidx.compose.ui.graphics.Color, onClick: (() -> Unit)? = null) {
