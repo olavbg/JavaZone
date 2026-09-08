@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+import com.olavbg.javazone.JavaZoneConfig
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.model.Session
@@ -48,7 +49,7 @@ fun SessionDetailScreen(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val isCurrentYear = year == 2026
+    val isCurrentYear = year == JavaZoneConfig.CURRENT_YEAR
     var session by remember(sessionId, year) { mutableStateOf<Session?>(null) }
     var loading by remember(sessionId, year) { mutableStateOf(true) }
     var simulatedTime by remember { mutableStateOf(Instant.now()) }
@@ -57,9 +58,15 @@ fun SessionDetailScreen(
     LaunchedEffect(offset) { simulatedTime = Instant.now().plusMillis(offset) }
     LaunchedEffect(sessionId, year) {
         loading = true
-        session = if (isCurrentYear) repository.getSessions().first().find { it.id == sessionId }
-        else repository.getArchiveSessions(year).find { it.id == sessionId }
-        loading = false
+        if (isCurrentYear) {
+            repository.getSessions().collect { sessions ->
+                session = sessions.find { it.id == sessionId }
+                if (session != null) loading = false
+            }
+        } else {
+            session = repository.getArchiveSessions(year).find { it.id == sessionId }
+            loading = false
+        }
     }
 
     Scaffold(
