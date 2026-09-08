@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionDetailScreen(
     sessionId: String,
