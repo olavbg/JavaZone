@@ -44,6 +44,15 @@ class TimelineViewModel(private val repository: SessionRepository, private val s
     private val currentYearSessions = repository.getSessions().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     private val sourceSessions = combine(_selectedYear, currentYearSessions, _yearSessions) { year, current, historical -> if (year == CURRENT_YEAR) current else historical }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Days are derived from the selected programme instead of being hard-coded to the current conference. */
+    val availableDays = sourceSessions.map { list ->
+        list.map { getDayFromZulu(it.startTimeZulu) }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sortedBy { daySortIndex(it) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val daySessions = combine(sourceSessions, _selectedDay) { list, day -> if (day == null) list else list.filter { getDayFromZulu(it.startTimeZulu) == day } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val availableFormats = daySessions.map { list -> list.map { it.format }.filter { it.isNotBlank() }.distinct().filter { it.contains("presentation", true) || it.contains("lightning", true) || it.contains("workshop", true) }.sorted() }
@@ -105,6 +114,7 @@ class TimelineViewModel(private val repository: SessionRepository, private val s
 
     private fun formatTime(zulu: String) = try { Instant.parse(zulu).atZone(ZoneId.of("Europe/Oslo")).format(DateTimeFormatter.ofPattern("HH:mm")) } catch (_: Exception) { "" }
     private fun getDayFromZulu(zulu: String) = try { Instant.parse(zulu).atZone(ZoneId.of("Europe/Oslo")).format(DateTimeFormatter.ofPattern("EEEE", Locale.ENGLISH)) } catch (_: Exception) { "" }
+    private fun daySortIndex(day: String) = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday").indexOf(day).let { if (it < 0) Int.MAX_VALUE else it }
     private fun isFormatMatch(value: String, target: String) = when { target.contains("lightning", true) -> value.contains("lightning", true); target.contains("workshop", true) -> value.contains("workshop", true); target.contains("presentation", true) -> value.contains("presentation", true) || value.contains("foredrag", true); else -> value.equals(target, true) }
     private fun extractRoomNumber(room: String) = room.filter { it.isDigit() }.toIntOrNull() ?: Int.MAX_VALUE
 }
