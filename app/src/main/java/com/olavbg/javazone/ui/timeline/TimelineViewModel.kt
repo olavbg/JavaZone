@@ -27,7 +27,8 @@ class TimelineViewModel(
     private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
-    val availableYears: List<Int> = SessionRepository.availableYears
+    val availableYears: StateFlow<List<Int>> = repository.availableYears
+    val sessionCountsByYear: Map<Int, Int> = SessionRepository.sessionCountsByYear
 
     private val _selectedYear = MutableStateFlow(SessionRepository.CURRENT_YEAR)
     val selectedYear = _selectedYear.asStateFlow()
@@ -201,6 +202,9 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
     private var hasScrolledForDay = false
 
     init {
+        viewModelScope.launch {
+            repository.loadAvailableYears()
+        }
         viewModelScope.launch {
             try {
                 repository.refreshSessions()

@@ -123,13 +123,17 @@ fun SessionDetailScreen(
         modifier = modifier
     ) { padding ->
         session?.let { s ->
-            val startTime = remember(s.startTimeZulu) { Instant.parse(s.startTimeZulu) }
-            val endTime = remember(s.endTimeZulu) { Instant.parse(s.endTimeZulu) }
+            val startTime = remember(s.startTimeZulu) {
+                runCatching { Instant.parse(s.startTimeZulu) }.getOrNull()
+            }
+            val endTime = remember(s.endTimeZulu) {
+                runCatching { Instant.parse(s.endTimeZulu) }.getOrNull()
+            }
             
-            val isFinished = endTime.isBefore(simulatedTime)
-            val isLive = !isFinished && simulatedTime.isAfter(startTime)
-            val minutesUntilStart = Duration.between(simulatedTime, startTime).toMinutes()
-            val startsSoon = !isFinished && (minutesUntilStart in 0..60)
+            val isFinished = startTime != null && endTime != null && endTime.isBefore(simulatedTime)
+            val isLive = startTime != null && endTime != null && !isFinished && simulatedTime.isAfter(startTime)
+            val minutesUntilStart = if (startTime != null) Duration.between(simulatedTime, startTime).toMinutes() else 0
+            val startsSoon = startTime != null && endTime != null && !isFinished && (minutesUntilStart in 0..60)
 
             PullToRefreshBox(
                 state = pullToRefreshState,
@@ -379,7 +383,9 @@ fun SessionDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    val timeLabel = if (effectiveYear == SessionRepository.CURRENT_YEAR) {
+                                    val timeLabel = if (s.startTimeZulu.isBlank()) {
+                                        "Mangler tidspunkt"
+                                    } else if (effectiveYear == SessionRepository.CURRENT_YEAR) {
                                         "${formatDay(s.startTimeZulu)}, ${formatTime(s.startTimeZulu)} – ${formatTime(s.endTimeZulu)}"
                                     } else {
                                         "${formatFullDay(s.startTimeZulu) ?: formatDay(s.startTimeZulu)}, ${formatTime(s.startTimeZulu)} – ${formatTime(s.endTimeZulu)}"
@@ -406,17 +412,19 @@ fun SessionDetailScreen(
                                 }
                                 
                                 val duration = calculateSessionDurationMinutes(s)
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                                ) {
-                                    Text(
-                                        text = "$duration min",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                    )
+                                if (!s.startTimeZulu.isBlank()) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                                    ) {
+                                        Text(
+                                            text = "$duration min",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

@@ -11,6 +11,8 @@ import com.olavbg.javazone.model.Speaker
 import com.olavbg.javazone.notifications.ReminderManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -23,6 +25,12 @@ class SessionRepository(
 ) {
     private val archiveSessions = MutableStateFlow<Map<Int, List<Session>>>(emptyMap())
     private val archiveLoading = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
+
+    private val _availableYears = MutableStateFlow(
+        // Fallback until the conference list is fetched (offline/first launch)
+        (2014..CURRENT_YEAR).reversed().toList()
+    )
+    val availableYears: StateFlow<List<Int>> = _availableYears.asStateFlow()
 
     fun getSessions(): Flow<List<Session>> {
         return getSessionsFlow(CURRENT_YEAR)
@@ -43,6 +51,26 @@ class SessionRepository(
     }
 
     fun archiveLoadingFlow(): Flow<Map<Int, Boolean>> = archiveLoading
+
+    suspend fun loadAvailableYears() {
+        try {
+            val response = api.getConferences()
+            val years = response.conferences.mapNotNull { conference ->
+                conference.slug
+                    ?.takeIf { it.startsWith("javazone_") }
+                    ?.substringAfter("javazone_")
+                    ?.toIntOrNull()
+            }
+                .let { list -> if (CURRENT_YEAR in list) list else list + CURRENT_YEAR }
+                .distinct()
+                .sortedDescending()
+            if (years.isNotEmpty()) {
+                _availableYears.value = years
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     suspend fun refreshSessions(conferenceId: String = "javazone_$CURRENT_YEAR") {
         try {
@@ -154,6 +182,31 @@ class SessionRepository(
 
     companion object {
         const val CURRENT_YEAR = 2026
-        val availableYears: List<Int> = (2014..CURRENT_YEAR).reversed().toList()
+
+        // Fetched once from the JavaZone API on 2026-09-12. Archive years never change,
+        // so these are kept up to date manually.
+        val sessionCountsByYear: Map<Int, Int> = mapOf(
+            2006 to 0,
+            2007 to 0,
+            2008 to 95,
+            2009 to 121,
+            2010 to 148,
+            2011 to 129,
+            2012 to 150,
+            2013 to 149,
+            2014 to 158,
+            2015 to 164,
+            2016 to 173,
+            2017 to 140,
+            2018 to 142,
+            2019 to 139,
+            2020 to 0,
+            2021 to 111,
+            2022 to 134,
+            2023 to 137,
+            2024 to 156,
+            2025 to 137,
+            2026 to 155,
+        )
     }
 }

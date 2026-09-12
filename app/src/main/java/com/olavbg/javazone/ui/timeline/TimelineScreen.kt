@@ -54,6 +54,7 @@ fun TimelineScreen(
 ) {
     val sessions by viewModel.sessions.collectAsState()
     val groupedSessions by viewModel.groupedSessions.collectAsState()
+    val allSessions by viewModel.allSessions.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val availableRooms by viewModel.availableRooms.collectAsState()
     val availableFormats by viewModel.availableFormats.collectAsState()
@@ -68,7 +69,7 @@ fun TimelineScreen(
     val filterSpeaker by viewModel.filterSpeaker.collectAsState()
     val selectedYear by viewModel.selectedYear.collectAsState()
     val isCurrentYear by viewModel.isCurrentYear.collectAsState()
-    val availableYears = viewModel.availableYears
+    val availableYears by viewModel.availableYears.collectAsState()
     val availableDays by viewModel.availableDays.collectAsState()
     val showLiveIndicators by viewModel.showLiveIndicators.collectAsState()
 
@@ -174,16 +175,25 @@ fun TimelineScreen(
                     }
 
                     if (sessions.isEmpty()) {
-                        EmptyStateView(
-                            isSearchActive = (searchQuery.isNotBlank() || onlyFavorites || selectedFormat != null || selectedRoom != null),
-                            onClearFilters = {
-                                viewModel.setSearchQuery("")
-                                viewModel.setOnlyFavorites(false)
-                                viewModel.setFormat(null)
-                                viewModel.setLanguage(null)
-                                viewModel.setRoom(null)
-                            }
-                        )
+                        if (allSessions.isEmpty() && !isCurrentYear) {
+                            // The selected archive year has no sessions registered at all
+                            EmptyStateView(
+                                isSearchActive = false,
+                                title = "Fant ingen foredrag for JavaZone $selectedYear",
+                                subtitle = "Det var ingen registrerte foredrag for dette året."
+                            )
+                        } else {
+                            EmptyStateView(
+                                isSearchActive = (searchQuery.isNotBlank() || onlyFavorites || selectedFormat != null || selectedRoom != null),
+                                onClearFilters = {
+                                    viewModel.setSearchQuery("")
+                                    viewModel.setOnlyFavorites(false)
+                                    viewModel.setFormat(null)
+                                    viewModel.setLanguage(null)
+                                    viewModel.setRoom(null)
+                                }
+                            )
+                        }
                     } else {
                         AgendaListView(
                             groupedSessions = groupedSessions,
@@ -208,6 +218,7 @@ fun TimelineScreen(
     if (isYearPickerVisible) {
         YearPickerSheet(
             years = availableYears,
+            sessionCountsByYear = viewModel.sessionCountsByYear,
             selectedYear = selectedYear,
             onYearSelected = { year ->
                 viewModel.setYear(year)
@@ -222,6 +233,7 @@ fun TimelineScreen(
 @Composable
 fun YearPickerSheet(
     years: List<Int>,
+    sessionCountsByYear: Map<Int, Int>,
     selectedYear: Int,
     onYearSelected: (Int) -> Unit,
     onDismiss: () -> Unit
@@ -238,20 +250,29 @@ fun YearPickerSheet(
         LazyColumn(modifier = Modifier.fillMaxWidth()) {
             items(years, key = { it }) { year ->
                 val isSelected = year == selectedYear
+                val count = sessionCountsByYear[year]
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onYearSelected(year) }
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = year.toString(),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = year.toString(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (count != null) {
+                            Text(
+                                text = "$count foredrag",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     if (isSelected) {
                         Icon(
                             imageVector = Icons.Default.Check,
@@ -737,20 +758,22 @@ fun DetailedSessionCard(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Duration Tag (e.g. 60 min, 10 min)
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                    border = BorderStroke(1.dp, if (isActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-                ) {
-                    Text(
-                        text = "$durationMins min",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
+                if (!session.startTimeZulu.isBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, if (isActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                    ) {
+                        Text(
+                            text = "$durationMins min",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
-                Spacer(modifier = Modifier.width(8.dp))
                 RoomTag(room = session.room)
                 Spacer(modifier = Modifier.width(8.dp))
                 FormatBadge(format = session.format)
@@ -873,7 +896,9 @@ fun DetailedSessionCard(
 @Composable
 fun EmptyStateView(
     isSearchActive: Boolean,
-    onClearFilters: () -> Unit
+    onClearFilters: () -> Unit = {},
+    title: String? = null,
+    subtitle: String? = null
 ) {
     Box(
         contentAlignment = Alignment.Center,
@@ -890,14 +915,14 @@ fun EmptyStateView(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = if (isSearchActive) "Ingen foredrag passer søket/filteret" else "Ingen foredrag funnet",
+                text = title ?: if (isSearchActive) "Ingen foredrag passer søket/filteret" else "Ingen foredrag funnet",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = if (isSearchActive) "Prøv å endre på søkeordene eller tilbakestill filtrene." else "Sjekk internettforbindelsen eller prøv igjen senere.",
+                text = subtitle ?: if (isSearchActive) "Prøv å endre på søkeordene eller tilbakestill filtrene." else "Sjekk internettforbindelsen eller prøv igjen senere.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
