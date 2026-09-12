@@ -44,16 +44,19 @@ import java.util.Locale
 @Composable
 fun SessionDetailScreen(
     sessionId: String,
+    year: Int? = null,
     repository: SessionRepository,
     settingsRepository: SettingsRepository,
     onBackClick: () -> Unit,
     onSpeakerClick: (String) -> Unit,
+    showLiveBanners: Boolean = true,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
 ) {
+    val effectiveYear = year ?: SessionRepository.CURRENT_YEAR
     val scope = rememberCoroutineScope()
-    val sessionFlow = remember(sessionId) {
-        repository.getSessions().map { it.find { s -> s.id == sessionId } }
+    val sessionFlow = remember(sessionId, effectiveYear) {
+        repository.getSessionsFlow(effectiveYear).map { it.find { s -> s.id == sessionId } }
     }
     val session by sessionFlow.collectAsState(initial = null)
 
@@ -97,19 +100,21 @@ fun SessionDetailScreen(
                     }
                 },
                 actions = {
-                    session?.let { s ->
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    repository.toggleFavorite(s.id, !s.isFavorite)
+                    if (effectiveYear == SessionRepository.CURRENT_YEAR) {
+                        session?.let { s ->
+                            IconButton(
+                                onClick = {
+                                    scope.launch {
+                                        repository.toggleFavorite(s.id, !s.isFavorite)
+                                    }
                                 }
+                            ) {
+                                Icon(
+                                    imageVector = if (s.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = null,
+                                    tint = if (s.isFavorite) MaterialTheme.colorScheme.tertiary else LocalContentColor.current
+                                )
                             }
-                        ) {
-                            Icon(
-                                imageVector = if (s.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = null,
-                                tint = if (s.isFavorite) MaterialTheme.colorScheme.tertiary else LocalContentColor.current
-                            )
                         }
                     }
                 }
@@ -132,7 +137,11 @@ fun SessionDetailScreen(
                 onRefresh = {
                     scope.launch {
                         isRefreshing = true
-                        repository.refreshSessions()
+                        if (effectiveYear == SessionRepository.CURRENT_YEAR) {
+                            repository.refreshSessions()
+                        } else {
+                            repository.loadArchiveSessions(effectiveYear)
+                        }
                         isRefreshing = false
                     }
                 },
@@ -145,7 +154,7 @@ fun SessionDetailScreen(
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
                 ) {
-                    if (isFinished) {
+                    if (showLiveBanners && isFinished) {
                         Surface(
                             color = MaterialTheme.colorScheme.errorContainer,
                             modifier = Modifier.fillMaxWidth()
@@ -209,7 +218,7 @@ fun SessionDetailScreen(
                                 }
                             }
                         }
-                    } else if (isLive) {
+                    } else if (showLiveBanners && isLive) {
                         val minutesRemaining = Duration.between(simulatedTime, endTime).toMinutes().coerceAtLeast(0)
                         Surface(
                             color = MaterialTheme.colorScheme.secondaryContainer,
@@ -234,7 +243,7 @@ fun SessionDetailScreen(
                                 )
                             }
                         }
-                    } else if (startsSoon) {
+                    } else if (showLiveBanners && startsSoon) {
                         Surface(
                             color = MaterialTheme.colorScheme.primaryContainer,
                             modifier = Modifier.fillMaxWidth()
@@ -255,6 +264,60 @@ fun SessionDetailScreen(
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+                    } else if (!s.videoUrl.isNullOrEmpty()) {
+                        val context = LocalContext.current
+                        Surface(
+                            onClick = {
+                                try {
+                                    val videoUrl = resolveVideoUrl(s.videoUrl)
+                                    val intent = Intent(Intent.ACTION_VIEW, videoUrl.toUri()).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {}
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 20.dp, bottom = 12.dp, start = 20.dp, end = 20.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.PlayCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Se videoopptak",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    if (effectiveYear != SessionRepository.CURRENT_YEAR) {
+                                        Text(
+                                            text = "Opptak fra JavaZone $effectiveYear",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
                                 )
                             }
                         }
@@ -316,11 +379,16 @@ fun SessionDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
+                                    val timeLabel = if (effectiveYear == SessionRepository.CURRENT_YEAR) {
+                                        "${formatDay(s.startTimeZulu)}, ${formatTime(s.startTimeZulu)} – ${formatTime(s.endTimeZulu)}"
+                                    } else {
+                                        "${formatFullDay(s.startTimeZulu) ?: formatDay(s.startTimeZulu)}, ${formatTime(s.startTimeZulu)} – ${formatTime(s.endTimeZulu)}"
+                                    }
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = "${formatDay(s.startTimeZulu)}, ${formatTime(s.startTimeZulu)} – ${formatTime(s.endTimeZulu)}",
+                                            text = timeLabel,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Bold
                                         )

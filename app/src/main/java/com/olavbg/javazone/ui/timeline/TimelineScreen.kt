@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -46,7 +47,7 @@ import kotlin.math.abs
 @Composable
 fun TimelineScreen(
     viewModel: TimelineViewModel,
-    onSessionClick: (String) -> Unit,
+    onSessionClick: (String, Int) -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
@@ -65,16 +66,32 @@ fun TimelineScreen(
     val selectedRoom by viewModel.selectedRoom.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val filterSpeaker by viewModel.filterSpeaker.collectAsState()
+    val selectedYear by viewModel.selectedYear.collectAsState()
+    val isCurrentYear by viewModel.isCurrentYear.collectAsState()
+    val availableYears = viewModel.availableYears
+    val availableDays by viewModel.availableDays.collectAsState()
+    val showLiveIndicators by viewModel.showLiveIndicators.collectAsState()
 
     var isSearchVisible by remember { mutableStateOf(value = false) }
+    var isYearPickerVisible by remember { mutableStateOf(value = false) }
 
     val roomsList = remember(groupedSessions, availableRooms) {
         availableRooms.ifEmpty { 
-            groupedSessions.values.flatten().asSequence().map { it.room }.filter { it.isNotBlank() }.distinct().sortedWith(compareBy({ extractRoomNumber(it) }, { it })).toList()
+            groupedSessions.flatMap { it.sessions }.asSequence().map { it.room }.filter { it.isNotBlank() }.distinct().sortedWith(compareBy({ extractRoomNumber(it) }, { it })).toList()
         }
     }
 
     val listState = rememberLazyListState()
+
+    var previousYear by remember { mutableStateOf(selectedYear) }
+
+    // Scroll back to the very top when the selected year changes
+    LaunchedEffect(selectedYear) {
+        if (selectedYear != previousYear) {
+            listState.scrollToItem(0)
+            previousYear = selectedYear
+        }
+    }
 
     // Auto-scroll to active or upcoming time slot when day changes or data first arrives
     LaunchedEffect(groupedSessions, selectedDay) {
@@ -111,6 +128,9 @@ fun TimelineScreen(
                     if (!isSearchVisible) viewModel.setSearchQuery("")
                 },
                 onSettingsClick = onSettingsClick,
+                selectedYear = selectedYear,
+                onYearClick = { isYearPickerVisible = true },
+                availableDays = availableDays,
             )
         },
         modifier = modifier,
@@ -169,8 +189,12 @@ fun TimelineScreen(
                             groupedSessions = groupedSessions,
                             currentTime = currentTime,
                             listState = listState,
-                            onSessionClick = onSessionClick,
+                            onSessionClick = { session ->
+                                onSessionClick(session.id, selectedYear)
+                            },
                             onFavoriteClick = viewModel::toggleFavorite,
+                            showFavorite = isCurrentYear,
+                            liveIndicators = showLiveIndicators,
                             contentPadding = PaddingValues(
                                 bottom = 32.dp + contentPadding.calculateBottomPadding()
                             )
@@ -180,7 +204,72 @@ fun TimelineScreen(
             }
         }
     }
+
+    if (isYearPickerVisible) {
+        YearPickerSheet(
+            years = availableYears,
+            selectedYear = selectedYear,
+            onYearSelected = { year ->
+                viewModel.setYear(year)
+                isYearPickerVisible = false
+            },
+            onDismiss = { isYearPickerVisible = false }
+        )
+    }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun YearPickerSheet(
+    years: List<Int>,
+    selectedYear: Int,
+    onYearSelected: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss
+    ) {
+        Text(
+            text = "Velg år",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+        )
+        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            items(years, key = { it }) { year ->
+                val isSelected = year == selectedYear
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onYearSelected(year) }
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = year.toString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Valgt år",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 24.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimelineHeader(
@@ -201,7 +290,10 @@ fun TimelineHeader(
     onSearchQueryChange: (String) -> Unit,
     isSearchVisible: Boolean,
     onToggleSearch: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    selectedYear: Int,
+    onYearClick: () -> Unit,
+    availableDays: List<String>
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -219,16 +311,28 @@ fun TimelineHeader(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer
+                            onClick = onYearClick,
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                         ) {
-                            Text(
-                                text = "2026",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = "$selectedYear",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = "Velg år",
+                                    modifier = Modifier.size(22.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
                         }
                     }
                 },
@@ -280,34 +384,32 @@ fun TimelineHeader(
             }
 
             // Day & View Selector Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.weight(1f)) {
-                    SegmentedButton(
-                        selected = selectedDay == null,
-                        onClick = { onDaySelected(null) },
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3)
-                    ) {
-                        Text("Alle dager", fontSize = 11.sp)
-                    }
-                    SegmentedButton(
-                        selected = selectedDay == "Wednesday",
-                        onClick = { onDaySelected("Wednesday") },
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3)
-                    ) {
-                        Text("Onsdag", fontSize = 11.sp)
-                    }
-                    SegmentedButton(
-                        selected = selectedDay == "Thursday",
-                        onClick = { onDaySelected("Thursday") },
-                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3)
-                    ) {
-                        Text("Torsdag", fontSize = 11.sp)
+            if (availableDays.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.weight(1f)) {
+                        val count = availableDays.size + 1
+                        SegmentedButton(
+                            selected = selectedDay == null,
+                            onClick = { onDaySelected(null) },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = count)
+                        ) {
+                            Text("Alle dager", fontSize = 11.sp)
+                        }
+                        availableDays.forEachIndexed { index, day ->
+                            SegmentedButton(
+                                selected = selectedDay == day,
+                                onClick = { onDaySelected(day) },
+                                shape = SegmentedButtonDefaults.itemShape(index = index + 1, count = count)
+                            ) {
+                                Text(localizedDayName(day), fontSize = 11.sp)
+                            }
+                        }
                     }
                 }
             }
@@ -381,11 +483,13 @@ fun TimelineHeader(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AgendaListView(
-    groupedSessions: Map<String, List<Session>>,
+    groupedSessions: List<AgendaGroup>,
     currentTime: Instant,
     listState: androidx.compose.foundation.lazy.LazyListState,
-    onSessionClick: (String) -> Unit,
+    onSessionClick: (Session) -> Unit,
     onFavoriteClick: (Session) -> Unit,
+    showFavorite: Boolean = true,
+    liveIndicators: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(bottom = 32.dp)
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -411,31 +515,32 @@ fun AgendaListView(
             contentPadding = contentPadding,
             modifier = Modifier.fillMaxSize()
         ) {
-            groupedSessions.forEach { (timeSlot, sessionsAtTime) ->
-                val isLiveSlot = sessionsAtTime.any { isSessionActive(it, currentTime) }
+            groupedSessions.forEach { group ->
+                val isLiveSlot = group.sessions.any { isSessionActive(it, currentTime) }
 
-                // Sticky Header: Time Node Badge pinned to top-left (shown once for group)
-                stickyHeader(key = "agenda-sticky-$timeSlot") {
+                // Sticky Header: Day + Time Node Badge pinned to top-left (shown once for group)
+                stickyHeader(key = "agenda-sticky-${group.key}") {
                     TimelineStickyTimeHeader(
-                        timeSlot = timeSlot,
+                        timeSlot = group.headerLabel,
                         isLiveSlot = isLiveSlot,
-                        sessionCount = sessionsAtTime.size
+                        sessionCount = group.sessions.size
                     )
                 }
 
                 // Session Rows in this Time Block (sorted by room number)
                 itemsIndexed(
-                    items = sessionsAtTime,
+                    items = group.sessions,
                     key = { _, session -> "agenda-item-${session.id}" },
                     contentType = { _, _ -> "session-row" }
                 ) { _, session ->
                     TimelineSessionRow(
                         session = session,
-                        isPast = isSessionPast(session.endTimeZulu, currentTime),
-                        isActive = isSessionActive(session, currentTime),
+                        isPast = liveIndicators && isSessionPast(session.endTimeZulu, currentTime),
+                        isActive = liveIndicators && isSessionActive(session, currentTime),
                         currentTime = currentTime,
                         onFavoriteClick = { onFavoriteClick(session) },
-                        onClick = { onSessionClick(session.id) }
+                        onClick = { onSessionClick(session) },
+                        showFavorite = showFavorite
                     )
                 }
             }
@@ -527,7 +632,8 @@ fun TimelineSessionRow(
     isActive: Boolean,
     currentTime: Instant,
     onFavoriteClick: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    showFavorite: Boolean = true
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -590,6 +696,7 @@ fun TimelineSessionRow(
                 currentTime = currentTime,
                 onFavoriteClick = onFavoriteClick,
                 onClick = onClick,
+                showFavorite = showFavorite,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -604,6 +711,7 @@ fun DetailedSessionCard(
     currentTime: Instant,
     onFavoriteClick: () -> Unit,
     onClick: () -> Unit,
+    showFavorite: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val alpha by animateFloatAsState(if (isPast) 0.55f else 1f, label = "alpha")
@@ -653,14 +761,16 @@ fun DetailedSessionCard(
                         fontSize = 13.sp
                     )
                 }
-                Spacer(modifier = Modifier.weight(1f))
-                IconButton(onClick = onFavoriteClick, modifier = Modifier.size(28.dp)) {
-                    Icon(
-                        imageVector = if (session.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = null,
-                        tint = if (session.isFavorite) MaterialTheme.colorScheme.tertiary else LocalContentColor.current,
-                        modifier = Modifier.size(18.dp)
-                    )
+                if (showFavorite) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    IconButton(onClick = onFavoriteClick, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            imageVector = if (session.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = null,
+                            tint = if (session.isFavorite) MaterialTheme.colorScheme.tertiary else LocalContentColor.current,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 
@@ -861,15 +971,15 @@ private fun extractRoomNumber(room: String): Int {
 }
 
 private fun findFirstActiveOrUpcomingIndex(
-    groupedSessions: Map<String, List<Session>>,
+    groupedSessions: List<AgendaGroup>,
     currentTime: Instant
 ): Int {
     var index = 0
     var bestIndex = -1
 
-    for ((_, sessions) in groupedSessions) {
-        val anyActive = sessions.any { isSessionActive(it, currentTime) }
-        val isFuture = sessions.firstOrNull()?.let {
+    for (group in groupedSessions) {
+        val anyActive = group.sessions.any { isSessionActive(it, currentTime) }
+        val isFuture = group.sessions.firstOrNull()?.let {
             try { Instant.parse(it.startTimeZulu).isAfter(currentTime) } catch (_: Exception) { false }
         } ?: false
 
@@ -880,7 +990,7 @@ private fun findFirstActiveOrUpcomingIndex(
             bestIndex = index
         }
 
-        index += 1 + sessions.size // header + sessions count
+        index += 1 + group.sessions.size // header + sessions count
     }
 
     return if (bestIndex != -1) bestIndex else 0

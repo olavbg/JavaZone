@@ -10,8 +10,10 @@ import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.model.Speaker
 import com.olavbg.javazone.notifications.ReminderManager
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 
 class SessionRepository(
     private val api: SleepingPillApi,
@@ -19,23 +21,47 @@ class SessionRepository(
     private val reminderManager: ReminderManager? = null,
     private val settingsRepository: SettingsRepository? = null
 ) {
+    private val archiveSessions = MutableStateFlow<Map<Int, List<Session>>>(emptyMap())
+    private val archiveLoading = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
+
     fun getSessions(): Flow<List<Session>> {
-        return dao.getAllSessions().combine(dao.getFavoriteSessionIds()) { sessions, favoriteIds ->
-            sessions.map { entity ->
-                entity.toDomainModel(isFavorite = favoriteIds.contains(entity.id))
+        return getSessionsFlow(CURRENT_YEAR)
+    }
+
+    fun getSessionsFlow(year: Int = CURRENT_YEAR): Flow<List<Session>> {
+        return if (year == CURRENT_YEAR) {
+            dao.getAllSessions().combine(dao.getFavoriteSessionIds()) { sessions, favoriteIds ->
+                sessions.map { entity ->
+                    entity.toDomainModel(isFavorite = favoriteIds.contains(entity.id))
+                }
+            }
+        } else {
+            archiveSessions.map { map ->
+                (map[year] ?: emptyList()).sortedBy { it.startTimeZulu }
             }
         }
     }
 
-    suspend fun refreshSessions(conferenceId: String = "javazone_2026") {
+    fun archiveLoadingFlow(): Flow<Map<Int, Boolean>> = archiveLoading
+
+    suspend fun refreshSessions(conferenceId: String = "javazone_$CURRENT_YEAR") {
         try {
             val response = api.getSessions(conferenceId)
             val entities = response.sessions.map { it.toEntity() }
+            dao.deleteAllSessions()
             dao.insertSessions(entities)
             rescheduleAllFavorites()
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    suspend fun loadArchiveSessions(year: Int) {
+        if (archiveSessions.value.containsKey(year)) return
+        archiveLoading.value = archiveLoading.value + (year to true)
+        val sessions = fetchArchiveSessions(year)
+        archiveSessions.value = archiveSessions.value + (year to sessions)
+        archiveLoading.value = archiveLoading.value + (year to false)
     }
 
     suspend fun rescheduleAllFavorites() {
@@ -69,7 +95,7 @@ class SessionRepository(
         }
     }
 
-    suspend fun getArchiveSessions(year: Int): List<Session> {
+    private suspend fun fetchArchiveSessions(year: Int): List<Session> {
         return try {
             val response = api.getSessions("javazone_$year")
             response.sessions.map { dto ->
@@ -125,4 +151,9 @@ class SessionRepository(
         speakers = speakers,
         isFavorite = isFavorite
     )
+
+    companion object {
+        const val CURRENT_YEAR = 2026
+        val availableYears: List<Int> = (2014..CURRENT_YEAR).reversed().toList()
+    }
 }

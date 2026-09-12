@@ -9,10 +9,7 @@ sealed interface NavDestination : NavKey {
     data object Timeline : NavDestination
 
     @Serializable
-    data class SessionDetail(val sessionId: String) : NavDestination
-
-    @Serializable
-    data object Archive : NavDestination
+    data class SessionDetail(val sessionId: String, val year: Int? = null) : NavDestination
 
     @Serializable
     data object Settings : NavDestination

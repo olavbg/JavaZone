@@ -28,6 +28,38 @@ fun formatDay(zulu: String): String {
     }
 }
 
+fun formatFullDay(zulu: String): String? {
+    return try {
+        val instant = Instant.parse(zulu)
+        val dateTime = instant.atZone(ZoneId.of("Europe/Oslo"))
+        dateTime.format(DateTimeFormatter.ofPattern("EEE d. MMM yyyy", Locale.forLanguageTag("no")))
+    } catch (_: Exception) {
+        null
+    }
+}
+
+fun localizedDayName(dayKey: String): String = when (dayKey) {
+    "Monday" -> "Mandag"
+    "Tuesday" -> "Tirsdag"
+    "Wednesday" -> "Onsdag"
+    "Thursday" -> "Torsdag"
+    "Friday" -> "Fredag"
+    "Saturday" -> "Lørdag"
+    "Sunday" -> "Søndag"
+    else -> dayKey
+}
+
+fun shortDayName(dayKey: String): String = when (dayKey) {
+    "Monday" -> "man."
+    "Tuesday" -> "tir."
+    "Wednesday" -> "ons."
+    "Thursday" -> "tor."
+    "Friday" -> "fre."
+    "Saturday" -> "lør."
+    "Sunday" -> "søn."
+    else -> dayKey
+}
+
 fun calculateSessionDurationMinutes(session: Session): Long {
     return try {
         val start = Instant.parse(session.startTimeZulu)

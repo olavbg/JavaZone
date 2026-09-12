@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.model.Session
+import com.olavbg.javazone.util.shortDayName
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -13,10 +15,26 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+data class AgendaGroup(
+    val key: String,
+    val headerLabel: String,
+    val sessions: List<Session>
+)
+
+@OptIn(ExperimentalCoroutinesApi::class)
 class TimelineViewModel(
     private val repository: SessionRepository,
     private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
+
+    val availableYears: List<Int> = SessionRepository.availableYears
+
+    private val _selectedYear = MutableStateFlow(SessionRepository.CURRENT_YEAR)
+    val selectedYear = _selectedYear.asStateFlow()
+
+    val isCurrentYear: StateFlow<Boolean> = selectedYear
+        .map { it == SessionRepository.CURRENT_YEAR }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     private val _selectedDay = MutableStateFlow<String?>(null)
     val selectedDay = _selectedDay.asStateFlow()
@@ -46,8 +64,26 @@ class TimelineViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Instant.now())
 
-    val allSessions: StateFlow<List<Session>> = repository.getSessions()
+    val allSessions: StateFlow<List<Session>> = _selectedYear
+        .flatMapLatest { year -> repository.getSessionsFlow(year) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val availableDays: StateFlow<List<String>> = allSessions.map { list ->
+        list.mapNotNull { session ->
+            runCatching { Instant.parse(session.startTimeZulu).atZone(ZoneId.of("Europe/Oslo")).toLocalDate() }.getOrNull()
+        }
+            .distinct()
+            .sorted()
+            .map { date -> date.format(DateTimeFormatter.ofPattern("EEEE", java.util.Locale.ENGLISH)) }
+            .distinct()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val showLiveIndicators: StateFlow<Boolean> = combine(allSessions, currentTime, _selectedYear) { sessions, time, year ->
+        if (year != SessionRepository.CURRENT_YEAR) false
+        else sessions.any { session ->
+            runCatching { Instant.parse(session.endTimeZulu).isAfter(time) }.getOrDefault(false)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     // Sessions filtered by selected day only (used for calculating dynamic filter options)
     val daySessions: StateFlow<List<Session>> = combine(allSessions, _selectedDay) { list, day ->
@@ -125,16 +161,41 @@ class TimelineViewModel(
         filtered
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val groupedSessions: StateFlow<Map<String, List<Session>>> = sessions.map { list ->
-        list.sortedWith(
+val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList ->
+    val grouped = sessionList
+        .sortedWith(
             compareBy<Session> { it.startTimeZulu }
                 .thenBy { extractRoomNumber(it.room) }
                 .thenBy { it.room },
-        ).groupBy { formatTime(it.startTimeZulu) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+        )
+        .groupBy { session ->
+            val date = runCatching { Instant.parse(session.startTimeZulu).atZone(ZoneId.of("Europe/Oslo")).toLocalDate() }.getOrNull()
+            "${date ?: java.time.LocalDate.MIN}|${formatTime(session.startTimeZulu)}"
+        }
+    val multiDay = grouped.keys.map { it.substringBefore('|') }.distinct().size > 1
+    grouped.map { (key, groupSessions) ->
+        val dayKey = runCatching {
+            java.time.LocalDate.parse(key.substringBefore('|'))
+                .format(DateTimeFormatter.ofPattern("EEEE", java.util.Locale.ENGLISH))
+        }.getOrDefault("")
+        val time = key.substringAfter('|')
+        AgendaGroup(
+            key = key,
+            headerLabel = if (multiDay) "${shortDayName(dayKey)} $time".trim() else time,
+            sessions = groupSessions
+        )
+    }
+}.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _isLoading = MutableStateFlow(value = true)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    val isLoading: StateFlow<Boolean> = combine(
+        _isLoading,
+        _selectedYear,
+        repository.archiveLoadingFlow()
+    ) { initialLoading, year, loadingMap ->
+        if (year == SessionRepository.CURRENT_YEAR) initialLoading
+        else loadingMap[year] ?: false
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     private var hasAutoSelectedDay = false
     private var hasScrolledForDay = false
@@ -149,9 +210,11 @@ class TimelineViewModel(
         }
         // Auto-select current day matching effective currentTime (including simulated time settings)
         viewModelScope.launch {
-            combine(allSessions, currentTime) { list, time -> list to time }
-                .collect { (list, time) ->
-                    if (!hasAutoSelectedDay && list.isNotEmpty()) {
+            combine(allSessions, currentTime, _selectedYear) { list, time, year -> list to (time to year) }
+                .collect { (list, pair) ->
+                    val time = pair.first
+                    val year = pair.second
+                    if (!hasAutoSelectedDay && year == SessionRepository.CURRENT_YEAR && list.isNotEmpty()) {
                         val currentDayName = try {
                             time.atZone(ZoneId.of("Europe/Oslo")).format(DateTimeFormatter.ofPattern("EEEE", java.util.Locale.ENGLISH))
                         } catch (_: Exception) { "" }
@@ -171,6 +234,27 @@ class TimelineViewModel(
             while (true) {
                 _currentTime.value = Instant.now()
                 delay(Duration.ofMinutes(1).toMillis())
+            }
+        }
+    }
+
+    fun setYear(year: Int) {
+        if (year == _selectedYear.value) return
+        _selectedYear.value = year
+        // Reset filters that don't make sense across years
+        _selectedDay.value = null
+        _selectedFormat.value = null
+        _selectedLanguage.value = null
+        _selectedRoom.value = null
+        _filterSpeaker.value = null
+        _searchQuery.value = ""
+        _onlyFavorites.value = false
+        hasScrolledForDay = true
+        if (year == SessionRepository.CURRENT_YEAR) {
+            hasAutoSelectedDay = false
+        } else {
+            viewModelScope.launch {
+                repository.loadArchiveSessions(year)
             }
         }
     }
@@ -223,6 +307,7 @@ class TimelineViewModel(
     }
 
     fun toggleFavorite(session: Session) {
+        if (_selectedYear.value != SessionRepository.CURRENT_YEAR) return
         viewModelScope.launch {
             repository.toggleFavorite(session.id, !session.isFavorite)
         }
