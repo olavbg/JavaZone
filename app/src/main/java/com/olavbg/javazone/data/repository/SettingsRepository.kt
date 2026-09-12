@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 
@@ -51,6 +52,18 @@ class SettingsRepository(private val context: Context) {
     suspend fun updateSimulatedTimeOffset(offsetMillis: Long) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.SIMULATED_TIME_OFFSET] = offsetMillis
+        }
+    }
+
+    suspend fun isConferenceDoneNotified(year: Int): Boolean {
+        val key = booleanPreferencesKey("conference_done_notified_$year")
+        return context.dataStore.data.first()[key] ?: false
+    }
+
+    suspend fun markConferenceDoneNotified(year: Int) {
+        val key = booleanPreferencesKey("conference_done_notified_$year")
+        context.dataStore.edit { preferences ->
+            preferences[key] = true
         }
     }
 }

@@ -9,6 +9,7 @@ import com.olavbg.javazone.data.remote.SleepingPillApi
 import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.model.Speaker
 import com.olavbg.javazone.notifications.ReminderManager
+import com.olavbg.javazone.notifications.handleConferenceDoneReminder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.time.Instant
 
 class SessionRepository(
     private val api: SleepingPillApi,
@@ -101,6 +103,28 @@ class SessionRepository(
         sessions.filter { favoriteIds.contains(it.id) }.forEach { entity ->
             reminderManager?.scheduleReminder(entity.toDomainModel(true), leadTime, timeOffset)
         }
+        rescheduleConferenceDoneReminder(timeOffset)
+    }
+
+    suspend fun rescheduleConferenceDoneReminder() {
+        val timeOffset = settingsRepository?.simulatedTimeOffset?.first() ?: 0L
+        rescheduleConferenceDoneReminder(timeOffset)
+    }
+
+    suspend fun rescheduleConferenceDoneReminder(timeOffset: Long) {
+        val reminderManager = reminderManager ?: return
+        val sessions = dao.getAllSessions().first()
+        val maxEndMillis = sessions.mapNotNull {
+            runCatching { Instant.parse(it.endTimeZulu).toEpochMilli() }.getOrNull()
+        }.maxOrNull()
+
+        handleConferenceDoneReminder(
+            reminderManager = reminderManager,
+            settingsRepository = settingsRepository,
+            conferenceEndMillis = maxEndMillis,
+            timeOffsetMillis = timeOffset,
+            year = CURRENT_YEAR
+        )
     }
 
     suspend fun toggleFavorite(sessionId: String, isFavorite: Boolean) {

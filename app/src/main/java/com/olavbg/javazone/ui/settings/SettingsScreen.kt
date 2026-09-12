@@ -1,12 +1,12 @@
 package com.olavbg.javazone.ui.settings
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +24,9 @@ import android.net.Uri
 import android.os.Build
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.CheckCircle
+import com.olavbg.javazone.BuildConfig
+import com.olavbg.javazone.notifications.ConferenceDoneReceiver
+import com.olavbg.javazone.ui.components.DonationButtons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,9 +95,9 @@ fun SettingsContent(
                 .padding(horizontal = 16.dp)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 SettingsSection(title = "Permissions") {
                     Card(
@@ -147,17 +150,10 @@ fun SettingsContent(
 
             SettingsSection(title = "Notifications") {
                 Text(
-                    "Notification Lead Time",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
                     "How many minutes before a session starts should you be notified?",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                
                 val options = listOf(5, 10, 15)
                 options.forEach { minutes ->
                     Row(
@@ -170,8 +166,16 @@ fun SettingsContent(
                         )
                         Text(
                             text = "$minutes minutes",
+                            style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(start = 8.dp)
                         )
+                    }
+                }
+                if (BuildConfig.DEBUG) {
+                    TextButton(
+                        onClick = { ConferenceDoneReceiver.showConferenceDoneNotification(context) }
+                    ) {
+                        Text("Send test notification now")
                     }
                 }
             }
@@ -180,52 +184,74 @@ fun SettingsContent(
 
             SettingsSection(title = "Time Simulation") {
                 Text(
-                    "Simulated Time",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
                     "Simulate the app's current time. Useful for demoing 'NOW' indicator and past session logic.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Card(
-                    onClick = { showDatePicker = true },
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true }
+                        .padding(vertical = 4.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Current Simulation:", style = MaterialTheme.typography.labelMedium)
-                            Text(
-                                if (simulatedTimeOffset == 0L) "Actual Time" else simulatedDateTime.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, HH:mm")),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        if (simulatedTimeOffset != 0L) {
-                            IconButton(onClick = onResetSimulation) {
-                                Icon(Icons.Rounded.Restore, contentDescription = "Reset Simulation")
-                            }
-                        }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Current Simulation", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            if (simulatedTimeOffset == 0L) "Actual Time" else simulatedDateTime.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, HH:mm")),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
-
                 Button(
                     onClick = onResetSimulation,
                     enabled = simulatedTimeOffset != 0L,
-                    modifier = Modifier.align(Alignment.End)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Reset to Actual Time")
                 }
-                
-                Spacer(modifier = Modifier.height(32.dp + contentPadding.calculateBottomPadding()))
             }
+
+            HorizontalDivider()
+
+            SettingsSection(title = "About") {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        modifier = Modifier.padding(20.dp)
+                    ) {
+                        Text(
+                            "Dette er en helt uoffisiell app, laget av en JavaZone-fan med et hobbyprosjekt som har fått eget liv. Målet er å utforske nye teknologier på fritiden, og å leke med AI.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            "Ja, appen er hovedsakelig vibe-kodet: AI-assistentene har banket på tastaturet mens jeg har stått bak og sagt \"Det ser bra ut!\". Mesteparten av tiden fungerer det overraskende bra. Resten av tiden er jeg glad for at dette kun er et hobbyprosjekt.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            "Uten JavaZone og JavaBin sine åpne API-er ville dette bare vært en god idé uten innhold. Takk for at dere deler!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            "Liker du app'en, og har lyst til å støtte videreutviklingen? Da setter jeg pris på et lite bidrag – enten via Vipps, eller \"Buy Me a Coffee\":",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        DonationButtons(modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp + contentPadding.calculateBottomPadding()))
         }
     }
 
@@ -310,7 +336,7 @@ fun SettingsSection(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = title,
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold
         )

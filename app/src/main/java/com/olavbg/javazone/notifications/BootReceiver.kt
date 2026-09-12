@@ -6,11 +6,13 @@ import android.content.Intent
 import androidx.room.Room
 import com.olavbg.javazone.data.local.AppDatabase
 import com.olavbg.javazone.data.repository.SettingsRepository
+import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.model.Session
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.time.Instant
 
 class BootReceiver : BroadcastReceiver() {
 
@@ -55,6 +57,18 @@ class BootReceiver : BroadcastReceiver() {
                 )
                 reminderManager.scheduleReminder(session, leadTime, timeOffset)
             }
+
+            val maxEndMillis = sessions.mapNotNull {
+                runCatching { Instant.parse(it.endTimeZulu).toEpochMilli() }.getOrNull()
+            }.maxOrNull()
+            handleConferenceDoneReminder(
+                reminderManager = reminderManager,
+                settingsRepository = settingsRepository,
+                conferenceEndMillis = maxEndMillis,
+                timeOffsetMillis = timeOffset,
+                year = SessionRepository.CURRENT_YEAR
+            )
+
             pendingResult.finish()
         }
     }

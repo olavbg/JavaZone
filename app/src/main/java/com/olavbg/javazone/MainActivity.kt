@@ -16,6 +16,7 @@ import com.olavbg.javazone.data.local.AppDatabase
 import com.olavbg.javazone.data.remote.SleepingPillApi
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
+import com.olavbg.javazone.notifications.ConferenceDoneReceiver
 import com.olavbg.javazone.notifications.ReminderManager
 import com.olavbg.javazone.ui.JavaZoneApp
 import com.olavbg.javazone.ui.theme.JavaZoneTheme
@@ -60,11 +61,21 @@ class MainActivity : ComponentActivity() {
         val repository = SessionRepository(api, db.sessionDao(), reminderManager, settingsRepository)
 
         val initialSessionId = intent.getStringExtra("session_id")
+        val initialShowDonation = intent.getBooleanExtra(
+            ConferenceDoneReceiver.EXTRA_SHOW_DONATION_DIALOG,
+            false
+        )
 
         enableEdgeToEdge()
         setContent {
             JavaZoneTheme {
-                JavaZoneApp(repository, settingsRepository, reminderManager, initialSessionId)
+                JavaZoneApp(
+                    repository,
+                    settingsRepository,
+                    reminderManager,
+                    initialSessionId,
+                    initialShowDonation
+                )
             }
         }
     }

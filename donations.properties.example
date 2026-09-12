@@ -1,0 +1,16 @@
+# Kopier denne filen til "donations.properties" og fyll inn dine egne verdier.
+# donations.properties er gitignored, så de personlige verdiene havner ikke i et offentlig repo.
+#
+# vipps.boxUrl = Linken til din Vipps "Boks" (kasse), f.eks:
+#   https://qr.vipps.no/box/12345678-aaaa-bbbb-cccc-123456789abc/pay-in
+#   Slik lager du en boks: Vipps-appen -> Fanen "Boks"/"Kasse" -> "Opprett boks".
+#   Deretter deler du boksen og kopierer lenken.
+#   Lenken er en universallink: åpnes i Vipps-appen når den er installert,
+#   ellers faller den tilbake til nettleser/landingsside.
+#
+# buymeacoffee.username = Brukernavnet ditt på buymeacoffee.com, f.eks:
+#   olavgulb
+#
+# Tomme verdier skjuler den aktuelle knappen i appen.
+vipps.boxUrl=
+buymeacoffee.username=

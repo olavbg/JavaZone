@@ -5,6 +5,18 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
 
+import java.util.Properties
+
+val donationsProperties = Properties().apply {
+    val file = rootProject.file("donations.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+fun donationProp(key: String): String =
+    donationsProperties.getProperty(key)?.trim().orEmpty()
+
 android {
     namespace = "com.olavbg.javazone"
     compileSdk {
@@ -19,6 +31,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "VIPPS_BOX_URL", "\"${donationProp("vipps.boxUrl")}\"")
+        buildConfigField("String", "BUY_ME_A_COFFEE_USERNAME", "\"${donationProp("buymeacoffee.username")}\"")
     }
 
     buildTypes {
@@ -34,6 +49,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
