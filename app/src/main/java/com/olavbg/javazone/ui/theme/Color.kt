@@ -6,8 +6,8 @@ import androidx.compose.ui.graphics.Color
 val FreshGreen = Color(0xFF9DB8A5)
 val DeepBlue = Color(0xFF667B9B)
 val DarkBackground = Color(0xFF17191E)
-val DarkSurface = Color(0xFF202329)
-val DarkSurfaceVariant = Color(0xFF30343C)
+val DarkSurface = Color(0xE6202329) // Slight translucency lets the diagonal identity show through.
+val DarkSurfaceVariant = Color(0xD930343C)
 val DarkOnSurface = Color(0xFFF1F0ED)
 
 val JavaBlue = Color(0xFF8FA9C7)
@@ -29,6 +29,6 @@ val RoomAccentColors = listOf(
 )
 
 val LightBackground = Color(0xFFF2F0EC)
-val LightSurface = Color(0xFFFAF9F6)
-val LightSurfaceVariant = Color(0xFFE3E1DD)
+val LightSurface = Color(0xEAFAF9F6)
+val LightSurfaceVariant = Color(0xDDE3E1DD)
 val LightOnSurface = Color(0xFF202228)
