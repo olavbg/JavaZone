@@ -2,47 +2,71 @@ package com.olavbg.javazone.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.olavbg.javazone.ui.components.AnimatedDiagonalBackground
 
 private val DarkColorScheme = darkColorScheme(
-    primary = FreshGreen,
-    secondary = JavaBlue,
-    tertiary = JavaOrange,
-    background = DarkBackground,
-    surface = DarkSurface,
-    onPrimary = Color.Black,
-    onSecondary = Color.White,
-    onTertiary = Color.Black,
+    primary = AccentMintLight,
+    secondary = AccentBlueLight,
+    tertiary = AccentRoseLight,
+    onPrimary = Color(0xFF0E1A14),
+    onSecondary = Color(0xFF101A24),
+    onTertiary = Color(0xFF250E15),
+    background = DarkBackground.copy(alpha = 0.45f),
+    surface = DarkSurface.copy(alpha = 0.74f),
+    surfaceVariant = DarkSurfaceVariant.copy(alpha = 0.66f),
+    surfaceContainer = DarkSurface.copy(alpha = 0.74f),
+    surfaceContainerHigh = DarkSurface.copy(alpha = 0.78f),
     onBackground = DarkOnSurface,
     onSurface = DarkOnSurface,
-    surfaceVariant = DarkSurfaceVariant,
-    onSurfaceVariant = Color(0xFF94A3B8),
-    secondaryContainer = Color(0xFF1E3A8A),
-    onSecondaryContainer = Color(0xFFDBEAFE),
+    onSurfaceVariant = Color(0xFFA6AEB8),
+    outlineVariant = DarkOutline,
+    primaryContainer = Color(0xFF2E5242).copy(alpha = 0.80f),
+    onPrimaryContainer = Color(0xFFC8EEDA),
+    secondaryContainer = Color(0xFF34445A).copy(alpha = 0.80f),
+    onSecondaryContainer = Color(0xFFD0DFEE),
+    tertiaryContainer = Color(0xFF59343F).copy(alpha = 0.80f),
+    onTertiaryContainer = Color(0xFFF2CCD5),
+    error = Color(0xFFF2B8B5),
+    errorContainer = Color(0xFF4A292B).copy(alpha = 0.80f),
+    onErrorContainer = Color(0xFFF5CDCB)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = DeepBlue,
-    secondary = FreshGreen,
-    tertiary = JavaOrange,
-    background = Color(0xFFF1F5F9),
-    surface = Color.White,
+    primary = Color(0xFF3C7A63),
+    secondary = Color(0xFF5A7FA4),
+    tertiary = Color(0xFFB0677E),
     onPrimary = Color.White,
-    onSecondary = Color.Black,
-    onTertiary = Color.Black,
-    onBackground = Color(0xFF0F172A),
-    onSurface = Color(0xFF0F172A),
-    surfaceVariant = Color(0xFFE2E8F0),
-    onSurfaceVariant = Color(0xFF64748B),
-    secondaryContainer = Color(0xFFDBEAFE),
-    onSecondaryContainer = Color(0xFF1E3A8A),
+    onSecondary = Color.White,
+    onTertiary = Color.White,
+    background = LightBackground.copy(alpha = 0.75f),
+    surface = LightSurface.copy(alpha = 0.84f),
+    surfaceVariant = LightSurfaceVariant.copy(alpha = 0.80f),
+    surfaceContainer = LightSurface.copy(alpha = 0.88f),
+    surfaceContainerHigh = LightSurface.copy(alpha = 0.92f),
+    onBackground = LightOnSurface,
+    onSurface = LightOnSurface,
+    onSurfaceVariant = Color(0xFF5C646C),
+    outlineVariant = Color(0xFFDDE1E5),
+    primaryContainer = Color(0xFFD3EBE0).copy(alpha = 0.90f),
+    onPrimaryContainer = Color(0xFF22463A),
+    secondaryContainer = Color(0xFFD9E4F0).copy(alpha = 0.90f),
+    onSecondaryContainer = Color(0xFF2B3D51),
+    tertiaryContainer = Color(0xFFF0DDE3).copy(alpha = 0.90f),
+    onTertiaryContainer = Color(0xFF5E3340),
+    error = Color(0xFFB4544D),
+    errorContainer = Color(0xFFF6DFDC).copy(alpha = 0.90f),
+    onErrorContainer = Color(0xFF6E2926)
 )
 
 @Composable
@@ -64,7 +88,18 @@ fun JavaZoneTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        shapes = Shapes,
-        content = content
-    )
+        shapes = Shapes
+    ) {
+        // Theme-level background: the animated diagonal stays consistent across all
+        // screens and navigation transitions, behind the translucent surfaces.
+        Box(modifier = Modifier.fillMaxSize()) {
+            AnimatedDiagonalBackground(
+                baseColor = if (darkTheme) DarkBackground else LightBackground,
+                tintPrimary = if (darkTheme) DiagonalMintLight else AccentMint,
+                tintSecondary = if (darkTheme) DiagonalBlueLight else AccentBlue,
+                modifier = Modifier.fillMaxSize()
+            )
+            content()
+        }
+    }
 }

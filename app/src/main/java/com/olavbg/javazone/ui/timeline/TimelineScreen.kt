@@ -25,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
@@ -34,13 +36,17 @@ import androidx.compose.ui.unit.sp
 import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.ui.components.FormatBadge
 import com.olavbg.javazone.ui.components.RoomTag
+import com.olavbg.javazone.ui.components.sharedElementModifier
 import com.olavbg.javazone.ui.theme.*
 import com.olavbg.javazone.util.*
 import java.time.Duration
 import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlin.math.abs
+
+// How many list items are skipped between warm-up scroll probes. Roughly one
+// screen worth of rows, so every slot gets composed at least once during the
+// hidden pre-scroll pass.
+private const val WARMUP_STEP_ITEMS = 8
 
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -51,6 +57,7 @@ fun TimelineScreen(
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
+    sharedScope: SharedTransitionScope? = null,
 ) {
     val sessions by viewModel.sessions.collectAsState()
     val groupedSessions by viewModel.groupedSessions.collectAsState()
@@ -83,6 +90,7 @@ fun TimelineScreen(
     }
 
     val listState = rememberLazyListState()
+    val yearState = rememberUpdatedState(selectedYear)
 
     var previousYear by remember { mutableStateOf(selectedYear) }
 
@@ -94,59 +102,102 @@ fun TimelineScreen(
         }
     }
 
-    // Auto-scroll to active or upcoming time slot when day changes or data first arrives
+    // Auto-scroll to active or upcoming time slot when day changes or data first arrives.
     LaunchedEffect(groupedSessions, selectedDay) {
         if (groupedSessions.isNotEmpty() && viewModel.shouldScrollToNow()) {
             val activeIndex = findFirstActiveOrUpcomingIndex(groupedSessions, currentTime)
             if (activeIndex > 0) {
-                listState.scrollToItem(activeIndex)
+                listState.animateScrollToItem(activeIndex)
             }
             viewModel.markScrolledToNow()
         }
     }
 
-    Scaffold(
-        topBar = {
-            TimelineHeader(
-                selectedDay = selectedDay,
-                onDaySelected = viewModel::setDay,
-                onlyFavorites = onlyFavorites,
-                onFavoritesToggled = viewModel::setOnlyFavorites,
-                selectedFormat = selectedFormat,
-                onFormatSelected = viewModel::setFormat,
-                availableFormats = availableFormats,
-                selectedLanguage = selectedLanguage,
-                onLanguageSelected = viewModel::setLanguage,
-                availableLanguages = availableLanguages,
-                selectedRoom = selectedRoom,
-                onRoomSelected = viewModel::setRoom,
-                availableRooms = roomsList,
-                searchQuery = searchQuery,
-                onSearchQueryChange = viewModel::setSearchQuery,
-                isSearchVisible = isSearchVisible,
-                onToggleSearch = {
-                    isSearchVisible = !isSearchVisible
-                    if (!isSearchVisible) viewModel.setSearchQuery("")
-                },
-                onSettingsClick = onSettingsClick,
-                selectedYear = selectedYear,
-                onYearClick = { isYearPickerVisible = true },
-                availableDays = availableDays,
-            )
-        },
-        modifier = modifier,
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.primary
+    // Loading gate. While this flag is false the timeline is rendered behind an
+    // opaque, input-blocking overlay. It flips to true only after the backend
+    // refresh has settled AND a single warm-up pass has composed every row, so
+    // the user never sees the first-composition / JIT hiccups on the first
+    // scroll attempt. There is deliberately no timeout: we wait on real events
+    // (refresh completion + list layout) only.
+    val isAlreadyLoaded = !isLoading && groupedSessions.isNotEmpty()
+    var contentReady by remember { mutableStateOf(isAlreadyLoaded) }
+    LaunchedEffect(isLoading, groupedSessions) {
+        if (contentReady || isLoading) return@LaunchedEffect
+        if (groupedSessions.isEmpty()) {
+            // Nothing to assemble yet (empty cache + fetch still pending or failed).
+            // Wait for the flag to relax instead of flipping ready early: keep the
+            // overlay up until isLoading turns false so resetting no-empty state
+            // never flashes.
+            if (!isLoading) contentReady = true
+            return@LaunchedEffect
+        }
+        // Let the first layout of the newly-arrived data settle.
+        withFrameNanos { }
+        withFrameNanos { }
+
+        // Warm-up: pre-compose only a small window of rows. All rows share the same
+        // composable functions, so first-composition / JIT cost is paid once per row
+        // *type* — hopping through the whole 150+ item agenda would only repeat the
+        // same work while nailing the UI thread (and the frame clock that drives the
+        // loading spinner) for seconds. Compose a view around "now" and the list top,
+        // yielding a real frame between probes so the spinner keeps animating.
+        val totalItems = groupedSessions.sumOf { 1 + it.sessions.size }
+        val activeIndex = findFirstActiveOrUpcomingIndex(groupedSessions, currentTime)
+        val probes = listOf(0, activeIndex)
+            .filter { it in 0 until totalItems }
+            .distinct()
+        for (probe in probes) {
+            listState.scrollToItem(probe)
+            withFrameNanos { }
+        }
+        // Restore the "now" position.
+        listState.scrollToItem(activeIndex)
+        withFrameNanos { }
+        contentReady = true
+    }
+
+    Box(
+        modifier = modifier.fillMaxSize()
+    ) {
+        Scaffold(
+            topBar = {
+                TimelineHeader(
+                    selectedDay = selectedDay,
+                    onDaySelected = viewModel::setDay,
+                    onlyFavorites = onlyFavorites,
+                    onFavoritesToggled = viewModel::setOnlyFavorites,
+                    selectedFormat = selectedFormat,
+                    onFormatSelected = viewModel::setFormat,
+                    availableFormats = availableFormats,
+                    selectedLanguage = selectedLanguage,
+                    onLanguageSelected = viewModel::setLanguage,
+                    availableLanguages = availableLanguages,
+                    selectedRoom = selectedRoom,
+                    onRoomSelected = viewModel::setRoom,
+                    availableRooms = roomsList,
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = viewModel::setSearchQuery,
+                    isSearchVisible = isSearchVisible,
+                    onToggleSearch = {
+                        isSearchVisible = !isSearchVisible
+                        if (!isSearchVisible) viewModel.setSearchQuery("")
+                    },
+                    onSettingsClick = onSettingsClick,
+                    selectedYear = selectedYear,
+                    onYearClick = { isYearPickerVisible = true },
+                    availableDays = availableDays,
                 )
-            } else {
+            },
+            modifier = Modifier.fillMaxSize(),
+        ) { padding ->
+            // The list is always composed here — even behind the loading overlay —
+            // so first-composition / JIT cost is paid once, hidden, instead of on
+            // the user's first scroll.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -200,11 +251,12 @@ fun TimelineScreen(
                             currentTime = currentTime,
                             listState = listState,
                             onSessionClick = { session ->
-                                onSessionClick(session.id, selectedYear)
+                                onSessionClick(session.id, yearState.value)
                             },
                             onFavoriteClick = viewModel::toggleFavorite,
                             showFavorite = isCurrentYear,
                             liveIndicators = showLiveIndicators,
+                            sharedScope = sharedScope,
                             contentPadding = PaddingValues(
                                 bottom = 32.dp + contentPadding.calculateBottomPadding()
                             )
@@ -213,19 +265,67 @@ fun TimelineScreen(
                 }
             }
         }
-    }
 
-    if (isYearPickerVisible) {
-        YearPickerSheet(
-            years = availableYears,
-            sessionCountsByYear = viewModel.sessionCountsByYear,
-            selectedYear = selectedYear,
-            onYearSelected = { year ->
-                viewModel.setYear(year)
-                isYearPickerVisible = false
-            },
-            onDismiss = { isYearPickerVisible = false }
-        )
+        // Full-screen loading gate. Covers the top bar too so the user cannot
+        // interact until the timeline is assembled and warmed up.
+        val showLoadingOverlay = !contentReady || isLoading
+        if (showLoadingOverlay) {
+            TimelineLoadingOverlay(
+                text = if (isCurrentYear) {
+                    "Laster inn foredrag…"
+                } else {
+                    "Laster inn programmet for JavaZone $selectedYear…"
+                }
+            )
+        }
+
+        if (isYearPickerVisible) {
+            YearPickerSheet(
+                years = availableYears,
+                sessionCountsByYear = viewModel.sessionCountsByYear,
+                selectedYear = selectedYear,
+                onYearSelected = { year ->
+                    viewModel.setYear(year)
+                    isYearPickerVisible = false
+                },
+                onDismiss = { isYearPickerVisible = false }
+            )
+        }
+    }
+}
+
+@Composable
+private fun TimelineLoadingOverlay(text: String) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            // Swallow every pointer event so the LazyColumn (and settings/other
+            // corners) cannot scroll or react while the timeline is still warming up.
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        event.changes.forEach { it.consume() }
+                    }
+                }
+            }
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            CircularProgressIndicator(
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -333,7 +433,7 @@ fun TimelineHeader(
                         Spacer(modifier = Modifier.width(6.dp))
                         Surface(
                             onClick = onYearClick,
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(6.dp),
                             color = MaterialTheme.colorScheme.primaryContainer,
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                         ) {
@@ -511,7 +611,8 @@ fun AgendaListView(
     onFavoriteClick: (Session) -> Unit,
     showFavorite: Boolean = true,
     liveIndicators: Boolean = true,
-    contentPadding: PaddingValues = PaddingValues(bottom = 32.dp)
+    contentPadding: PaddingValues = PaddingValues(bottom = 32.dp),
+    sharedScope: SharedTransitionScope? = null,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         // Continuous Vertical Guide Line (positioned at x = 36.dp)
@@ -556,12 +657,13 @@ fun AgendaListView(
                 ) { _, session ->
                     TimelineSessionRow(
                         session = session,
-                        isPast = liveIndicators && isSessionPast(session.endTimeZulu, currentTime),
+                        isPast = liveIndicators && isSessionPast(session, currentTime),
                         isActive = liveIndicators && isSessionActive(session, currentTime),
                         currentTime = currentTime,
-                        onFavoriteClick = { onFavoriteClick(session) },
-                        onClick = { onSessionClick(session) },
-                        showFavorite = showFavorite
+                        onFavoriteClick = remember(session) { { onFavoriteClick(session) } },
+                        onClick = remember(session) { { onSessionClick(session) } },
+                        showFavorite = showFavorite,
+                        sharedScope = sharedScope
                     )
                 }
             }
@@ -576,7 +678,9 @@ fun TimelineStickyTimeHeader(
     sessionCount: Int
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
+        // Same background tint as before, but translucent enough for the animated
+        // diagonal background to show through behind the sticky time divider.
+        color = MaterialTheme.colorScheme.background.copy(alpha = 0.10f),
         tonalElevation = 2.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -654,7 +758,8 @@ fun TimelineSessionRow(
     currentTime: Instant,
     onFavoriteClick: () -> Unit,
     onClick: () -> Unit,
-    showFavorite: Boolean = true
+    showFavorite: Boolean = true,
+    sharedScope: SharedTransitionScope? = null
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -693,7 +798,7 @@ fun TimelineSessionRow(
                         when {
                             isActive -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
                             isPast -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                            else -> FreshGreen
+                            else -> MaterialTheme.colorScheme.primary
                         }
                     )
                     .border(
@@ -718,6 +823,7 @@ fun TimelineSessionRow(
                 onFavoriteClick = onFavoriteClick,
                 onClick = onClick,
                 showFavorite = showFavorite,
+                sharedScope = sharedScope,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -733,9 +839,11 @@ fun DetailedSessionCard(
     onFavoriteClick: () -> Unit,
     onClick: () -> Unit,
     showFavorite: Boolean = true,
+    sharedScope: SharedTransitionScope? = null,
     modifier: Modifier = Modifier
 ) {
     val alpha by animateFloatAsState(if (isPast) 0.55f else 1f, label = "alpha")
+    val id = session.id
 
     Card(
         onClick = onClick,
@@ -744,13 +852,13 @@ fun DetailedSessionCard(
             else MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 3.dp else 1.dp),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(10.dp),
         modifier = modifier
             .alpha(alpha)
             .border(
                 width = if (isActive) 1.5.dp else 0.5.dp,
                 color = if (isActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(10.dp)
             )
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -776,13 +884,23 @@ fun DetailedSessionCard(
                 }
                 RoomTag(room = session.room)
                 Spacer(modifier = Modifier.width(8.dp))
-                FormatBadge(format = session.format)
+                FormatBadge(
+                    format = session.format,
+                    modifier = sharedElementModifier(sharedScope, "session-format-$id")
+                )
                 if (session.language != null) {
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (session.language.contains("no", ignoreCase = true)) "🇳🇴" else "🇬🇧",
-                        fontSize = 13.sp
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                    ) {
+                        Text(
+                            text = if (session.language.contains("no", ignoreCase = true)) "🇳🇴" else "🇬🇧",
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
                 }
                 if (showFavorite) {
                     Spacer(modifier = Modifier.weight(1f))
@@ -803,7 +921,8 @@ fun DetailedSessionCard(
                 text = session.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = sharedElementModifier(sharedScope, "session-title-$id")
             )
 
             if (session.speakers.isNotEmpty()) {
@@ -846,7 +965,7 @@ fun DetailedSessionCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "${formatTime(session.startTimeZulu)} – ${formatTime(session.endTimeZulu)}",
+                        text = "${formatTime(session.start)} – ${formatTime(session.end)}",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -867,7 +986,7 @@ fun DetailedSessionCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "${formatTime(session.startTimeZulu)} – ${formatTime(session.endTimeZulu)}",
+                        text = "${formatTime(session.start)} – ${formatTime(session.end)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp
@@ -939,55 +1058,34 @@ fun EmptyStateView(
 
 
 private fun isSessionActive(session: Session, currentTime: Instant): Boolean {
-    return try {
-        val start = Instant.parse(session.startTimeZulu)
-        val end = Instant.parse(session.endTimeZulu)
-        (currentTime.isAfter(start) || currentTime == start) && currentTime.isBefore(end)
-    } catch (_: Exception) {
-        false
-    }
+    val start = session.start ?: return false
+    val end = session.end ?: return false
+    return (currentTime.isAfter(start) || currentTime == start) && currentTime.isBefore(end)
 }
 
-private fun isSessionPast(endTimeZulu: String, currentTime: Instant): Boolean {
-    return try {
-        val end = Instant.parse(endTimeZulu)
-        currentTime.isAfter(end)
-    } catch (_: Exception) {
-        false
-    }
+private fun isSessionPast(session: Session, currentTime: Instant): Boolean {
+    val end = session.end ?: return false
+    return currentTime.isAfter(end)
 }
 
 private fun calculateSessionProgress(session: Session, currentTime: Instant): Float {
-    return try {
-        val start = Instant.parse(session.startTimeZulu)
-        val end = Instant.parse(session.endTimeZulu)
-        val total = Duration.between(start, end).toMillis()
-        val elapsed = Duration.between(start, currentTime).toMillis()
-        if (total <= 0) 0f else (elapsed.toFloat() / total.toFloat()).coerceIn(0f, 1f)
-    } catch (_: Exception) {
-        0f
-    }
+    val start = session.start ?: return 0f
+    val end = session.end ?: return 0f
+    val total = Duration.between(start, end).toMillis()
+    val elapsed = Duration.between(start, currentTime).toMillis()
+    return if (total <= 0) 0f else (elapsed.toFloat() / total.toFloat()).coerceIn(0f, 1f)
 }
 
 private fun calculateRemainingMinutes(session: Session, currentTime: Instant): Long {
-    return try {
-        val end = Instant.parse(session.endTimeZulu)
-        val remaining = Duration.between(currentTime, end).toMinutes()
-        if (remaining < 0) 0 else remaining
-    } catch (_: Exception) {
-        0
-    }
+    val end = session.end ?: return 0
+    val remaining = Duration.between(currentTime, end).toMinutes()
+    return if (remaining < 0) 0 else remaining
 }
 
-
 private fun calculateMinutesUntilStart(session: Session, currentTime: Instant): Long {
-    return try {
-        val start = Instant.parse(session.startTimeZulu)
-        val minutes = Duration.between(currentTime, start).toMinutes()
-        if (minutes < 0) 0 else minutes
-    } catch (_: Exception) {
-        0
-    }
+    val start = session.start ?: return 0
+    val minutes = Duration.between(currentTime, start).toMinutes()
+    return if (minutes < 0) 0 else minutes
 }
 
 private fun extractRoomNumber(room: String): Int {
@@ -1004,9 +1102,7 @@ private fun findFirstActiveOrUpcomingIndex(
 
     for (group in groupedSessions) {
         val anyActive = group.sessions.any { isSessionActive(it, currentTime) }
-        val isFuture = group.sessions.firstOrNull()?.let {
-            try { Instant.parse(it.startTimeZulu).isAfter(currentTime) } catch (_: Exception) { false }
-        } ?: false
+        val isFuture = group.sessions.firstOrNull()?.start?.isAfter(currentTime) ?: false
 
         if (anyActive) {
             return index

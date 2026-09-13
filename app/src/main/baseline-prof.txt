@@ -1,0 +1,97 @@
+# Hand-written baseline profile for JavaZone.
+#
+# Generated on-device profiles (run ./gradlew :app:generateReleaseBaselineProfile
+# with a connected device/emulator) will supersede this file. It exists so
+# release APKs get useful AOT coverage even before generation has been run.
+#
+# Format: Human Readable Format.
+# Method rules:      H=hot, S=startup, P=post-startup, L=leaf (e.g. HSPL<cls>-><method>)
+# Class rules:       only L (leaf) is supported (e.g. L<cls>)
+
+# --- App startup -----------------------------------------------------------------
+Lcom/olavbg/javazone/MainActivity
+Lcom/olavbg/javazone/ui/JavaZoneAppKt
+Lcom/olavbg/javazone/ui/theme/ThemeKt
+Lcom/olavbg/javazone/ui/theme/ColorKt
+Lcom/olavbg/javazone/ui/theme/TypeKt
+Lcom/olavbg/javazone/ui/theme/ShapeKt
+
+# --- Timeline screen + rows (travel fast, many items) ---------------------------
+Lcom/olavbg/javazone/ui/timeline/TimelineScreenKt
+Lcom/olavbg/javazone/ui/timeline/TimelineViewModel
+Lcom/olavbg/javazone/ui/timeline/TimelineViewModelFactory
+Lcom/olavbg/javazone/ui/detail/SessionDetailScreenKt
+Lcom/olavbg/javazone/ui/settings/SettingsScreenKt
+Lcom/olavbg/javazone/ui/components/AnimatedDiagonalBackgroundKt
+Lcom/olavbg/javazone/ui/components/CommonUiKt
+Lcom/olavbg/javazone/ui/components/DonationContentKt
+Lcom/olavbg/javazone/ui/navigation/NavDestinationsKt
+
+# --- Domain model -----------------------------------------------------------------
+Lcom/olavbg/javazone/model/Session
+Lcom/olavbg/javazone/model/Speaker
+Lcom/olavbg/javazone/util/DateTimeUtilsKt
+
+# --- Data layer (Room + Retrofit + Moshi) ----------------------------------------
+Lcom/olavbg/javazone/data/local/AppDatabase
+Lcom/olavbg/javazone/data/local/SessionDao_Impl
+Lcom/olavbg/javazone/data/local/ConvertersKt
+Lcom/olavbg/javazone/data/repository/SessionRepository
+Lcom/olavbg/javazone/data/repository/SettingsRepository
+Lcom/olavbg/javazone/data/remote/SleepingPillApi
+
+# --- Notification receivers (post-startup) ---------------------------------------
+Lcom/olavbg/javazone/notifications/ReminderManager
+Lcom/olavbg/javazone/notifications/SessionReminderReceiver
+Lcom/olavbg/javazone/notifications/ConferenceDoneReceiver
+Lcom/olavbg/javazone/notifications/BootReceiver
+
+# --- Well-known Compose runtime / UI hot methods ---------------------------------
+HSPLandroidx/compose/runtime/ComposerImpl;->updateValue(Ljava/lang/Object;)V
+HSPLandroidx/compose/runtime/ComposerImpl;->recomposeToGroupEnd()V
+HSPLandroidx/compose/runtime/ComposerImpl;->recomposeToGroupEnd(ZZ)V
+HSPLandroidx/compose/runtime/ComposerImpl;->insertRootContent(Landroidx/compose/runtime/Composer;Z)V
+HSPLandroidx/compose/runtime/ComposerImpl;->startGroup()V
+HSPLandroidx/compose/runtime/ComposerImpl;->endGroup()V
+HSPLandroidx/compose/runtime/ComposerImpl;->startRestartGroup()I
+HSPLandroidx/compose/runtime/ComposerImpl;->startRestartGroup()Landroidx/compose/runtime/ComposerImpl;
+HSPLandroidx/compose/runtime/ComposerImpl;->endRestartGroup()Landroidx/compose/runtime/ScopeUpdateScope;
+HSPLandroidx/compose/runtime/ComposerImpl;->applyChanges()V
+HSPLandroidx/compose/runtime/ComposerImpl;->applyChangesInLocked(Landroidx/compose/runtime/ComposerImpl;Ljava/lang/Object;)V
+HSPLandroidx/compose/runtime/ComposerKt;->updateValueEquals(Ljava/lang/Object;Ljava/lang/Object;)Z
+HSPLandroidx/compose/runtime/ComposerKt;->recomposeToGroupEnd(ZZ)Landroidx/compose/runtime/MoveToGroupResult;
+HSPLandroidx/compose/runtime/ComposerKt;->startReusableGroup(Landroidx/compose/runtime/Composer;ILjava/lang/String;)V
+HSPLandroidx/compose/runtime/ComposerKt;->endReusableGroup(Landroidx/compose/runtime/Composer;)V
+HSPLandroidx/compose/runtime/ComposerKt;->startReusableNode()V
+HSPLandroidx/compose/runtime/ComposerKt;->endReusableNode()V
+HSPLandroidx/compose/runtime/ComposerKt;->startNode(Landroidx/compose/runtime/Composer;ZLjava/lang/String;)V
+HSPLandroidx/compose/runtime/ComposerKt;->endNode(Landroidx/compose/runtime/Composer;)V
+HSPLandroidx/compose/runtime/ComposerKt;->startGroup(Landroidx/compose/runtime/Composer;Ljava/lang/String;)V
+HSPLandroidx/compose/runtime/ComposerKt;->endGroup(Landroidx/compose/runtime/Composer;)V
+HSPLandroidx/compose/runtime/ComposerKt;->startRestartGroup(Landroidx/compose/runtime/Composer;I)V
+HSPLandroidx/compose/runtime/ComposerKt;->endRestartGroup(Landroidx/compose/runtime/Composer;)V
+HSPLandroidx/compose/runtime/ComposerKt;->buildDefaultComposer(Z)Landroidx/compose/runtime/Composer;
+HSPLandroidx/compose/runtime/ComposerKt;->remember(Landroidx/compose/runtime/Composer;)V
+HSPLandroidx/compose/runtime/MutableState;->getValue()Ljava/lang/Object;
+HSPLandroidx/compose/runtime/RecomposeScopeImpl;->negativeHit(Z)V
+HSPLandroidx/compose/runtime/RecomposeScopeImpl;->updateCachedValue(Ljava/lang/Object;Ljava/lang/Object;)V
+HSPLandroidx/compose/runtime/ScopeUpdateScopeImpl;->updateScope(Lkotlin/jvm/functions/Function2;)V
+HSPLandroidx/compose/runtime/SlotWriter;->beginGroup(Ljava/lang/Object;ILjava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Landroidx/compose/runtime/Anchor;
+HSPLandroidx/compose/runtime/SlotWriter;->endGroup()V
+HSPLandroidx/compose/runtime/SlotWriter;->resetSlotTable()V
+HSPLandroidx/compose/runtime/SlotWriter;->findPrecedingKey(ILjava/lang/Object;Landroidx/compose/runtime/Anchor;)I
+HSPLandroidx/compose/runtime/SlotWriter;->closesAnchor(Landroidx/compose/runtime/Anchor;)V
+HSPLandroidx/compose/runtime/SlotTable;->hasCompositionEndListener()V
+HSPLandroidx/compose/runtime/SlotTable;->getAnchor(I)Landroidx/compose/runtime/Anchor;
+HSPLandroidx/compose/runtime/SlotTable;->collectNodes()V
+HSPLandroidx/compose/runtime/ComposerLock;->lock()V
+HSPLandroidx/compose/runtime/CompositionLocalKt;->CompositionLocalProvider(Ljava/lang/Object;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+HSPLandroidx/compose/runtime/SaveableStateHolderImpl;->getStateHolder()V
+HSPLandroidx/compose/ui/platform/AndroidComposeView;->detachedFromWindow()V
+HSPLandroidx/compose/ui/layout/SubcomposedLayoutState;->getComposer()V
+HSPLandroidx/compose/ui/layout/LayoutNodeSubcompositionsState;->getComposer()V
+HSPLandroidx/compose/ui/platform/AndroidComposeViewAccessibilityDelegateCompat;->getAccessibilityManager()V
+
+# --- Coil image loading (speaker avatars in rows) ---------------------------------
+Lcoil/compose/AsyncImagePainter
+Lcoil/compose/SubcomposeAsyncImageKt

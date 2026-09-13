@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.compose.runtime.*
 import androidx.core.content.ContextCompat
 import androidx.room.Room
 import com.olavbg.javazone.data.local.AppDatabase
@@ -19,6 +20,7 @@ import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.notifications.ConferenceDoneReceiver
 import com.olavbg.javazone.notifications.ReminderManager
 import com.olavbg.javazone.ui.JavaZoneApp
+import com.olavbg.javazone.ui.components.LocalBackgroundReanimate
 import com.olavbg.javazone.ui.theme.JavaZoneTheme
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
@@ -68,14 +70,20 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            JavaZoneTheme {
-                JavaZoneApp(
-                    repository,
-                    settingsRepository,
-                    reminderManager,
-                    initialSessionId,
-                    initialShowDonation
-                )
+            var reanimateSignal by remember { mutableLongStateOf(0L) }
+            CompositionLocalProvider(
+                LocalBackgroundReanimate provides reanimateSignal
+            ) {
+                JavaZoneTheme {
+                    JavaZoneApp(
+                        repository,
+                        settingsRepository,
+                        reminderManager,
+                        initialSessionId,
+                        initialShowDonation,
+                        onNavigation = { reanimateSignal++ }
+                    )
+                }
             }
         }
     }

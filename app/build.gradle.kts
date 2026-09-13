@@ -1,11 +1,11 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.devtools.ksp)
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
-
-import java.util.Properties
 
 val donationsProperties = Properties().apply {
     val file = rootProject.file("donations.properties")
@@ -38,8 +38,15 @@ android {
 
     buildTypes {
         release {
+            // Signed with the debug keystore so release APKs can be installed via adb
+            // (no production signing keystore is configured yet).
+            signingConfig = signingConfigs.getByName("debug")
+
+            // AGP 9.3+ optimization DSL: enables R8 code shrinking + optimized resource
+            // shrinking. Default Android keep rules are included automatically; custom
+            // rules live in src/main/keepRules/*.keep.
             optimization {
-                enable = false
+                enable = true
             }
         }
     }
@@ -91,6 +98,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.play.services.location)
     implementation(libs.retrofit)
+    implementation(libs.androidx.profileinstaller)
     testImplementation(libs.androidx.core)
     testImplementation(libs.androidx.junit)
     testImplementation(libs.junit)

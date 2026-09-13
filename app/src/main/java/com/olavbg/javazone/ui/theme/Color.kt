@@ -2,27 +2,50 @@ package com.olavbg.javazone.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val FreshGreen = Color(0xFF00E676)
-val DeepBlue = Color(0xFF1E3A8A)
-val DarkBackground = Color(0xFF0F172A) // Rich slate navy background
-val DarkSurface = Color(0xFF1E293B)    // Elevated slate card surface
-val DarkSurfaceVariant = Color(0xFF334155) // Border/Header variant
-val DarkOnSurface = Color(0xFFF8FAFC)
+// ---- Calm dark neutrals (graphite, not black) ----
+val DarkBackground = Color(0xFF212529)
+val DarkSurface = Color(0xFF2C3138)
+val DarkSurfaceVariant = Color(0xFF39404A)
+val DarkOutline = Color(0xFF4A525C)
+val DarkOnSurface = Color(0xFFE8EAED)
 
-val JavaBlue = Color(0xFF2563EB)
-val JavaOrange = Color(0xFFF97316)
+// ---- Light neutrals ----
+val LightBackground = Color(0xFFF3F4F5)
+val LightSurface = Color(0xFFFAFBFB)
+val LightSurfaceVariant = Color(0xFFE7EAEC)
+val LightOnSurface = Color(0xFF1B1E21)
 
-val WorkshopPurple = Color(0xFFA855F7)
-val LightningAmber = Color(0xFFF59E0B)
-val PresentationBlue = Color(0xFF60A5FA) // Lighter blue for better contrast
+// ---- Muted pastel accents ----
+val AccentMint = Color(0xFF7BC4A6)
+val AccentBlue = Color(0xFF7B9EC7)
+val AccentPurple = Color(0xFF9B8AC4)
+val AccentAmber = Color(0xFFCBA963)
+val AccentRose = Color(0xFFC08093)
+val AccentTeal = Color(0xFF67A8A5)
+val AccentIndigo = Color(0xFF8C94C8)
+val AccentCoral = Color(0xFFBF8A72)
+
+// High-lightness pastels that keep their hue on dark surfaces
+val AccentMintLight = Color(0xFFA5E8CD)
+val AccentBlueLight = Color(0xFFABC9EF)
+val AccentRoseLight = Color(0xFFE2AFBB)
+
+// Soft pastel tints for the animated diagonal background
+val DiagonalMintLight = Color(0xFF8FDFBA)
+val DiagonalBlueLight = Color(0xFF9FC2F0)
+
+// Format badge accents (muted, readable on both dark and light surfaces)
+val LightningAmber = AccentAmber
+val WorkshopPurple = AccentPurple
+val PresentationBlue = AccentBlue
 
 val RoomAccentColors = listOf(
-    Color(0xFF38BDF8),
-    Color(0xFF34D399),
-    Color(0xFFFB923C),
-    Color(0xFFE879F9),
-    Color(0xFFF87171),
-    Color(0xFF4ADE80),
-    Color(0xFFFBBF24),
-    Color(0xFF60A5FA)
+    AccentBlue,
+    AccentMint,
+    AccentCoral,
+    AccentPurple,
+    AccentRose,
+    AccentTeal,
+    AccentAmber,
+    AccentIndigo
 )

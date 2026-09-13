@@ -18,4 +18,5 @@ local.properties
 # AI/Agent artifacts
 .artifacts/
 .agent/
+.opencode/
 *.artifact.md

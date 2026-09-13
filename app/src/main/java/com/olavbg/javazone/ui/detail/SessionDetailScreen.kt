@@ -1,5 +1,6 @@
 package com.olavbg.javazone.ui.detail
 
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -18,11 +19,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.core.net.toUri
 import android.content.Intent
 import com.olavbg.javazone.data.repository.SessionRepository
@@ -30,6 +31,7 @@ import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.model.Speaker
 import com.olavbg.javazone.ui.components.FormatBadge
 import com.olavbg.javazone.ui.components.resolveVideoUrl
+import com.olavbg.javazone.ui.components.sharedElementModifier
 import com.olavbg.javazone.ui.theme.*
 import com.olavbg.javazone.util.*
 import kotlinx.coroutines.flow.map
@@ -52,6 +54,7 @@ fun SessionDetailScreen(
     showLiveBanners: Boolean = true,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
+    sharedScope: SharedTransitionScope? = null,
 ) {
     val effectiveYear = year ?: SessionRepository.CURRENT_YEAR
     val scope = rememberCoroutineScope()
@@ -112,7 +115,8 @@ fun SessionDetailScreen(
                                 Icon(
                                     imageVector = if (s.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = null,
-                                    tint = if (s.isFavorite) MaterialTheme.colorScheme.tertiary else LocalContentColor.current
+                                    tint = if (s.isFavorite) MaterialTheme.colorScheme.tertiary else LocalContentColor.current,
+                                    modifier = sharedElementModifier(sharedScope, "session-favorite-${s.id}")
                                 )
                             }
                         }
@@ -283,7 +287,7 @@ fun SessionDetailScreen(
                                     context.startActivity(intent)
                                 } catch (_: Exception) {}
                             },
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(10.dp),
                             color = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
@@ -339,7 +343,8 @@ fun SessionDetailScreen(
                                 text = s.title,
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Black,
-                                lineHeight = 32.sp
+                                lineHeight = 32.sp,
+                                modifier = sharedElementModifier(sharedScope, "session-title-${s.id}")
                             )
                             
                             Spacer(modifier = Modifier.height(16.dp))
@@ -348,7 +353,14 @@ fun SessionDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                FormatBadge(format = s.format)
+                                if (sharedScope != null) {
+                                    FormatBadge(
+                                        format = s.format,
+                                        modifier = sharedElementModifier(sharedScope, "session-format-${s.id}")
+                                    )
+                                } else {
+                                    FormatBadge(format = s.format)
+                                }
                                 if (s.language != null) {
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Surface(
@@ -356,12 +368,20 @@ fun SessionDetailScreen(
                                         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
                                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                                     ) {
-                                        Text(
-                                            text = if (s.language.contains("no", ignoreCase = true)) "🇳🇴 Norsk" else "🇬🇧 Engelsk",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.Medium,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                        )
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            val isNorwegian = s.language.contains("no", ignoreCase = true)
+                                            Text(
+                                                text = if (isNorwegian) "🇳🇴" else "🇬🇧",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                modifier = Modifier.padding(start = 10.dp)
+                                            )
+                                            Text(
+                                                text = if (isNorwegian) "Norsk" else "Engelsk",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Medium,
+                                                modifier = Modifier.padding(start = 4.dp, end = 10.dp, top = 6.dp, bottom = 6.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -371,7 +391,7 @@ fun SessionDetailScreen(
                     Column(modifier = Modifier.padding(20.dp)) {
                         // Time and Room Card
                         Surface(
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surface,
                             tonalElevation = 2.dp,
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
@@ -480,7 +500,7 @@ fun SpeakerItem(
     val context = LocalContext.current
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
         modifier = Modifier.fillMaxWidth()
     ) {

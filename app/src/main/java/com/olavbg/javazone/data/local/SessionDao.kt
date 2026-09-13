@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -16,6 +17,12 @@ interface SessionDao {
 
     @Query("DELETE FROM sessions")
     suspend fun deleteAllSessions()
+
+    @Transaction
+    suspend fun replaceAllSessions(sessions: List<SessionEntity>) {
+        deleteAllSessions()
+        insertSessions(sessions)
+    }
 
     @Query("SELECT sessionId FROM favorites")
     fun getFavoriteSessionIds(): Flow<List<String>>

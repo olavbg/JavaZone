@@ -7,11 +7,28 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+// DateTimeFormatter and ZoneId are immutable and thread-safe; creating them once
+// avoids expensive object allocation on every formatting call (called per list item).
+private val OSLO_ZONE: ZoneId = ZoneId.of("Europe/Oslo")
+private val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val DAY_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEEE", Locale.forLanguageTag("no"))
+private val FULL_DAY_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEE d. MMM yyyy", Locale.forLanguageTag("no"))
+
 fun formatTime(zulu: String): String {
     return try {
         val instant = Instant.parse(zulu)
-        val dateTime = instant.atZone(ZoneId.of("Europe/Oslo"))
-        dateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
+        instant.atZone(OSLO_ZONE).format(TIME_FORMATTER)
+    } catch (_: Exception) {
+        ""
+    }
+}
+
+/** Formats an already-parsed session time, avoiding a redundant [Instant.parse]. */
+fun formatTime(instant: Instant?): String {
+    return try {
+        instant?.atZone(OSLO_ZONE)?.format(TIME_FORMATTER) ?: ""
     } catch (_: Exception) {
         ""
     }
@@ -20,8 +37,7 @@ fun formatTime(zulu: String): String {
 fun formatDay(zulu: String): String {
     return try {
         val instant = Instant.parse(zulu)
-        val dateTime = instant.atZone(ZoneId.of("Europe/Oslo"))
-        dateTime.format(DateTimeFormatter.ofPattern("EEEE", Locale.forLanguageTag("no")))
+        instant.atZone(OSLO_ZONE).format(DAY_FORMATTER)
             .replaceFirstChar { it.uppercase() }
     } catch (_: Exception) {
         ""
@@ -31,8 +47,7 @@ fun formatDay(zulu: String): String {
 fun formatFullDay(zulu: String): String? {
     return try {
         val instant = Instant.parse(zulu)
-        val dateTime = instant.atZone(ZoneId.of("Europe/Oslo"))
-        dateTime.format(DateTimeFormatter.ofPattern("EEE d. MMM yyyy", Locale.forLanguageTag("no")))
+        instant.atZone(OSLO_ZONE).format(FULL_DAY_FORMATTER)
     } catch (_: Exception) {
         null
     }
@@ -61,12 +76,12 @@ fun shortDayName(dayKey: String): String = when (dayKey) {
 }
 
 fun calculateSessionDurationMinutes(session: Session): Long {
-    return try {
-        val start = Instant.parse(session.startTimeZulu)
-        val end = Instant.parse(session.endTimeZulu)
+    val start = session.start
+    val end = session.end
+    return if (start != null && end != null) {
         val duration = Duration.between(start, end).toMinutes()
         if (duration <= 0) 60 else duration
-    } catch (e: Exception) {
+    } else {
         60
     }
 }

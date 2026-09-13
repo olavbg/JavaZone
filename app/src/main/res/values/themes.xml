@@ -1,4 +1,6 @@
 <resources>
 
-    <style name="Theme.JavaZone" parent="Theme.MaterialComponents.Light" />
+    <style name="Theme.JavaZone" parent="Theme.MaterialComponents.Light">
+        <item name="android:windowBackground">@color/javazone_background</item>
+    </style>
 </resources>

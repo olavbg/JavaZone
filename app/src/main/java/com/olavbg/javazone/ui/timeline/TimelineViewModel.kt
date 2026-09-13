@@ -1,11 +1,13 @@
 package com.olavbg.javazone.ui.timeline
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.util.shortDayName
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -15,6 +17,13 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+// Shared, thread-safe formatters/zones so per-item formatting never allocates a new one.
+private val OSLO_ZONE: ZoneId = ZoneId.of("Europe/Oslo")
+private val ENGLISH_DAY_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEEE", java.util.Locale.ENGLISH)
+private val SHORT_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+@Immutable
 data class AgendaGroup(
     val key: String,
     val headerLabel: String,
@@ -67,28 +76,26 @@ class TimelineViewModel(
 
     val allSessions: StateFlow<List<Session>> = _selectedYear
         .flatMapLatest { year -> repository.getSessionsFlow(year) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        // Eagerly: start streaming from Room the moment the ViewModel is created, so
+        // cached data is already available on the very first frame (no empty-list flash).
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val availableDays: StateFlow<List<String>> = allSessions.map { list ->
-        list.mapNotNull { session ->
-            runCatching { Instant.parse(session.startTimeZulu).atZone(ZoneId.of("Europe/Oslo")).toLocalDate() }.getOrNull()
-        }
+        list.mapNotNull { it.start?.atZone(OSLO_ZONE)?.toLocalDate() }
             .distinct()
             .sorted()
-            .map { date -> date.format(DateTimeFormatter.ofPattern("EEEE", java.util.Locale.ENGLISH)) }
+            .map { date -> date.format(ENGLISH_DAY_FORMATTER) }
             .distinct()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val showLiveIndicators: StateFlow<Boolean> = combine(allSessions, currentTime, _selectedYear) { sessions, time, year ->
         if (year != SessionRepository.CURRENT_YEAR) false
-        else sessions.any { session ->
-            runCatching { Instant.parse(session.endTimeZulu).isAfter(time) }.getOrDefault(false)
-        }
+        else sessions.any { it.end?.isAfter(time) == true }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     // Sessions filtered by selected day only (used for calculating dynamic filter options)
     val daySessions: StateFlow<List<Session>> = combine(allSessions, _selectedDay) { list, day ->
-        if (day == null) list else list.filter { getDayFromZulu(it.startTimeZulu) == day }
+        if (day == null) list else list.filter { getDayFromZulu(it.start) == day }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val availableFormats: StateFlow<List<String>> = daySessions.map { list ->
@@ -133,7 +140,7 @@ class TimelineViewModel(
 
         var filtered = list
         if (day != null && speaker == null) { // Don't filter by day if looking for a specific speaker's all talks
-            filtered = filtered.filter { getDayFromZulu(it.startTimeZulu) == day }
+            filtered = filtered.filter { getDayFromZulu(it.start) == day }
         }
         if (favoritesOnly) {
             filtered = filtered.filter { it.isFavorite }
@@ -160,7 +167,10 @@ class TimelineViewModel(
             }
         }
         filtered
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        // Run the filter chain off the main thread; it re-executes on every source
+        // change and would otherwise add main-thread spikes during the first seconds.
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
 val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList ->
     val grouped = sessionList
@@ -170,8 +180,8 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
                 .thenBy { it.room },
         )
         .groupBy { session ->
-            val date = runCatching { Instant.parse(session.startTimeZulu).atZone(ZoneId.of("Europe/Oslo")).toLocalDate() }.getOrNull()
-            "${date ?: java.time.LocalDate.MIN}|${formatTime(session.startTimeZulu)}"
+            val date = session.start?.atZone(OSLO_ZONE)?.toLocalDate()
+            "${date ?: java.time.LocalDate.MIN}|${formatTime(session.start)}"
         }
     val multiDay = grouped.keys.map { it.substringBefore('|') }.distinct().size > 1
     grouped.map { (key, groupSessions) ->
@@ -186,7 +196,10 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
             sessions = groupSessions
         )
     }
-}.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Sorting + grouping + formatting runs off the main thread so the eagerly-shared
+    // pipeline never blocks the first frames/scroll.
+}.flowOn(Dispatchers.Default)
+    .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _isLoading = MutableStateFlow(value = true)
     val isLoading: StateFlow<Boolean> = combine(
@@ -220,10 +233,10 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
                     val year = pair.second
                     if (!hasAutoSelectedDay && year == SessionRepository.CURRENT_YEAR && list.isNotEmpty()) {
                         val currentDayName = try {
-                            time.atZone(ZoneId.of("Europe/Oslo")).format(DateTimeFormatter.ofPattern("EEEE", java.util.Locale.ENGLISH))
+                            time.atZone(OSLO_ZONE).format(ENGLISH_DAY_FORMATTER)
                         } catch (_: Exception) { "" }
 
-                        val matchingDay = list.map { getDayFromZulu(it.startTimeZulu) }
+                        val matchingDay = list.map { getDayFromZulu(it.start) }
                             .firstOrNull { it.equals(currentDayName, ignoreCase = true) }
 
                         if (matchingDay != null) {
@@ -317,34 +330,26 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
         }
     }
 
-    private fun formatTime(zulu: String): String {
+    private fun formatTime(instant: Instant?): String {
         return try {
-            val instant = Instant.parse(zulu)
-            val dateTime = instant.atZone(ZoneId.of("Europe/Oslo"))
-            dateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
-        } catch (e: Exception) {
+            instant?.atZone(OSLO_ZONE)?.format(SHORT_TIME_FORMATTER) ?: ""
+        } catch (_: Exception) {
             ""
         }
     }
 
-    private fun getDayFromZulu(zulu: String): String {
+    private fun getDayFromZulu(instant: Instant?): String {
         return try {
-            val instant = Instant.parse(zulu)
-            val dateTime = instant.atZone(ZoneId.of("Europe/Oslo"))
-            dateTime.format(DateTimeFormatter.ofPattern("EEEE", java.util.Locale.ENGLISH))
-        } catch (e: Exception) {
+            instant?.atZone(OSLO_ZONE)?.format(ENGLISH_DAY_FORMATTER) ?: ""
+        } catch (_: Exception) {
             ""
         }
     }
 
     private fun isSessionActive(session: Session, currentTime: Instant): Boolean {
-        return try {
-            val start = Instant.parse(session.startTimeZulu)
-            val end = Instant.parse(session.endTimeZulu)
-            (currentTime.isAfter(start) || currentTime == start) && currentTime.isBefore(end)
-        } catch (e: Exception) {
-            false
-        }
+        val start = session.start ?: return false
+        val end = session.end ?: return false
+        return (currentTime.isAfter(start) || currentTime == start) && currentTime.isBefore(end)
     }
 
     private fun isFormatMatch(sessionFormat: String, targetFormat: String): Boolean {

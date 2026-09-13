@@ -78,8 +78,12 @@ class SessionRepository(
         try {
             val response = api.getSessions(conferenceId)
             val entities = response.sessions.map { it.toEntity() }
-            dao.deleteAllSessions()
-            dao.insertSessions(entities)
+            val currentSessions = dao.getAllSessions().first()
+            // Avoid a wasteful delete+insert (and the resulting flow churn / scroll jumps)
+            // when the program has not changed since the last successful fetch.
+            if (currentSessions.toSet() != entities.toSet()) {
+                dao.replaceAllSessions(entities)
+            }
             rescheduleAllFavorites()
         } catch (e: Exception) {
             e.printStackTrace()
