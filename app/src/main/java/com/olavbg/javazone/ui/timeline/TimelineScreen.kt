@@ -678,8 +678,6 @@ fun TimelineStickyTimeHeader(
     sessionCount: Int
 ) {
     Surface(
-        // Same background tint as before, but translucent enough for the animated
-        // diagonal background to show through behind the sticky time divider.
         color = MaterialTheme.colorScheme.background.copy(alpha = 0.10f),
         tonalElevation = 2.dp,
         modifier = Modifier.fillMaxWidth()
