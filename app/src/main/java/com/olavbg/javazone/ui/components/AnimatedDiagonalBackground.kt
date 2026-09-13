@@ -40,10 +40,11 @@ import kotlinx.coroutines.delay
 private const val TICK_RATE_MILLIS = 33L
 
 /**
- * How long the band morph waits after navigation, so it starts once the ~700 ms scene
- * transition has already settled and is not competing with it for frame time.
+ * Delay between the navigation signal and the start of the band morph. Matches the scene
+ * fade-in delay so the bands start moving the moment the new screen begins to appear,
+ * rather than only after the transition has fully settled.
  */
-private const val MORPH_START_DELAY_MILLIS = 760L
+private const val MORPH_START_DELAY_MILLIS = 350L
 
 /** How long the smooth band-to-band morph takes. */
 private const val MORPH_DURATION_MILLIS = 1200L
