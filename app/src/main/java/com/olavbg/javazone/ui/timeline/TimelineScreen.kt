@@ -37,17 +37,9 @@ import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.ui.components.FormatBadge
 import com.olavbg.javazone.ui.components.RoomTag
 import com.olavbg.javazone.ui.components.sharedElementModifier
-import com.olavbg.javazone.ui.theme.*
 import com.olavbg.javazone.util.*
 import java.time.Duration
 import java.time.Instant
-import kotlin.math.abs
-
-// How many list items are skipped between warm-up scroll probes. Roughly one
-// screen worth of rows, so every slot gets composed at least once during the
-// hidden pre-scroll pass.
-private const val WARMUP_STEP_ITEMS = 8
-
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -113,21 +105,14 @@ fun TimelineScreen(
         }
     }
 
-    // Loading gate. While this flag is false the timeline is rendered behind an
-    // opaque, input-blocking overlay. It flips to true only after the backend
-    // refresh has settled AND a single warm-up pass has composed every row, so
-    // the user never sees the first-composition / JIT hiccups on the first
-    // scroll attempt. There is deliberately no timeout: we wait on real events
-    // (refresh completion + list layout) only.
+    // Keep the timeline behind an opaque overlay until data has loaded and the
+    // rows have been composed once, so first-scroll JIT hiccups stay hidden.
     val isAlreadyLoaded = !isLoading && groupedSessions.isNotEmpty()
     var contentReady by remember { mutableStateOf(isAlreadyLoaded) }
     LaunchedEffect(isLoading, groupedSessions) {
         if (contentReady || isLoading) return@LaunchedEffect
         if (groupedSessions.isEmpty()) {
-            // Nothing to assemble yet (empty cache + fetch still pending or failed).
-            // Wait for the flag to relax instead of flipping ready early: keep the
-            // overlay up until isLoading turns false so resetting no-empty state
-            // never flashes.
+            // Nothing to render yet; keep the overlay up until loading settles.
             if (!isLoading) contentReady = true
             return@LaunchedEffect
         }
@@ -135,12 +120,8 @@ fun TimelineScreen(
         withFrameNanos { }
         withFrameNanos { }
 
-        // Warm-up: pre-compose only a small window of rows. All rows share the same
-        // composable functions, so first-composition / JIT cost is paid once per row
-        // *type* — hopping through the whole 150+ item agenda would only repeat the
-        // same work while nailing the UI thread (and the frame clock that drives the
-        // loading spinner) for seconds. Compose a view around "now" and the list top,
-        // yielding a real frame between probes so the spinner keeps animating.
+        // Warm up: compose a view around "now" and the list top, yielding a frame
+        // between probes so the spinner keeps animating.
         val totalItems = groupedSessions.sumOf { 1 + it.sessions.size }
         val activeIndex = findFirstActiveOrUpcomingIndex(groupedSessions, currentTime)
         val probes = listOf(0, activeIndex)
@@ -190,9 +171,7 @@ fun TimelineScreen(
             },
             modifier = Modifier.fillMaxSize(),
         ) { padding ->
-            // The list is always composed here — even behind the loading overlay —
-            // so first-composition / JIT cost is paid once, hidden, instead of on
-            // the user's first scroll.
+            // Keep the list composed so the warm-up pass isn't thrown away on first scroll.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -266,8 +245,7 @@ fun TimelineScreen(
             }
         }
 
-        // Full-screen loading gate. Covers the top bar too so the user cannot
-        // interact until the timeline is assembled and warmed up.
+        // Block interaction until the timeline is loaded and warmed up.
         val showLoadingOverlay = !contentReady || isLoading
         if (showLoadingOverlay) {
             TimelineLoadingOverlay(
@@ -301,8 +279,7 @@ private fun TimelineLoadingOverlay(text: String) {
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            // Swallow every pointer event so the LazyColumn (and settings/other
-            // corners) cannot scroll or react while the timeline is still warming up.
+            // Swallow pointer events until the timeline is ready.
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
@@ -478,7 +455,6 @@ fun TimelineHeader(
                 windowInsets = WindowInsets.statusBars
             )
 
-            // Search Bar
             AnimatedVisibility(
                 visible = isSearchVisible,
                 enter = expandVertically() + fadeIn(),
@@ -504,7 +480,6 @@ fun TimelineHeader(
                 )
             }
 
-            // Day & View Selector Row
             if (availableDays.isNotEmpty()) {
                 Row(
                     modifier = Modifier
@@ -535,7 +510,6 @@ fun TimelineHeader(
                 }
             }
 
-            // Dynamic Quick Filter Chips (Format, Language, Room)
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -556,7 +530,6 @@ fun TimelineHeader(
                     }
                 }
 
-                // Show format chips dynamically available for the selected day
                 items(availableFormats) { format ->
                     val isSelected = selectedFormat?.equals(format, ignoreCase = true) == true
                     FilterChip(
@@ -575,7 +548,6 @@ fun TimelineHeader(
                     )
                 }
 
-                // Show language chips dynamically available for the selected day
                 items(availableLanguages) { lang ->
                     val isSelected = selectedLanguage == lang
                     FilterChip(
@@ -585,7 +557,6 @@ fun TimelineHeader(
                     )
                 }
 
-                // Show room chips dynamically available for the selected day
                 if (availableRooms.isNotEmpty()) {
                     items(availableRooms) { room ->
                         val isSelected = selectedRoom == room
@@ -615,7 +586,7 @@ fun AgendaListView(
     sharedScope: SharedTransitionScope? = null,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
-        // Continuous Vertical Guide Line (positioned at x = 36.dp)
+        // Vertical guide line.
         Box(
             modifier = Modifier
                 .padding(start = 36.dp)
@@ -640,7 +611,7 @@ fun AgendaListView(
             groupedSessions.forEach { group ->
                 val isLiveSlot = group.sessions.any { isSessionActive(it, currentTime) }
 
-                // Sticky Header: Day + Time Node Badge pinned to top-left (shown once for group)
+                // Sticky time header.
                 stickyHeader(key = "agenda-sticky-${group.key}") {
                     TimelineStickyTimeHeader(
                         timeSlot = group.headerLabel,
@@ -649,7 +620,6 @@ fun AgendaListView(
                     )
                 }
 
-                // Session Rows in this Time Block (sorted by room number)
                 itemsIndexed(
                     items = group.sessions,
                     key = { _, session -> "agenda-item-${session.id}" },
@@ -737,17 +707,11 @@ fun TimelineStickyTimeHeader(
                 )
             }
             
-            // Just a bit of vertical line spacing
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
 
-/**
- * Timeline Session Row
- * Features:
- * - Vertically centered timeline connector node aligned with card height
- */
 @Composable
 fun TimelineSessionRow(
     session: Session,
@@ -765,12 +729,10 @@ fun TimelineSessionRow(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
     ) {
-        // Left Column Node Connector (Centered at x = 36.dp)
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier.width(52.dp)
         ) {
-            // Horizontal Connector Arm from vertical line to card
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -787,7 +749,6 @@ fun TimelineSessionRow(
                 )
             }
 
-            // Connector Dot on the vertical line (vertically centered with card)
             Box(
                 modifier = Modifier
                     .size(if (isActive) 12.dp else 8.dp)
@@ -807,7 +768,6 @@ fun TimelineSessionRow(
             )
         }
 
-        // Right Column: Session Card
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -863,7 +823,6 @@ fun DetailedSessionCard(
             val durationMins = remember(session) { calculateSessionDurationMinutes(session) }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Duration Tag (e.g. 60 min, 10 min)
                 if (!session.startTimeZulu.isBlank()) {
                     Surface(
                         shape = RoundedCornerShape(6.dp),
