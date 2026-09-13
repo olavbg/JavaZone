@@ -1,21 +1,19 @@
 package com.olavbg.javazone.ui.components
 
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.graphics.drawscope.drawRect
-import androidx.compose.material3.MaterialTheme
 
 /**
  * Subtle JavaZone background: two calm tones separated by a slowly moving diagonal.
@@ -37,33 +35,31 @@ fun AnimatedDiagonalBackground(
         label = "diagonal-sway",
     )
 
-    val base = MaterialTheme.colorScheme.background
     val firstTone = MaterialTheme.colorScheme.surfaceContainerLowest
     val secondTone = MaterialTheme.colorScheme.surfaceContainerLow
 
     Box(modifier = modifier) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            drawRect(color = base)
-
             val diagonalX = size.width * (0.52f + sway)
-            val path = Path().apply {
+
+            val firstPath = Path().apply {
                 moveTo(0f, 0f)
                 lineTo(diagonalX, 0f)
                 lineTo(0f, size.height)
                 close()
             }
-            clipPath(path) {
+            clipPath(firstPath) {
                 drawRect(color = firstTone)
             }
 
-            val lowerPath = Path().apply {
+            val secondPath = Path().apply {
                 moveTo(diagonalX, 0f)
                 lineTo(size.width, 0f)
                 lineTo(size.width, size.height)
                 lineTo(0f, size.height)
                 close()
             }
-            clipPath(lowerPath) {
+            clipPath(secondPath) {
                 drawRect(color = secondTone)
             }
         }
