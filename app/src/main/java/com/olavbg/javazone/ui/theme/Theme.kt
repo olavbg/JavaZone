@@ -10,39 +10,48 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.olavbg.javazone.ui.components.AnimatedDiagonalBackground
 
 private val DarkColorScheme = darkColorScheme(
     primary = FreshGreen,
     secondary = JavaBlue,
     tertiary = JavaOrange,
-    background = DarkBackground,
+    background = Color.Transparent,
     surface = DarkSurface,
-    onPrimary = Color.Black,
-    onSecondary = Color.White,
-    onTertiary = Color.Black,
+    surfaceContainerLowest = Color(0xFF15171B),
+    surfaceContainerLow = Color(0xFF1B1E23),
+    surfaceContainer = DarkSurface,
+    surfaceContainerHigh = Color(0xFF282C33),
+    onPrimary = Color(0xFF17201A),
+    onSecondary = Color(0xFF17202A),
+    onTertiary = Color(0xFF271A18),
     onBackground = DarkOnSurface,
     onSurface = DarkOnSurface,
     surfaceVariant = DarkSurfaceVariant,
-    onSurfaceVariant = Color(0xFF94A3B8),
-    secondaryContainer = Color(0xFF1E3A8A),
-    onSecondaryContainer = Color(0xFFDBEAFE),
+    onSurfaceVariant = Color(0xFFB7B9BD),
+    secondaryContainer = Color(0xFF344253),
+    onSecondaryContainer = Color(0xFFDCE5EF),
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = DeepBlue,
-    secondary = FreshGreen,
-    tertiary = JavaOrange,
-    background = Color(0xFFF1F5F9),
-    surface = Color.White,
+    primary = Color(0xFF536B5B),
+    secondary = Color(0xFF58718F),
+    tertiary = Color(0xFF986B62),
+    background = Color.Transparent,
+    surface = LightSurface,
+    surfaceContainerLowest = Color(0xFFECEAE5),
+    surfaceContainerLow = Color(0xFFF0EEE9),
+    surfaceContainer = LightSurface,
+    surfaceContainerHigh = Color(0xFFE7E5E0),
     onPrimary = Color.White,
-    onSecondary = Color.Black,
-    onTertiary = Color.Black,
-    onBackground = Color(0xFF0F172A),
-    onSurface = Color(0xFF0F172A),
-    surfaceVariant = Color(0xFFE2E8F0),
-    onSurfaceVariant = Color(0xFF64748B),
-    secondaryContainer = Color(0xFFDBEAFE),
-    onSecondaryContainer = Color(0xFF1E3A8A),
+    onSecondary = Color.White,
+    onTertiary = Color.White,
+    onBackground = LightOnSurface,
+    onSurface = LightOnSurface,
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = Color(0xFF5E6064),
+    secondaryContainer = Color(0xFFDCE5EF),
+    onSecondaryContainer = Color(0xFF30465D),
 )
 
 @Composable
@@ -56,7 +65,6 @@ fun JavaZoneTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
@@ -65,6 +73,9 @@ fun JavaZoneTheme(
         colorScheme = colorScheme,
         typography = Typography,
         shapes = Shapes,
-        content = content
-    )
+    ) {
+        AnimatedDiagonalBackground {
+            content()
+        }
+    }
 }

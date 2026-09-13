@@ -2,27 +2,33 @@ package com.olavbg.javazone.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val FreshGreen = Color(0xFF00E676)
-val DeepBlue = Color(0xFF1E3A8A)
-val DarkBackground = Color(0xFF0F172A) // Rich slate navy background
-val DarkSurface = Color(0xFF1E293B)    // Elevated slate card surface
-val DarkSurfaceVariant = Color(0xFF334155) // Border/Header variant
-val DarkOnSurface = Color(0xFFF8FAFC)
+// JavaZone palette: muted pastels over calm, dark neutrals.
+val FreshGreen = Color(0xFF9DB8A5)
+val DeepBlue = Color(0xFF667B9B)
+val DarkBackground = Color(0xFF17191E)
+val DarkSurface = Color(0xE6202329) // Slight translucency lets the diagonal identity show through.
+val DarkSurfaceVariant = Color(0xD930343C)
+val DarkOnSurface = Color(0xFFF1F0ED)
 
-val JavaBlue = Color(0xFF2563EB)
-val JavaOrange = Color(0xFFF97316)
+val JavaBlue = Color(0xFF8FA9C7)
+val JavaOrange = Color(0xFFD2A39A)
 
-val WorkshopPurple = Color(0xFFA855F7)
-val LightningAmber = Color(0xFFF59E0B)
-val PresentationBlue = Color(0xFF60A5FA) // Lighter blue for better contrast
+val WorkshopPurple = Color(0xFFB2A1C7)
+val LightningAmber = Color(0xFFD1B17D)
+val PresentationBlue = Color(0xFF8FA9C7)
 
 val RoomAccentColors = listOf(
-    Color(0xFF38BDF8),
-    Color(0xFF34D399),
-    Color(0xFFFB923C),
-    Color(0xFFE879F9),
-    Color(0xFFF87171),
-    Color(0xFF4ADE80),
-    Color(0xFFFBBF24),
-    Color(0xFF60A5FA)
+    Color(0xFF8FA9C7),
+    Color(0xFF9DB8A5),
+    Color(0xFFD2A39A),
+    Color(0xFFB2A1C7),
+    Color(0xFFC59A9A),
+    Color(0xFFA7B99A),
+    Color(0xFFD0B783),
+    Color(0xFF9AA9BD)
 )
+
+val LightBackground = Color(0xFFF2F0EC)
+val LightSurface = Color(0xEAFAF9F6)
+val LightSurfaceVariant = Color(0xDDE3E1DD)
+val LightOnSurface = Color(0xFF202228)
