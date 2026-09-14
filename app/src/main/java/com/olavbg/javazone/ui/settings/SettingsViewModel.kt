@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
+import com.olavbg.javazone.model.BackgroundMode
 import com.olavbg.javazone.notifications.ReminderManager
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +25,9 @@ class SettingsViewModel(
 
     val simulatedTimeOffset: StateFlow<Long> = repository.simulatedTimeOffset
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
+    val backgroundMode: StateFlow<BackgroundMode> = repository.backgroundMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BackgroundMode.Animated)
 
     fun canScheduleExactAlarms(): Boolean = reminderManager.canScheduleExact()
 
@@ -48,6 +52,12 @@ class SettingsViewModel(
         viewModelScope.launch {
             repository.updateSimulatedTimeOffset(0L)
             sessionRepository.rescheduleAllFavorites()
+        }
+    }
+
+    fun setBackgroundMode(mode: BackgroundMode) {
+        viewModelScope.launch {
+            repository.updateBackgroundMode(mode)
         }
     }
 }

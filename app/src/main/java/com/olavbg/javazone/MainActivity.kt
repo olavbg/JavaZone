@@ -17,6 +17,7 @@ import com.olavbg.javazone.data.local.AppDatabase
 import com.olavbg.javazone.data.remote.SleepingPillApi
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
+import com.olavbg.javazone.model.BackgroundMode
 import com.olavbg.javazone.notifications.ConferenceDoneReceiver
 import com.olavbg.javazone.notifications.ReminderManager
 import com.olavbg.javazone.ui.JavaZoneApp
@@ -71,10 +72,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             var reanimateSignal by remember { mutableLongStateOf(0L) }
+            val backgroundMode by settingsRepository.backgroundMode
+                .collectAsState(initial = BackgroundMode.Animated)
             CompositionLocalProvider(
                 LocalBackgroundReanimate provides reanimateSignal
             ) {
-                JavaZoneTheme {
+                JavaZoneTheme(backgroundMode = backgroundMode) {
                     JavaZoneApp(
                         repository,
                         settingsRepository,

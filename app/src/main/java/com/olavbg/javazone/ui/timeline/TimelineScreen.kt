@@ -25,10 +25,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -37,7 +41,9 @@ import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.ui.components.FormatBadge
 import com.olavbg.javazone.ui.components.RoomTag
 import com.olavbg.javazone.ui.components.sharedElementModifier
+import com.olavbg.javazone.ui.theme.FavoriteRed
 import com.olavbg.javazone.util.*
+import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.Instant
 
@@ -103,38 +109,6 @@ fun TimelineScreen(
             }
             viewModel.markScrolledToNow()
         }
-    }
-
-    // Keep the timeline behind an opaque overlay until data has loaded and the
-    // rows have been composed once, so first-scroll JIT hiccups stay hidden.
-    val isAlreadyLoaded = !isLoading && groupedSessions.isNotEmpty()
-    var contentReady by remember { mutableStateOf(isAlreadyLoaded) }
-    LaunchedEffect(isLoading, groupedSessions) {
-        if (contentReady || isLoading) return@LaunchedEffect
-        if (groupedSessions.isEmpty()) {
-            // Nothing to render yet; keep the overlay up until loading settles.
-            if (!isLoading) contentReady = true
-            return@LaunchedEffect
-        }
-        // Let the first layout of the newly-arrived data settle.
-        withFrameNanos { }
-        withFrameNanos { }
-
-        // Warm up: compose a view around "now" and the list top, yielding a frame
-        // between probes so the spinner keeps animating.
-        val totalItems = groupedSessions.sumOf { 1 + it.sessions.size }
-        val activeIndex = findFirstActiveOrUpcomingIndex(groupedSessions, currentTime)
-        val probes = listOf(0, activeIndex)
-            .filter { it in 0 until totalItems }
-            .distinct()
-        for (probe in probes) {
-            listState.scrollToItem(probe)
-            withFrameNanos { }
-        }
-        // Restore the "now" position.
-        listState.scrollToItem(activeIndex)
-        withFrameNanos { }
-        contentReady = true
     }
 
     Box(
@@ -245,15 +219,12 @@ fun TimelineScreen(
             }
         }
 
-        // Block interaction until the timeline is loaded and warmed up.
-        val showLoadingOverlay = !contentReady || isLoading
-        if (showLoadingOverlay) {
+        // Only block startup with a loading overlay while an archive year is being
+        // fetched from the network. For the current year the data is read straight
+        // from Room, so the timeline content shows immediately behind the empty state.
+        if (isLoading && !isCurrentYear) {
             TimelineLoadingOverlay(
-                text = if (isCurrentYear) {
-                    "Laster inn foredrag…"
-                } else {
-                    "Laster inn programmet for JavaZone $selectedYear…"
-                }
+                text = "Laster inn programmet for JavaZone $selectedYear…"
             )
         }
 
@@ -393,8 +364,21 @@ fun TimelineHeader(
     onYearClick: () -> Unit,
     availableDays: List<String>
 ) {
+    val searchFocusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    // Give the expand animation a moment to lay the field out before requesting
+    // focus, so the keyboard slides in together with the field.
+    LaunchedEffect(isSearchVisible) {
+        if (isSearchVisible) {
+            delay(300)
+            runCatching { searchFocusRequester.requestFocus() }
+            keyboardController?.show()
+        }
+    }
+
     Surface(
-        color = MaterialTheme.colorScheme.surface,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
         tonalElevation = 3.dp,
         shadowElevation = 1.dp
     ) {
@@ -445,14 +429,17 @@ fun TimelineHeader(
                         Icon(
                             imageVector = if (onlyFavorites) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = "Favoritter",
-                            tint = if (onlyFavorites) MaterialTheme.colorScheme.tertiary else LocalContentColor.current
+                            tint = if (onlyFavorites) FavoriteRed else LocalContentColor.current
                         )
                     }
                     IconButton(onClick = onSettingsClick) {
                         Icon(Icons.Rounded.Settings, contentDescription = "Innstillinger")
                     }
                 },
-                windowInsets = WindowInsets.statusBars
+                windowInsets = WindowInsets.statusBars,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
             )
 
             AnimatedVisibility(
@@ -477,6 +464,7 @@ fun TimelineHeader(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .focusRequester(searchFocusRequester)
                 )
             }
 
@@ -523,8 +511,8 @@ fun TimelineHeader(
                             label = { Text("Favoritter") },
                             leadingIcon = { Icon(Icons.Default.Favorite, contentDescription = null, modifier = Modifier.size(14.dp)) },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                                selectedLabelColor = MaterialTheme.colorScheme.onTertiaryContainer
+                                selectedContainerColor = FavoriteRed.copy(alpha = 0.22f),
+                                selectedLabelColor = FavoriteRed
                             )
                         )
                     }
@@ -608,15 +596,25 @@ fun AgendaListView(
             contentPadding = contentPadding,
             modifier = Modifier.fillMaxSize()
         ) {
+            var nextStickyIndex = 0
             groupedSessions.forEach { group ->
+                val stickyIndex = nextStickyIndex
+                nextStickyIndex += 1 + group.sessions.size
                 val isLiveSlot = group.sessions.any { isSessionActive(it, currentTime) }
+
+                // A sticky header counts as "pinned" while the next group's rows are being
+                // scrolled under it; while it sits at its natural position in the list it
+                // is not overlapping any content.
+                val visibleIndex = listState.firstVisibleItemIndex
+                val isPinned = visibleIndex >= stickyIndex + 1 && visibleIndex < nextStickyIndex
 
                 // Sticky time header.
                 stickyHeader(key = "agenda-sticky-${group.key}") {
                     TimelineStickyTimeHeader(
                         timeSlot = group.headerLabel,
                         isLiveSlot = isLiveSlot,
-                        sessionCount = group.sessions.size
+                        sessionCount = group.sessions.size,
+                        isPinned = isPinned
                     )
                 }
 
@@ -645,10 +643,18 @@ fun AgendaListView(
 fun TimelineStickyTimeHeader(
     timeSlot: String,
     isLiveSlot: Boolean,
-    sessionCount: Int
+    sessionCount: Int,
+    isPinned: Boolean = false
 ) {
+    // The header background is nearly invisible in its natural list position, but
+    // fades to a readable opaque tint while it is pinned to the top over scrolling rows.
+    val bgAlpha by animateFloatAsState(
+        targetValue = if (isPinned) 0.88f else 0.10f,
+        animationSpec = tween(durationMillis = 250),
+        label = "stickyHeaderBg"
+    )
     Surface(
-        color = MaterialTheme.colorScheme.background.copy(alpha = 0.10f),
+        color = MaterialTheme.colorScheme.background.copy(alpha = bgAlpha),
         tonalElevation = 2.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -847,17 +853,12 @@ fun DetailedSessionCard(
                 )
                 if (session.language != null) {
                     Spacer(modifier = Modifier.width(6.dp))
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                    ) {
-                        Text(
-                            text = if (session.language.contains("no", ignoreCase = true)) "🇳🇴" else "🇬🇧",
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
+                    Text(
+                        text = if (session.language.contains("no", ignoreCase = true)) "🇳🇴" else "🇬🇧",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = 18.sp,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
                 }
                 if (showFavorite) {
                     Spacer(modifier = Modifier.weight(1f))
@@ -865,7 +866,7 @@ fun DetailedSessionCard(
                         Icon(
                             imageVector = if (session.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = null,
-                            tint = if (session.isFavorite) MaterialTheme.colorScheme.tertiary else LocalContentColor.current,
+                            tint = if (session.isFavorite) FavoriteRed else LocalContentColor.current,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -948,13 +949,13 @@ fun DetailedSessionCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp
                     )
-                    if (minsUntil in 1..60) {
+                    if (minsUntil <= 60) {
                         Surface(
                             shape = RoundedCornerShape(4.dp),
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                         ) {
                             Text(
-                                text = "Om $minsUntil min",
+                                text = if (minsUntil > 0) "Om $minsUntil min" else "Om < 1 min",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,

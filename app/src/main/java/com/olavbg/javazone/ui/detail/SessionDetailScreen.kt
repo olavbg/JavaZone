@@ -97,6 +97,9 @@ fun SessionDetailScreen(
                         style = MaterialTheme.typography.titleLarge,
                     )
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
+                ),
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Tilbake")
@@ -115,7 +118,7 @@ fun SessionDetailScreen(
                                 Icon(
                                     imageVector = if (s.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = null,
-                                    tint = if (s.isFavorite) MaterialTheme.colorScheme.tertiary else LocalContentColor.current,
+                                    tint = if (s.isFavorite) FavoriteRed else LocalContentColor.current,
                                     modifier = sharedElementModifier(sharedScope, "session-favorite-${s.id}")
                                 )
                             }
@@ -461,7 +464,7 @@ fun SessionDetailScreen(
                             text = s.abstract,
                             style = MaterialTheme.typography.bodyLarge,
                             lineHeight = 26.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.95f)
                         )
 
                         if (s.speakers.isNotEmpty()) {
@@ -501,7 +504,9 @@ fun SpeakerItem(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(20.dp)) {

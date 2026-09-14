@@ -20,6 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
@@ -30,8 +31,10 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.lerp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.olavbg.javazone.model.BackgroundMode
 import kotlin.math.PI
 import kotlin.math.hypot
+import kotlin.math.min
 import kotlin.math.sin
 import kotlin.random.Random
 import kotlinx.coroutines.delay
@@ -40,14 +43,25 @@ import kotlinx.coroutines.delay
 private const val TICK_RATE_MILLIS = 33L
 
 /**
- * Delay between the navigation signal and the start of the band morph. Matches the scene
- * fade-in delay so the bands start moving the moment the new screen begins to appear,
+ * Delay between the reanimate call and the start of the band morph. Matches the scene
+ * fade-in delay, so the bands start moving the moment the new screen begins to appear
  * rather than only after the transition has fully settled.
  */
-private const val MORPH_START_DELAY_MILLIS = 350L
+private const val REANIMATE_START_DELAY_MILLIS = 350L
 
 /** How long the smooth band-to-band morph takes. */
 private const val MORPH_DURATION_MILLIS = 1200L
+
+/**
+ * Total time a reanimate occupies, from the call until the morph has fully played.
+ * reanimate() simply returns when it is called sooner than this after the previous
+ * start, so a burst of screen changes collapses into exactly one band morph.
+ */
+private const val REANIMATE_DURATION_MILLIS =
+    REANIMATE_START_DELAY_MILLIS + MORPH_DURATION_MILLIS
+
+/** Max rocking angle for the band tilt animation, degrees. */
+private const val ROTATION_AMPLITUDE_DEG = 4f
 
 /**
  * Signal consumed by [AnimatedDiagonalBackground]. Bump the value (e.g. on navigation)
@@ -77,12 +91,16 @@ val LocalBackgroundReanimate = compositionLocalOf { 0L }
  * @param baseColor opaque backdrop painted underneath the bands.
  * @param tintPrimary first pastel tone (rendered as the dominant band).
  * @param tintSecondary second pastel tone (rendered as a lighter opposing band).
+ * @param mode how the background is rendered: [BackgroundMode.Animated] (default) runs the
+ *   full ticker, [BackgroundMode.Static] paints one frozen frame, and
+ *   [BackgroundMode.None] skips the bands entirely.
  */
 @Composable
 fun AnimatedDiagonalBackground(
     baseColor: Color,
     tintPrimary: Color,
     tintSecondary: Color,
+    mode: BackgroundMode = BackgroundMode.Animated,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -113,39 +131,77 @@ fun AnimatedDiagonalBackground(
     var band2OffsetX by remember { mutableFloatStateOf(0f) }
     var band2OffsetY by remember { mutableFloatStateOf(0f) }
 
-    // Morph bookkeeping, shared between the ticker loop and the navigation effect.
-    var morphArmed by remember { mutableStateOf(false) }
-    var morphStartElapsed by remember { mutableFloatStateOf(-1f) } // <0 == no morph scheduled
+    // Band tilt (angle animation), updated each tick and applied as a GPU rotation.
+    var band1Rotation by remember { mutableFloatStateOf(0f) }
+    var band2Rotation by remember { mutableFloatStateOf(0f) }
+
+    // Morph clock in active-time seconds. <0 == no morph in flight; otherwise the moment
+    // (in active time) the morph's fast phase starts playing.
+    var morphStartElapsed by remember { mutableFloatStateOf(-1f) }
+
+    // Wall-clock stamp of the last reanimate that actually started. reanimate() returns
+    // early while less than REANIMATE_DURATION_MILLIS has passed since this stamp.
+    var lastReanimateStartMillis by remember { mutableStateOf(-1L) }
 
     // Screen size captured once the layers lay out; used to scale drift to pixels.
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
-    // Arm a new morph shortly after the navigation signal, so the bands start moving once
-    // the screen transition has already peaked.
-    LaunchedEffect(reanimateTick) {
-        if (reanimateTick == 0L) return@LaunchedEffect
+    // reanimate(): called on every screen change. If a reanimate is still playing (less
+    // than REANIMATE_DURATION_MILLIS since the previous start) it does nothing; otherwise
+    // it kicks off a new random band morph.
+    fun reanimate() {
+        val now = SystemClock.elapsedRealtime()
+        if (lastReanimateStartMillis >= 0L &&
+            now - lastReanimateStartMillis < REANIMATE_DURATION_MILLIS
+        ) {
+            return
+        }
+        lastReanimateStartMillis = now
         fromVariation = toVariation
         toVariation = DiagonalVariation.random()
         mix = 0f
-        morphArmed = true
     }
 
-    if (!animationsEnabled) {
-        // Respect the system "remove animations" (reduce motion) setting: single static frame.
+    val animated = mode == BackgroundMode.Animated && animationsEnabled
+
+    // A fresh random placement every time the bands are switched back into view from
+    // "Ingen bånd", so toggling the setting always lands on a new layout instead of
+    // rediscovering the previous one.
+    var bandsWereShown by remember { mutableStateOf(mode != BackgroundMode.None) }
+    LaunchedEffect(mode) {
+        val shown = mode != BackgroundMode.None
+        if (shown && !bandsWereShown) {
+            fromVariation = DiagonalVariation.random()
+            toVariation = fromVariation
+            mix = 1f
+        }
+        bandsWereShown = shown
+    }
+
+    if (!animated) {
+        // Single static frame with the ticker AND the reanimate listener both out of the
+        // composition, so neither the drift clock nor the morph machinery runs while the
+        // bands are hidden or frozen — nothing works in the background.
         Canvas(modifier = modifier) {
             drawRect(color = baseColor)
-            drawOrganicBandBase(band1Brush, toVariation.band1, size.width, size.height)
-            drawOrganicBandBase(band2Brush, toVariation.band2, size.width, size.height)
+            if (mode == BackgroundMode.Static) {
+                drawOrganicBandBase(band1Brush, toVariation.band1, size.width, size.height)
+                drawOrganicBandBase(band2Brush, toVariation.band2, size.width, size.height)
+            }
         }
         return
+    }
+
+    LaunchedEffect(reanimateTick) {
+        if (reanimateTick != 0L) reanimate()
     }
 
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val activeTime = remember { ActiveTimeAccumulator() }
 
-    // Single ticker that advances both the drift clock and (when armed) the morph progress.
-    // It wakes only ~30 times per second, pauses when the app is backgrounded, and only
-    // updates the GPU layer translations — the band layers never redraw.
+    // Single ticker that advances both the drift clock and (during a morph) the morph
+    // progress. It wakes only ~30 times per second, pauses when the app is backgrounded,
+    // and only updates the GPU layer translations — the band layers never redraw.
     LaunchedEffect(lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (true) {
@@ -153,30 +209,64 @@ fun AnimatedDiagonalBackground(
 
                 val elapsed = activeTime.tick()
 
-                if (morphArmed) {
-                    morphArmed = false
-                    morphStartElapsed = elapsed + MORPH_START_DELAY_MILLIS / 1000f
+                if (mix < 1f && morphStartElapsed < 0f) {
+                    // A reanimate just started: schedule the morph's fast phase after
+                    // the start delay (kept inside active time so a pause doesn't jump it).
+                    morphStartElapsed = elapsed + REANIMATE_START_DELAY_MILLIS / 1000f
                 }
                 if (morphStartElapsed >= 0f) {
                     val t = ((elapsed - morphStartElapsed) * 1000f / MORPH_DURATION_MILLIS)
                         .coerceIn(0f, 1f)
                     mix = FastOutSlowInEasing.transform(t)
-                    if (t >= 1f) morphStartElapsed = -1f // settle on `toVariation`, keep mix = 1
+                    if (t >= 1f) {
+                        morphStartElapsed = -1f // settle on `toVariation`, keep mix = 1
+                    }
                 }
 
                 val w = canvasSize.width.toFloat()
                 val h = canvasSize.height.toFloat()
                 if (w <= 0f || h <= 0f) continue
 
-                val spec1 = lerp(fromVariation.band1, toVariation.band1, mix)
-                val motion1 = driftMotion(spec1, elapsed)
-                band1OffsetX = w * viewportDrift(spec1.posX, spec1.driftX, motion1)
-                band1OffsetY = h * viewportDrift(spec1.posY, spec1.driftY, motion1)
+                // A morph interpolates the bands' drifted CENTERS (positions), not the drift
+                // sine parameters. The old center is frozen at the morph's start and the new
+                // center is evaluated live, so the visible sweep is one monotonic move that
+                // can never add a second "kick" (an interpolated sine can swing + then -).
+                // When the morph ends the band is exactly on the new spec's live center, so
+                // the calm drift resumes without a jump.
+                val morphActive = morphStartElapsed >= 0f
+                val fromTime = if (morphActive) min(elapsed, morphStartElapsed) else elapsed
 
-                val spec2 = lerp(fromVariation.band2, toVariation.band2, mix)
-                val motion2 = driftMotion(spec2, elapsed)
-                band2OffsetX = w * viewportDrift(spec2.posX, spec2.driftX, motion2)
-                band2OffsetY = h * viewportDrift(spec2.posY, spec2.driftY, motion2)
+                val f1 = fromVariation.band1
+                val t1 = toVariation.band1
+                val a1x = (f1.posX + f1.driftX * driftMotion(f1, fromTime)).coerceIn(0f, 1f)
+                val a1y = (f1.posY + f1.driftY * driftMotion(f1, fromTime)).coerceIn(0f, 1f)
+                val b1x = (t1.posX + t1.driftX * driftMotion(t1, elapsed)).coerceIn(0f, 1f)
+                val b1y = (t1.posY + t1.driftY * driftMotion(t1, elapsed)).coerceIn(0f, 1f)
+                val c1x = lerp(a1x, b1x, mix)
+                val c1y = lerp(a1y, b1y, mix)
+                val d1x = lerp(f1.posX, t1.posX, mix)
+                val d1y = lerp(f1.posY, t1.posY, mix)
+                band1OffsetX = w * (c1x - d1x)
+                band1OffsetY = h * (c1y - d1y)
+                band1Rotation = ROTATION_AMPLITUDE_DEG * lerp(
+                    rotationMotion(f1, fromTime), rotationMotion(t1, elapsed), mix
+                )
+
+                val f2 = fromVariation.band2
+                val t2 = toVariation.band2
+                val a2x = (f2.posX + f2.driftX * driftMotion(f2, fromTime)).coerceIn(0f, 1f)
+                val a2y = (f2.posY + f2.driftY * driftMotion(f2, fromTime)).coerceIn(0f, 1f)
+                val b2x = (t2.posX + t2.driftX * driftMotion(t2, elapsed)).coerceIn(0f, 1f)
+                val b2y = (t2.posY + t2.driftY * driftMotion(t2, elapsed)).coerceIn(0f, 1f)
+                val c2x = lerp(a2x, b2x, mix)
+                val c2y = lerp(a2y, b2y, mix)
+                val d2x = lerp(f2.posX, t2.posX, mix)
+                val d2y = lerp(f2.posY, t2.posY, mix)
+                band2OffsetX = w * (c2x - d2x)
+                band2OffsetY = h * (c2y - d2y)
+                band2Rotation = ROTATION_AMPLITUDE_DEG * lerp(
+                    rotationMotion(f2, fromTime), rotationMotion(t2, elapsed), mix
+                )
             }
         }
     }
@@ -188,13 +278,19 @@ fun AnimatedDiagonalBackground(
         }
 
         // Each band layer re-records only when `mix` changes (during a morph).
-        // The slow drift is applied externally as a GPU layer translation.
+        // The slow drift is applied externally as a GPU layer translation, and the
+        // tilt as a GPU rotation around the band's own center.
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
                     translationX = band1OffsetX
                     translationY = band1OffsetY
+                    rotationZ = band1Rotation
+                    transformOrigin = TransformOrigin(
+                        lerp(fromVariation.band1.posX, toVariation.band1.posX, mix) + band1OffsetX / size.width,
+                        lerp(fromVariation.band1.posY, toVariation.band1.posY, mix) + band1OffsetY / size.height
+                    )
                 }
         ) {
             drawOrganicBandBase(
@@ -210,6 +306,11 @@ fun AnimatedDiagonalBackground(
                 .graphicsLayer {
                     translationX = band2OffsetX
                     translationY = band2OffsetY
+                    rotationZ = band2Rotation
+                    transformOrigin = TransformOrigin(
+                        lerp(fromVariation.band2.posX, toVariation.band2.posX, mix) + band2OffsetX / size.width,
+                        lerp(fromVariation.band2.posY, toVariation.band2.posY, mix) + band2OffsetY / size.height
+                    )
                 }
         ) {
             drawOrganicBandBase(
@@ -299,12 +400,13 @@ private fun driftMotion(spec: BandSpec, elapsed: Float): Float =
         sin(spec.omega * spec.harmonicRatio * elapsed + spec.phaseOffset * 1.7f) * 0.30f
 
 /**
- * Translates the drift into a layer offset that keeps the band's center inside the viewport
- * (0..1 as a fraction of the screen). Without this, a deep drift sweep can push a band most
- * of the way off-screen so only a sliver remains visible.
+ * Slow rocking used for the band's angle. Deliberately desynchronized from
+ * [driftMotion] (shifted phase and slower harmonics) so the tilt doesn't just
+ * mirror the horizontal/vertical translation.
  */
-private fun viewportDrift(pos: Float, drift: Float, motion: Float): Float =
-    (pos + drift * motion).coerceIn(0f, 1f) - pos
+private fun rotationMotion(spec: BandSpec, elapsed: Float): Float =
+    sin(spec.omega * 0.55f * elapsed + spec.phaseOffset + 1.3f) * 0.85f +
+        sin(spec.omega * spec.harmonicRatio * 0.22f * elapsed + spec.phaseOffset) * 0.15f
 
 /**
  * Draws a band at its base position (no drift). Drift is applied externally as a GPU layer
@@ -329,15 +431,25 @@ private fun DrawScope.drawOrganicBandBase(
     }
 }
 
-/** Accumulates active (foreground) ticking time so pausing/resuming never jumps the drift. */
+/**
+ * Accumulates active (foreground) ticking time so pausing/resuming never jumps the drift.
+ * Ticks that are too far apart (the app was backgrounded in between) are discarded, so
+ * the drift clock freezes while backgrounded and resumes seamlessly where it left off.
+ */
 private class ActiveTimeAccumulator {
     private var accumulatedMillis = 0L
     private var lastTick = 0L
 
+    /** Anything above this gap means the app was backgrounded between two ticks. */
+    private val maxTickGapMillis = 250L
+
     fun tick(): Float {
         val now = SystemClock.elapsedRealtime()
         if (lastTick != 0L) {
-            accumulatedMillis += (now - lastTick)
+            val delta = now - lastTick
+            if (delta < maxTickGapMillis) {
+                accumulatedMillis += delta
+            }
         }
         lastTick = now
         return accumulatedMillis / 1000f

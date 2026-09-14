@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.olavbg.javazone.model.BackgroundMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -17,6 +18,7 @@ class SettingsRepository(private val context: Context) {
     private object PreferencesKeys {
         val NOTIFICATION_LEAD_TIME = intPreferencesKey("notification_lead_time_minutes")
         val SIMULATED_TIME_OFFSET = longPreferencesKey("simulated_time_offset_millis")
+        val BACKGROUND_MODE = stringPreferencesKey("background_mode")
     }
 
     val notificationLeadTime: Flow<Int> = context.dataStore.data
@@ -43,6 +45,20 @@ class SettingsRepository(private val context: Context) {
             preferences[PreferencesKeys.SIMULATED_TIME_OFFSET] ?: 0L
         }
 
+    val backgroundMode: Flow<BackgroundMode> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[PreferencesKeys.BACKGROUND_MODE]
+                ?.let { raw -> BackgroundMode.values().firstOrNull { it.name == raw } }
+                ?: BackgroundMode.Animated
+        }
+
     suspend fun updateNotificationLeadTime(minutes: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.NOTIFICATION_LEAD_TIME] = minutes
@@ -52,6 +68,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun updateSimulatedTimeOffset(offsetMillis: Long) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.SIMULATED_TIME_OFFSET] = offsetMillis
+        }
+    }
+
+    suspend fun updateBackgroundMode(mode: BackgroundMode) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.BACKGROUND_MODE] = mode.name
         }
     }
 

@@ -25,6 +25,7 @@ import android.os.Build
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.CheckCircle
 import com.olavbg.javazone.BuildConfig
+import com.olavbg.javazone.model.BackgroundMode
 import com.olavbg.javazone.notifications.ConferenceDoneReceiver
 import com.olavbg.javazone.ui.components.DonationButtons
 
@@ -38,7 +39,8 @@ fun SettingsScreen(
 ) {
     val notificationLeadTime by viewModel.notificationLeadTime.collectAsState()
     val simulatedTimeOffset by viewModel.simulatedTimeOffset.collectAsState()
-    
+    val backgroundMode by viewModel.backgroundMode.collectAsState()
+
     val canScheduleExact = viewModel.canScheduleExactAlarms()
 
     BackHandler(onBack = onBackClick)
@@ -46,10 +48,12 @@ fun SettingsScreen(
     SettingsContent(
         notificationLeadTime = notificationLeadTime,
         simulatedTimeOffset = simulatedTimeOffset,
+        backgroundMode = backgroundMode,
         canScheduleExact = canScheduleExact,
         onNotificationLeadTimeChange = viewModel::setNotificationLeadTime,
         onSimulatedTimeChange = viewModel::setSimulatedTime,
         onResetSimulation = viewModel::resetSimulation,
+        onBackgroundModeChange = viewModel::setBackgroundMode,
         onBackClick = onBackClick,
         modifier = modifier,
         contentPadding = contentPadding,
@@ -62,9 +66,11 @@ fun SettingsContent(
     notificationLeadTime: Int,
     simulatedTimeOffset: Long,
     canScheduleExact: Boolean,
+    backgroundMode: BackgroundMode,
     onNotificationLeadTimeChange: (Int) -> Unit,
     onSimulatedTimeChange: (LocalDateTime) -> Unit,
     onResetSimulation: () -> Unit,
+    onBackgroundModeChange: (BackgroundMode) -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues()
@@ -84,7 +90,10 @@ fun SettingsContent(
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
+                )
             )
         },
         modifier = modifier
@@ -215,6 +224,43 @@ fun SettingsContent(
 
             HorizontalDivider()
 
+            SettingsSection(title = "Background") {
+                Text(
+                    "Choose how the diagonal bands behind the app content are rendered.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                val modeLabels = listOf(
+                    BackgroundMode.None to ("Ingen bånd" to "Only the plain background color."),
+                    BackgroundMode.Static to ("Statiske bånd" to "Bands visible, but frozen in place."),
+                    BackgroundMode.Animated to ("Bånd med animasjon" to "Bands drift, tilt and sweep on navigation.")
+                )
+                modeLabels.forEach { (mode, label) ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        RadioButton(
+                            selected = backgroundMode == mode,
+                            onClick = { onBackgroundModeChange(mode) }
+                        )
+                        Column(modifier = Modifier.padding(start = 8.dp)) {
+                            Text(
+                                text = label.first,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = label.second,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
             SettingsSection(title = "About") {
                 Card(
                     colors = CardDefaults.cardColors(
@@ -320,9 +366,11 @@ fun SettingsScreenPreview() {
             notificationLeadTime = 10,
             simulatedTimeOffset = 0,
             canScheduleExact = true,
+            backgroundMode = BackgroundMode.Animated,
             onNotificationLeadTimeChange = {},
             onSimulatedTimeChange = {},
             onResetSimulation = {},
+            onBackgroundModeChange = {},
             onBackClick = {}
         )
     }

@@ -1,6 +1,5 @@
 package com.olavbg.javazone.ui
 
-import android.os.SystemClock
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
@@ -49,8 +48,6 @@ import com.olavbg.javazone.ui.timeline.TimelineScreen
 import com.olavbg.javazone.ui.timeline.TimelineViewModel
 import com.olavbg.javazone.ui.timeline.TimelineViewModelFactory
 
-private const val NAV_COALESCE_WINDOW_MILLIS = 250L
-
 @OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun JavaZoneApp(
@@ -77,24 +74,16 @@ fun JavaZoneApp(
         rememberNavBackStack(NavDestination.Timeline)
     }
 
-    // Bump the background reanimation signal on every navigation (push or pop). nav3 can
-    // mutate the back stack several times for a single gesture (e.g. a predictive-back
-    // that pops multiple entries), so coalesce mutations within a short window to keep
-    // the reanimate to exactly once per visible screen change.
+    // Ask the background to reanimate on every screen change (push or pop). The simplest
+    // possible contract: nav mutates the back stack -> onNavigation() is called. The
+    // background itself ignores calls that arrive while a reanimate is still playing.
     var isFirstNav by remember { mutableStateOf(true) }
-    // 0L means "no navigation recorded yet". Plain subtraction keeps this overflow-free
-    // because elapsedRealtime only grows and both operands stay non-negative.
-    var lastNavigationAt by remember { mutableStateOf(0L) }
     LaunchedEffect(backStack.size) {
         if (isFirstNav) {
             isFirstNav = false
             return@LaunchedEffect
         }
-        val now = SystemClock.elapsedRealtime()
-        if (lastNavigationAt == 0L || now - lastNavigationAt >= NAV_COALESCE_WINDOW_MILLIS) {
-            lastNavigationAt = now
-            onNavigation()
-        }
+        onNavigation()
     }
 
     SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {

@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.olavbg.javazone.model.BackgroundMode
 import com.olavbg.javazone.ui.components.AnimatedDiagonalBackground
 
 private val DarkColorScheme = darkColorScheme(
@@ -29,7 +30,7 @@ private val DarkColorScheme = darkColorScheme(
     surfaceContainerHigh = DarkSurface.copy(alpha = 0.78f),
     onBackground = DarkOnSurface,
     onSurface = DarkOnSurface,
-    onSurfaceVariant = Color(0xFFA6AEB8),
+    onSurfaceVariant = Color(0xFFC4CBD3),
     outlineVariant = DarkOutline,
     primaryContainer = Color(0xFF2E5242).copy(alpha = 0.80f),
     onPrimaryContainer = Color(0xFFC8EEDA),
@@ -56,7 +57,7 @@ private val LightColorScheme = lightColorScheme(
     surfaceContainerHigh = LightSurface.copy(alpha = 0.92f),
     onBackground = LightOnSurface,
     onSurface = LightOnSurface,
-    onSurfaceVariant = Color(0xFF5C646C),
+    onSurfaceVariant = Color(0xFF4E565F),
     outlineVariant = Color(0xFFDDE1E5),
     primaryContainer = Color(0xFFD3EBE0).copy(alpha = 0.90f),
     onPrimaryContainer = Color(0xFF22463A),
@@ -73,6 +74,7 @@ private val LightColorScheme = lightColorScheme(
 fun JavaZoneTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
+    backgroundMode: BackgroundMode = BackgroundMode.Animated,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -97,6 +99,7 @@ fun JavaZoneTheme(
                 baseColor = if (darkTheme) DarkBackground else LightBackground,
                 tintPrimary = if (darkTheme) DiagonalMintLight else AccentMint,
                 tintSecondary = if (darkTheme) DiagonalBlueLight else AccentBlue,
+                mode = backgroundMode,
                 modifier = Modifier.fillMaxSize()
             )
             content()

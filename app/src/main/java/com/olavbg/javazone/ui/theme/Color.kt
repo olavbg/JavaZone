@@ -7,7 +7,7 @@ val DarkBackground = Color(0xFF212529)
 val DarkSurface = Color(0xFF2C3138)
 val DarkSurfaceVariant = Color(0xFF39404A)
 val DarkOutline = Color(0xFF4A525C)
-val DarkOnSurface = Color(0xFFE8EAED)
+val DarkOnSurface = Color(0xFFF2F4F7)
 
 // ---- Light neutrals ----
 val LightBackground = Color(0xFFF3F4F5)
@@ -33,6 +33,9 @@ val AccentRoseLight = Color(0xFFE2AFBB)
 // Soft pastel tints for the animated diagonal background
 val DiagonalMintLight = Color(0xFF8FDFBA)
 val DiagonalBlueLight = Color(0xFF9FC2F0)
+
+// Favorite heart color — clear, warm red that reads as "red" on both dark and light surfaces
+val FavoriteRed = Color(0xFFEF5350)
 
 // Format badge accents (muted, readable on both dark and light surfaces)
 val LightningAmber = AccentAmber
