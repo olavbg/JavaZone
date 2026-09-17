@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
+import com.olavbg.javazone.model.Speaker
 import com.olavbg.javazone.ui.theme.*
 import kotlin.math.abs
 
@@ -78,6 +79,83 @@ fun resolveVideoUrl(url: String): String {
         url.contains(".") -> "https://$url"
         else -> "https://vimeo.com/$url"
     }
+}
+
+fun resolveSpeakerImageUrl(url: String): String {
+    return when {
+        url.startsWith("http://") || url.startsWith("https://") -> url
+        url.startsWith("//") -> "https:$url"
+        url.startsWith("/") -> "https://javazone.no$url"
+        url.contains(".") -> "https://$url"
+        else -> url
+    }
+}
+
+data class SpeakerSocialLink(
+    val kind: String,
+    val label: String,
+    val url: String
+)
+
+/**
+ * Builds the list of social media links shown for a speaker. Empty/placeholder
+ * handles (e.g. a lone "@", "=") are dropped, and Twitter handles are presented
+ * as X, using [buildSpeakerSocialLinks]'s sibling resolvers below.
+ */
+fun buildSpeakerSocialLinks(speaker: Speaker): List<SpeakerSocialLink> = buildList {
+    speaker.twitter?.let { value ->
+        val url = resolveXUrl(value)
+        if (url != null) add(SpeakerSocialLink(kind = "twitter", label = displayHandle(value), url = url))
+    }
+    speaker.bluesky?.let { value ->
+        val url = resolveBlueskyUrl(value)
+        if (url != null) add(SpeakerSocialLink(kind = "bluesky", label = displayHandle(value), url = url))
+    }
+    speaker.linkedin?.let { value ->
+        val url = resolveLinkedInUrl(value)
+        if (url != null) add(SpeakerSocialLink(kind = "linkedin", label = displayHandle(value), url = url))
+    }
+}
+
+private fun isHttpUrl(value: String): Boolean =
+    value.startsWith("http://") || value.startsWith("https://")
+
+private fun displayHandle(value: String): String {
+    val trimmed = value.trim().substringBefore('?')
+    return if (isHttpUrl(trimmed)) {
+        trimmed.trimEnd('/').substringAfterLast('/').trim()
+    } else {
+        trimmed.removePrefix("@").trim().trimEnd('/')
+    }
+}
+
+private fun isValidHandle(handle: String): Boolean =
+    handle.length >= 2 && handle.any { it.isLetterOrDigit() }
+
+private fun resolveXUrl(value: String): String? {
+    val trimmed = value.trim()
+    if (isHttpUrl(trimmed)) return trimmed
+    val handle = displayHandle(trimmed)
+    return if (isValidHandle(handle)) "https://x.com/$handle" else null
+}
+
+private fun resolveBlueskyUrl(value: String): String? {
+    val trimmed = value.trim()
+    if (isHttpUrl(trimmed)) return trimmed
+    val handle = displayHandle(trimmed)
+    if (!isValidHandle(handle)) return null
+    // Bluesky handles must contain at least one ".": either a custom domain such as
+    // "brianvermeer.nl", or end in ".bsky.social". A bare handle like "gsaab" would
+    // 404, so give it the *.bsky.social suffix.
+    val full = if (handle.contains('.') || handle.startsWith("did:")) handle else "$handle.bsky.social"
+    return "https://bsky.app/profile/$full"
+}
+
+private fun resolveLinkedInUrl(value: String): String? {
+    val trimmed = value.trim()
+    if (isHttpUrl(trimmed)) return trimmed
+    val handle = displayHandle(trimmed)
+    return if (isValidHandle(handle)) "https://www.linkedin.com/in/$handle" else null
 }
 
 /**

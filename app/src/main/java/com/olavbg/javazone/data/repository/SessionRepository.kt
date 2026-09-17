@@ -165,7 +165,9 @@ class SessionRepository(
                     format = dto.format ?: "",
                     language = dto.language,
                     videoUrl = dto.videoUrl,
-                    speakers = dto.speakers?.map { Speaker(it.name, it.bio, it.twitter) } ?: emptyList(),
+                    intendedAudience = dto.intendedAudience,
+                    suggestedKeywords = dto.suggestedKeywords,
+                    speakers = dto.speakers?.map { it.toDomainModel() } ?: emptyList(),
                     isFavorite = false
                 )
             }
@@ -185,13 +187,18 @@ class SessionRepository(
         format = format ?: "",
         language = language,
         videoUrl = videoUrl,
+        intendedAudience = intendedAudience,
+        suggestedKeywords = suggestedKeywords,
         speakers = speakers?.map { it.toDomainModel() } ?: emptyList()
     )
 
     private fun SpeakerDto.toDomainModel() = Speaker(
         name = name,
         bio = bio,
-        twitter = twitter
+        twitter = twitter,
+        bluesky = bluesky,
+        linkedin = linkedin,
+        pictureUrl = pictureUrl
     )
 
     private fun SessionEntity.toDomainModel(isFavorite: Boolean) = Session(
@@ -204,6 +211,8 @@ class SessionRepository(
         format = format,
         language = language,
         videoUrl = videoUrl,
+        intendedAudience = intendedAudience,
+        suggestedKeywords = suggestedKeywords,
         speakers = speakers,
         isFavorite = isFavorite
     )

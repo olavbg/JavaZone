@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.WindowCompat
 import androidx.appcompat.app.AlertDialog
 import androidx.compose.runtime.*
 import androidx.core.content.ContextCompat
@@ -51,6 +52,7 @@ class MainActivity : ComponentActivity() {
         requestNotificationPermission()
 
         val db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "javazone.db")
+            .addMigrations(AppDatabase.MIGRATION_3_4)
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
         val retrofit = Retrofit.Builder()
@@ -69,6 +71,7 @@ class MainActivity : ComponentActivity() {
             false
         )
 
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         enableEdgeToEdge()
         setContent {
             var reanimateSignal by remember { mutableLongStateOf(0L) }

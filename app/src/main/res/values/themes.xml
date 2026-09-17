@@ -1,6 +1,16 @@
 <resources>
 
-    <style name="Theme.JavaZone" parent="Theme.MaterialComponents.Light">
+    <style name="Theme.JavaZone" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="android:windowBackground">@color/javazone_background</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- Without this, the system paints a translucent contrast scrim behind the
+             navigation bar, which reads as a thin band "cutting" the app's bottom
+             edge. Disabling it lets the app draw all the way down. -->
+        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
+
 </resources>

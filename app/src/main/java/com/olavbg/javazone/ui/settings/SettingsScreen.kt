@@ -82,6 +82,9 @@ fun SettingsContent(
     var showDatePicker by remember { mutableStateOf(value = false) }
     var showTimePicker by remember { mutableStateOf(value = false) }
 
+    // Navigation bar inset added to the scroll content so the screen can draw behind it.
+    val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -96,6 +99,7 @@ fun SettingsContent(
                 )
             )
         },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         modifier = modifier
     ) { padding ->
         Column(
@@ -297,7 +301,7 @@ fun SettingsContent(
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp + contentPadding.calculateBottomPadding()))
+            Spacer(modifier = Modifier.height(32.dp + navBarBottom + contentPadding.calculateBottomPadding()))
         }
     }
 

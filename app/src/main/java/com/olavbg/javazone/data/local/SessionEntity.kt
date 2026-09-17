@@ -15,6 +15,8 @@ data class SessionEntity(
     val format: String,
     val language: String?,
     val videoUrl: String?,
+    val intendedAudience: String?,
+    val suggestedKeywords: String?,
     val speakers: List<Speaker>
 )
 

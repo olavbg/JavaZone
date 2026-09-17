@@ -19,6 +19,8 @@ data class SessionDto(
     @Json(name = "format") val format: String?,
     @Json(name = "language") val language: String?,
     @Json(name = "video") val videoUrl: String?,
+    @Json(name = "intendedAudience") val intendedAudience: String?,
+    @Json(name = "suggestedKeywords") val suggestedKeywords: String?,
     @Json(name = "speakers") val speakers: List<SpeakerDto>?
 )
 
@@ -26,5 +28,8 @@ data class SessionDto(
 data class SpeakerDto(
     @Json(name = "name") val name: String,
     @Json(name = "bio") val bio: String?,
-    @Json(name = "twitter") val twitter: String?
+    @Json(name = "twitter") val twitter: String?,
+    @Json(name = "bluesky") val bluesky: String?,
+    @Json(name = "linkedin") val linkedin: String?,
+    @Json(name = "pictureUrl") val pictureUrl: String?
 )

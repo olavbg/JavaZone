@@ -27,8 +27,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -44,6 +42,7 @@ import com.olavbg.javazone.ui.components.sharedElementModifier
 import com.olavbg.javazone.ui.theme.FavoriteRed
 import com.olavbg.javazone.util.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
 
@@ -88,7 +87,17 @@ fun TimelineScreen(
     }
 
     val listState = rememberLazyListState()
+    // Bottom inset of the gesture/3-button navigation bar. The Scaffold is configured
+    // with zero content insets so list content can scroll behind the bar; this value is
+    // added to the scrollable content padding instead, keeping the last row reachable.
+    val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val yearState = rememberUpdatedState(selectedYear)
+    val scope = rememberCoroutineScope()
+    // List index of the active/upcoming time slot, used for the auto "scroll to now"
+    // behaviour and the "Nå" jump button.
+    val nowIndex = remember(groupedSessions, currentTime) {
+        findFirstActiveOrUpcomingIndex(groupedSessions, currentTime)
+    }
 
     var previousYear by remember { mutableStateOf(selectedYear) }
 
@@ -100,12 +109,16 @@ fun TimelineScreen(
         }
     }
 
-    // Auto-scroll to active or upcoming time slot when day changes or data first arrives.
+    // Auto-scroll to the active/upcoming slot when opening the app or when switching
+    // the day filter. For the current year we wait until a day is actually selected:
+    // the ViewModel auto-selects today shortly after launch, and scrolling against the
+    // transient all-days snapshot (mismatched list indices) would leave the list at
+    // the wrong position and consume the scroll flag for the real target day.
+    val daySettled = !isCurrentYear || selectedDay != null
     LaunchedEffect(groupedSessions, selectedDay) {
-        if (groupedSessions.isNotEmpty() && viewModel.shouldScrollToNow()) {
-            val activeIndex = findFirstActiveOrUpcomingIndex(groupedSessions, currentTime)
-            if (activeIndex > 0) {
-                listState.animateScrollToItem(activeIndex)
+        if (daySettled && groupedSessions.isNotEmpty() && viewModel.shouldScrollToNow()) {
+            if (nowIndex > 0) {
+                listState.animateScrollToItem(nowIndex)
             }
             viewModel.markScrolledToNow()
         }
@@ -143,6 +156,7 @@ fun TimelineScreen(
                     availableDays = availableDays,
                 )
             },
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             modifier = Modifier.fillMaxSize(),
         ) { padding ->
             // Keep the list composed so the warm-up pass isn't thrown away on first scroll.
@@ -179,7 +193,11 @@ fun TimelineScreen(
                     }
 
                     if (sessions.isEmpty()) {
-                        if (allSessions.isEmpty() && !isCurrentYear) {
+                        if (isLoading) {
+                            // Centered loading state (mirrors the empty-state layout) so it is
+                            // clearly visible at startup, also for archive years.
+                            TimelineLoadingState()
+                        } else if (allSessions.isEmpty() && !isCurrentYear) {
                             // The selected archive year has no sessions registered at all
                             EmptyStateView(
                                 isSearchActive = false,
@@ -211,7 +229,7 @@ fun TimelineScreen(
                             liveIndicators = showLiveIndicators,
                             sharedScope = sharedScope,
                             contentPadding = PaddingValues(
-                                bottom = 32.dp + contentPadding.calculateBottomPadding()
+                                bottom = 32.dp + navBarBottom + contentPadding.calculateBottomPadding()
                             )
                         )
                     }
@@ -219,13 +237,64 @@ fun TimelineScreen(
             }
         }
 
-        // Only block startup with a loading overlay while an archive year is being
-        // fetched from the network. For the current year the data is read straight
-        // from Room, so the timeline content shows immediately behind the empty state.
-        if (isLoading && !isCurrentYear) {
-            TimelineLoadingOverlay(
-                text = "Laster inn programmet for JavaZone $selectedYear…"
-            )
+        // "Scroll to now" button – a compact, centered pill that only appears once the
+        // viewport is several rows away from the active/upcoming slot, so it does not
+        // pop up on every little scroll. The arrow points at where "now" lies: up
+        // when we have scrolled past it, down when it is still further down.
+        val nowFabState by remember(groupedSessions, nowIndex, isCurrentYear) {
+            derivedStateOf {
+                if (!isCurrentYear || groupedSessions.isEmpty() || nowIndex <= 0) {
+                    NowFabState.Hidden
+                } else {
+                    val delta = nowIndex - listState.firstVisibleItemIndex
+                    when {
+                        delta >= NOW_FAB_SLOP_ITEMS -> NowFabState.ShowDown
+                        delta <= -NOW_FAB_SLOP_ITEMS -> NowFabState.ShowUp
+                        else -> NowFabState.Hidden
+                    }
+                }
+            }
+        }
+        AnimatedVisibility(
+            visible = nowFabState != NowFabState.Hidden,
+            enter = fadeIn() + scaleIn(),
+            exit = fadeOut() + scaleOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp + navBarBottom + contentPadding.calculateBottomPadding())
+        ) {
+            Surface(
+                onClick = {
+                    scope.launch {
+                        listState.animateScrollToItem(nowIndex)
+                    }
+                },
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                shadowElevation = 6.dp,
+                modifier = Modifier.height(44.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ) {
+                    Icon(
+                        imageVector = if (nowFabState == NowFabState.ShowDown)
+                            Icons.Filled.KeyboardArrowDown
+                        else
+                            Icons.Filled.KeyboardArrowUp,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Nå",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
 
         if (isYearPickerVisible) {
@@ -244,34 +313,21 @@ fun TimelineScreen(
 }
 
 @Composable
-private fun TimelineLoadingOverlay(text: String) {
+private fun TimelineLoadingState() {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            // Swallow pointer events until the timeline is ready.
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        event.changes.forEach { it.consume() }
-                    }
-                }
-            }
+            .padding(32.dp)
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            CircularProgressIndicator(
-                color = MaterialTheme.colorScheme.primary
-            )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator()
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = text,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "Laster inn foredrag…",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
             )
         }
     }
@@ -509,11 +565,14 @@ fun TimelineHeader(
                             selected = true,
                             onClick = { onFavoritesToggled(false) },
                             label = { Text("Favoritter") },
-                            leadingIcon = { Icon(Icons.Default.Favorite, contentDescription = null, modifier = Modifier.size(14.dp)) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = FavoriteRed.copy(alpha = 0.22f),
-                                selectedLabelColor = FavoriteRed
-                            )
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Favorite,
+                                    contentDescription = null,
+                                    tint = FavoriteRed,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
                         )
                     }
                 }
@@ -647,9 +706,11 @@ fun TimelineStickyTimeHeader(
     isPinned: Boolean = false
 ) {
     // The header background is nearly invisible in its natural list position, but
-    // fades to a readable opaque tint while it is pinned to the top over scrolling rows.
+    // fades to a readable translucent tint while pinned over scrolling rows. It uses
+    // the screen background colour (not the raised "surface" tone) so it never reads
+    // as an offset panel below the toolbar.
     val bgAlpha by animateFloatAsState(
-        targetValue = if (isPinned) 0.88f else 0.10f,
+        targetValue = if (isPinned) 0.72f else 0.10f,
         animationSpec = tween(durationMillis = 250),
         label = "stickyHeaderBg"
     )
@@ -949,7 +1010,7 @@ fun DetailedSessionCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp
                     )
-                    if (minsUntil <= 60) {
+                    if (minsUntil <= 60 && !isSessionPast(session, currentTime)) {
                         Surface(
                             shape = RoundedCornerShape(4.dp),
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
@@ -1074,3 +1135,10 @@ private fun findFirstActiveOrUpcomingIndex(
 
     return if (bestIndex != -1) bestIndex else 0
 }
+
+// How many rows the viewport must move away from the active/upcoming slot before the
+// "Scroll to now" pill appears. Gives a little slack so minor scrolling does not
+// flash the button.
+private const val NOW_FAB_SLOP_ITEMS = 8
+
+private enum class NowFabState { Hidden, ShowUp, ShowDown }

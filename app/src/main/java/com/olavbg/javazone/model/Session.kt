@@ -14,6 +14,8 @@ data class Session(
     val format: String,
     val language: String?,
     val videoUrl: String?,
+    val intendedAudience: String? = null,
+    val suggestedKeywords: String? = null,
     val speakers: List<Speaker>,
     val isFavorite: Boolean = false,
     // Parsed once at construction, so downstream code (grouping, per-card
@@ -26,7 +28,10 @@ data class Session(
 data class Speaker(
     val name: String,
     val bio: String?,
-    val twitter: String?
+    val twitter: String?,
+    val bluesky: String? = null,
+    val linkedin: String? = null,
+    val pictureUrl: String? = null
 )
 
 private fun parseOrNull(value: String): Instant? =
