@@ -1,5 +1,11 @@
 package com.olavbg.javazone.ui
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
@@ -17,6 +23,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,9 +35,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -63,6 +72,26 @@ fun JavaZoneApp(
     )
 
     val showLiveBanners by timelineViewModel.showLiveIndicators.collectAsState()
+
+    val context = LocalContext.current
+    var showNotificationPrompt by remember { mutableStateOf(false) }
+    val promptShown by settingsRepository.notificationPromptShown.collectAsState(initial = true)
+    val favoriteCount by repository.favoriteCount.collectAsState(initial = null)
+    var previousFavoriteCount by remember { mutableStateOf<Int?>(null) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+
+    LaunchedEffect(favoriteCount, promptShown) {
+        val current = favoriteCount ?: return@LaunchedEffect
+        val previous = previousFavoriteCount
+        previousFavoriteCount = current
+        if (previous == null || current <= previous) return@LaunchedEffect
+        if (promptShown || !needsNotificationPermission(context)) return@LaunchedEffect
+        showNotificationPrompt = true
+        settingsRepository.markNotificationPromptShown()
+    }
 
     var showDonationDialog by rememberSaveable { mutableStateOf(showDonationOnLaunch) }
 
@@ -149,7 +178,7 @@ fun JavaZoneApp(
                         SettingsScreen(
                             viewModel = viewModel(
                                 factory = SettingsViewModelFactory(
-                                    settingsRepository, repository, reminderManager
+                                    settingsRepository, repository
                                 )
                             ),
                             onBackClick = { backStack.removeAt(backStack.size - 1) }
@@ -164,6 +193,7 @@ fun JavaZoneApp(
     if (showDonationDialog) {
         AlertDialog(
             onDismissRequest = { showDonationDialog = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 1f),
             title = { Text("Takk for i år!") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -195,4 +225,42 @@ fun JavaZoneApp(
             }
         )
     }
+
+    if (showNotificationPrompt) {
+        AlertDialog(
+            onDismissRequest = { showNotificationPrompt = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 1f),
+            title = { Text("Vil du ha påminnelser?") },
+            text = {
+                Text(
+                    "Vi kan sende deg et varsel før foredragene du favorittmarkerer starter. For at det skal fungere, ber vi om tillatelse til å sende varslinger."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showNotificationPrompt = false
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    }
+                ) {
+                    Text("Be om tillatelse")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNotificationPrompt = false }) {
+                    Text("Ikke nå")
+                }
+            }
+        )
+    }
+}
+
+private fun needsNotificationPermission(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false
+    return ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.POST_NOTIFICATIONS
+    ) != PackageManager.PERMISSION_GRANTED
 }

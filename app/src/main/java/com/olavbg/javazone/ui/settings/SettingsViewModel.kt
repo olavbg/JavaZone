@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.model.BackgroundMode
-import com.olavbg.javazone.notifications.ReminderManager
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -17,7 +16,6 @@ import java.time.ZoneId
 class SettingsViewModel(
     private val repository: SettingsRepository,
     private val sessionRepository: SessionRepository,
-    private val reminderManager: ReminderManager,
 ) : ViewModel() {
 
     val notificationLeadTime: StateFlow<Int> = repository.notificationLeadTime
@@ -28,8 +26,6 @@ class SettingsViewModel(
 
     val backgroundMode: StateFlow<BackgroundMode> = repository.backgroundMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BackgroundMode.Animated)
-
-    fun canScheduleExactAlarms(): Boolean = reminderManager.canScheduleExact()
 
     fun setNotificationLeadTime(minutes: Int) {
         viewModelScope.launch {

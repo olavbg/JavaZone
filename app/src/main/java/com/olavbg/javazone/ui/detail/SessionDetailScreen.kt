@@ -67,6 +67,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -150,43 +151,48 @@ fun SessionDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Foredrag",
-                        fontWeight = FontWeight.Black,
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
-                ),
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Tilbake")
-                    }
-                },
-                actions = {
-                    if (effectiveYear == SessionRepository.CURRENT_YEAR) {
-                        session?.let { s ->
-                            IconButton(
-                                onClick = {
-                                    scope.launch {
-                                        repository.toggleFavorite(s.id, !s.isFavorite)
+            Surface(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+                shadowElevation = 2.dp
+            ) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "Foredrag",
+                            fontWeight = FontWeight.Black,
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent
+                    ),
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Tilbake")
+                        }
+                    },
+                    actions = {
+                        if (effectiveYear == SessionRepository.CURRENT_YEAR) {
+                            session?.let { s ->
+                                IconButton(
+                                    onClick = {
+                                        scope.launch {
+                                            repository.toggleFavorite(s.id, !s.isFavorite)
+                                        }
                                     }
+                                ) {
+                                    Icon(
+                                        imageVector = if (s.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                        contentDescription = null,
+                                        tint = if (s.isFavorite) FavoriteRed else LocalContentColor.current,
+                                        modifier = Modifier.sharedElementModifier(sharedScope, "session-favorite-${s.id}")
+                                    )
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = if (s.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = null,
-                                    tint = if (s.isFavorite) FavoriteRed else LocalContentColor.current,
-                                    modifier = Modifier.sharedElementModifier(sharedScope, "session-favorite-${s.id}")
-                                )
                             }
                         }
                     }
-                }
-            )
+                )
+            }
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         modifier = modifier
@@ -533,15 +539,15 @@ fun SessionDetailScreen(
                             Spacer(modifier = Modifier.height(24.dp))
                             Text(
                                 text = "Passer for",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = s.intendedAudience,
-                                style = MaterialTheme.typography.bodyMedium,
-                                lineHeight = 22.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                style = MaterialTheme.typography.bodyLarge,
+                                lineHeight = 26.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.95f)
                             )
                         }
 
@@ -549,7 +555,7 @@ fun SessionDetailScreen(
                             Spacer(modifier = Modifier.height(24.dp))
                             Text(
                                 text = "Emneknagger",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(8.dp))

@@ -34,6 +34,8 @@ class SessionRepository(
     )
     val availableYears: StateFlow<List<Int>> = _availableYears.asStateFlow()
 
+    val favoriteCount: Flow<Int> = dao.getFavoriteSessionIds().map { it.size }
+
     fun getSessions(): Flow<List<Session>> {
         return getSessionsFlow(CURRENT_YEAR)
     }

@@ -22,8 +22,8 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -39,6 +39,12 @@ internal fun getDayFromZulu(instant: Instant?): String {
     } catch (_: Exception) {
         ""
     }
+}
+
+internal fun conferenceDayForDate(sessions: List<Session>, date: LocalDate): String? {
+    return sessions.firstOrNull { session ->
+        session.start?.atZone(OSLO_ZONE)?.toLocalDate() == date
+    }?.let { getDayFromZulu(it.start) }
 }
 
 @Immutable
@@ -113,11 +119,7 @@ class TimelineViewModel(
 
     val currentConferenceDay: StateFlow<String?> = combine(allSessions, currentTime, _selectedYear) { list, time, year ->
         if (year != SessionRepository.CURRENT_YEAR || list.isEmpty()) null
-        else {
-            val currentDayName = getDayFromZulu(time)
-            list.map { getDayFromZulu(it.start) }
-                .firstOrNull { it.equals(currentDayName, ignoreCase = true) }
-        }
+        else conferenceDayForDate(list, time.atZone(OSLO_ZONE).toLocalDate())
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     // Sessions filtered by selected day only (used for calculating dynamic filter options)
@@ -261,11 +263,12 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
                 }
             }
         }
-        // Update current time every minute
+        // Update current time at each whole clock minute (second = 0)
         viewModelScope.launch {
             while (true) {
                 _currentTime.value = Instant.now()
-                delay(Duration.ofMinutes(1).toMillis())
+                val millisUntilNextMinute = 60_000L - (System.currentTimeMillis() % 60_000L)
+                delay(millisUntilNextMinute)
             }
         }
     }

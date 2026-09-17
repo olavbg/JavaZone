@@ -1,10 +1,19 @@
 package com.olavbg.javazone.ui.settings
 
+import android.Manifest
+import android.app.Activity
+import android.app.AlarmManager
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,10 +28,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
@@ -36,8 +48,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -46,6 +61,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,10 +69,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.olavbg.javazone.BuildConfig
 import com.olavbg.javazone.model.BackgroundMode
 import com.olavbg.javazone.notifications.ConferenceDoneReceiver
@@ -79,23 +101,216 @@ fun SettingsScreen(
     val simulatedTimeOffset by viewModel.simulatedTimeOffset.collectAsState()
     val backgroundMode by viewModel.backgroundMode.collectAsState()
 
-    val canScheduleExact = viewModel.canScheduleExactAlarms()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    var permissions by remember { mutableStateOf(computeAppPermissions(context)) }
+    val permissionRequestLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        permissions = computeAppPermissions(context)
+        if (!granted && !shouldShowPermissionRationale(context, Manifest.permission.POST_NOTIFICATIONS)) {
+            openAppNotificationSettings(context)
+        }
+    }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                permissions = computeAppPermissions(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val onPermissionsAction: () -> Unit = {
+        val current = computeAppPermissions(context)
+        when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !current.canPostNotifications ->
+                permissionRequestLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !current.canScheduleExact ->
+                openExactAlarmSettings(context)
+        }
+    }
+    val onOpenNotificationSettings: () -> Unit = { openAppNotificationSettings(context) }
 
     BackHandler(onBack = onBackClick)
 
     SettingsContent(
         notificationLeadTime = notificationLeadTime,
         simulatedTimeOffset = simulatedTimeOffset,
+        permissions = permissions,
         backgroundMode = backgroundMode,
-        canScheduleExact = canScheduleExact,
         onNotificationLeadTimeChange = viewModel::setNotificationLeadTime,
         onSimulatedTimeChange = viewModel::setSimulatedTime,
         onResetSimulation = viewModel::resetSimulation,
         onBackgroundModeChange = viewModel::setBackgroundMode,
+        onPermissionsAction = onPermissionsAction,
+        onOpenNotificationSettings = onOpenNotificationSettings,
         onBackClick = onBackClick,
         modifier = modifier,
         contentPadding = contentPadding,
     )
+}
+
+@Composable
+private fun PermissionsWarningCard(
+    permissions: AppPermissions,
+    onPermissionsAction: () -> Unit,
+    onOpenNotificationSettings: () -> Unit
+) {
+    val message = when {
+        !permissions.canPostNotifications && !permissions.canScheduleExact ->
+            "Notifications and exact alarms are disabled. Tap to request access."
+        !permissions.canPostNotifications ->
+            "Notifications are disabled. Tap to request access."
+        else ->
+            "Exact alarms are disabled. Tap to request access."
+    }
+    Card(
+        onClick = onPermissionsAction,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Rounded.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+            Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
+                Text(
+                    text = "Permissions needed",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+            TextButton(
+                onClick = onOpenNotificationSettings,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Text("Settings", style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionsGrantedCard(onOpenNotificationSettings: () -> Unit) {
+    Surface(
+        onClick = onOpenNotificationSettings,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Rounded.CheckCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
+                Text(
+                    text = "Notifications enabled",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Tap to open this app's notification settings.",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private fun computeAppPermissions(context: Context): AppPermissions {
+    val canScheduleExact = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
+    } else {
+        true
+    }
+    val canPostNotifications = when {
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU -> true
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED -> true
+        else -> false
+    }
+    return AppPermissions(
+        canScheduleExact = canScheduleExact,
+        canPostNotifications = canPostNotifications
+    )
+}
+
+@Suppress("InlinedApi")
+private fun openExactAlarmSettings(context: Context) {
+    runCatching {
+        context.startActivity(
+            Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                data = Uri.fromParts("package", context.packageName, null)
+            }
+        )
+    }
+}
+
+private fun openAppNotificationSettings(context: Context) {
+    runCatching {
+        context.startActivity(
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            }
+        )
+    }
+}
+
+private fun shouldShowPermissionRationale(context: Context, permission: String): Boolean {
+    val activity = context.findActivity() ?: return true
+    return ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+private fun isLocalBuild(context: Context): Boolean {
+    if ((context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) return true
+    val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        runCatching {
+            context.packageManager.getInstallSourceInfo(context.packageName).installingPackageName
+        }.getOrNull()
+    } else {
+        @Suppress("DEPRECATION")
+        context.packageManager.getInstallerPackageName(context.packageName)
+    }
+    return installer != "com.android.vending"
+}
+
+data class AppPermissions(
+    val canScheduleExact: Boolean,
+    val canPostNotifications: Boolean
+) {
+    val allGranted: Boolean get() = canScheduleExact && canPostNotifications
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -103,17 +318,20 @@ fun SettingsScreen(
 fun SettingsContent(
     notificationLeadTime: Int,
     simulatedTimeOffset: Long,
-    canScheduleExact: Boolean,
+    permissions: AppPermissions,
     backgroundMode: BackgroundMode,
     onNotificationLeadTimeChange: (Int) -> Unit,
     onSimulatedTimeChange: (LocalDateTime) -> Unit,
     onResetSimulation: () -> Unit,
     onBackgroundModeChange: (BackgroundMode) -> Unit,
+    onPermissionsAction: () -> Unit,
+    onOpenNotificationSettings: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues()
 ) {
     val context = LocalContext.current
+    val showTimeSimulation = remember(context) { isLocalBuild(context) }
     val simulatedInstant = Instant.now().plusMillis(simulatedTimeOffset)
     val simulatedDateTime = simulatedInstant.atZone(ZoneId.of("Europe/Oslo")).toLocalDateTime()
 
@@ -125,17 +343,22 @@ fun SettingsContent(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Settings") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
+            Surface(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+                shadowElevation = 2.dp
+            ) {
+                TopAppBar(
+                    title = { Text("Settings") },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent
+                    )
                 )
-            )
+            }
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         modifier = modifier
@@ -149,77 +372,29 @@ fun SettingsContent(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Spacer(modifier = Modifier.height(8.dp))
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                SettingsSection(title = "Permissions") {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (canScheduleExact) 
-                                MaterialTheme.colorScheme.surfaceVariant 
-                            else 
-                                MaterialTheme.colorScheme.errorContainer
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                if (canScheduleExact) Icons.Rounded.CheckCircle else Icons.Rounded.Warning,
-                                contentDescription = null,
-                                tint = if (canScheduleExact) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                            )
-                            Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
-                                Text(
-                                    "Exact Alarms",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    if (canScheduleExact) "Enabled - Notifications will be precise." else "Disabled - Notifications might be delayed.",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                            if (!canScheduleExact) {
-                                Button(
-                                    onClick = {
-                                        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                                            data = Uri.fromParts("package", context.packageName, null)
-                                        }
-                                        context.startActivity(intent)
-                                    },
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                                ) {
-                                    Text("Fix", style = MaterialTheme.typography.labelMedium)
-                                }
-                            }
-                        }
-                    }
-                }
-                HorizontalDivider()
-            }
 
             SettingsSection(title = "Notifications") {
+                if (!permissions.allGranted) {
+                    PermissionsWarningCard(
+                        permissions = permissions,
+                        onPermissionsAction = onPermissionsAction,
+                        onOpenNotificationSettings = onOpenNotificationSettings
+                    )
+                }
                 Text(
                     "How many minutes before a session starts should you be notified?",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                val options = listOf(5, 10, 15)
-                options.forEach { minutes ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        RadioButton(
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    listOf(5, 10, 15).forEachIndexed { index, minutes ->
+                        SegmentedButton(
                             selected = notificationLeadTime == minutes,
-                            onClick = { onNotificationLeadTimeChange(minutes) }
-                        )
-                        Text(
-                            text = "$minutes minutes",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
+                            onClick = { onNotificationLeadTimeChange(minutes) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 3)
+                        ) {
+                            Text("$minutes min")
+                        }
                     }
                 }
                 if (BuildConfig.DEBUG) {
@@ -229,38 +404,8 @@ fun SettingsContent(
                         Text("Send test notification now")
                     }
                 }
-            }
-
-            HorizontalDivider()
-
-            SettingsSection(title = "Time Simulation") {
-                Text(
-                    "Simulate the app's current time. Useful for demoing 'NOW' indicator and past session logic.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showDatePicker = true }
-                        .padding(vertical = 4.dp)
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Current Simulation", style = MaterialTheme.typography.labelMedium)
-                        Text(
-                            if (simulatedTimeOffset == 0L) "Actual Time" else simulatedDateTime.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, HH:mm")),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-                Button(
-                    onClick = onResetSimulation,
-                    enabled = simulatedTimeOffset != 0L,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Reset to Actual Time")
+                if (permissions.allGranted) {
+                    PermissionsGrantedCard(onOpenNotificationSettings = onOpenNotificationSettings)
                 }
             }
 
@@ -269,33 +414,68 @@ fun SettingsContent(
             SettingsSection(title = "Background") {
                 Text(
                     "Choose how the diagonal bands behind the app content are rendered.",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                val modeLabels = listOf(
-                    BackgroundMode.None to ("Ingen bånd" to "Only the plain background color."),
-                    BackgroundMode.Static to ("Statiske bånd" to "Bands visible, but frozen in place."),
-                    BackgroundMode.Animated to ("Bånd med animasjon" to "Bands drift, tilt and sweep on navigation.")
+                val modes = listOf(
+                    BackgroundMode.None to "Ingen",
+                    BackgroundMode.Static to "Statisk",
+                    BackgroundMode.Animated to "Animasjon"
                 )
-                modeLabels.forEach { (mode, label) ->
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    modes.forEachIndexed { index, (mode, label) ->
+                        SegmentedButton(
+                            selected = backgroundMode == mode,
+                            onClick = { onBackgroundModeChange(mode) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size)
+                        ) {
+                            Text(label)
+                        }
+                    }
+                }
+                Text(
+                    text = when (backgroundMode) {
+                        BackgroundMode.None -> "Only the plain background color."
+                        BackgroundMode.Static -> "Bands visible, but frozen in place."
+                        BackgroundMode.Animated -> "Bands drift, tilt and sweep on navigation."
+                    },
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (showTimeSimulation) {
+                HorizontalDivider()
+
+                SettingsSection(title = "Time Simulation") {
+                    Text(
+                        "Simulate the app's current time. Useful for demoing 'NOW' indicator and past session logic.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        RadioButton(
-                            selected = backgroundMode == mode,
-                            onClick = { onBackgroundModeChange(mode) }
-                        )
-                        Column(modifier = Modifier.padding(start = 8.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { showDatePicker = true }
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Text("Current Simulation", style = MaterialTheme.typography.labelMedium)
                             Text(
-                                text = label.first,
-                                style = MaterialTheme.typography.bodyMedium
+                                if (simulatedTimeOffset == 0L) "Actual Time" else simulatedDateTime.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, HH:mm")),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold
                             )
-                            Text(
-                                text = label.second,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Button(
+                            onClick = onResetSimulation,
+                            enabled = simulatedTimeOffset != 0L
+                        ) {
+                            Text("Reset to Actual Time")
                         }
                     }
                 }
@@ -316,22 +496,22 @@ fun SettingsContent(
                     ) {
                         Text(
                             "Dette er en helt uoffisiell app, laget av en JavaZone-fan med et hobbyprosjekt som har fått eget liv. Målet er å utforske nye teknologier på fritiden, og å leke med AI.",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             "Ja, appen er hovedsakelig vibe-kodet: AI-assistentene har banket på tastaturet mens jeg har stått bak og sagt \"Det ser bra ut!\". Mesteparten av tiden fungerer det overraskende bra. Resten av tiden er jeg glad for at dette kun er et hobbyprosjekt.",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             "Uten JavaZone og JavaBin sine åpne API-er ville dette bare vært en god idé uten innhold. Takk for at dere deler!",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             "Liker du app'en, og har lyst til å støtte videreutviklingen? Da setter jeg pris på et lite bidrag – enten via Vipps, eller \"Buy Me a Coffee\":",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         DonationButtons(modifier = Modifier.fillMaxWidth())
@@ -377,6 +557,7 @@ fun SettingsContent(
         )
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 1f),
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -407,12 +588,14 @@ fun SettingsScreenPreview() {
         SettingsContent(
             notificationLeadTime = 10,
             simulatedTimeOffset = 0,
-            canScheduleExact = true,
+            permissions = AppPermissions(canScheduleExact = true, canPostNotifications = true),
             backgroundMode = BackgroundMode.Animated,
             onNotificationLeadTimeChange = {},
             onSimulatedTimeChange = {},
             onResetSimulation = {},
             onBackgroundModeChange = {},
+            onPermissionsAction = {},
+            onOpenNotificationSettings = {},
             onBackClick = {}
         )
     }
@@ -426,7 +609,7 @@ fun SettingsSection(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold
         )

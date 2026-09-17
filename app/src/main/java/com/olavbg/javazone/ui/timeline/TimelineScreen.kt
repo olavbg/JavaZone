@@ -16,6 +16,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,8 +57,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -94,6 +93,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -101,6 +101,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -978,6 +979,7 @@ fun TimelineSessionRow(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DetailedSessionCard(
     session: Session,
@@ -992,21 +994,31 @@ fun DetailedSessionCard(
 ) {
     val id = session.id
     val cardAlpha = if (isPast) 0.55f else 1f
+    val cardShape = RoundedCornerShape(10.dp)
 
-    Card(
-        onClick = onClick,
-        colors = CardDefaults.cardColors(
-            containerColor = if (isActive) MaterialTheme.colorScheme.surfaceVariant
-            else MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 3.dp else 1.dp),
-        shape = RoundedCornerShape(10.dp),
+    Box(
         modifier = modifier
             .graphicsLayer { this.alpha = cardAlpha }
+            .shadow(
+                elevation = if (isActive) 3.dp else 1.dp,
+                shape = cardShape
+            )
+            .background(
+                color = if (isActive) MaterialTheme.colorScheme.surfaceVariant.copy(
+                    alpha = MaterialTheme.colorScheme.surface.alpha
+                ) else MaterialTheme.colorScheme.surface,
+                shape = cardShape
+            )
             .border(
                 width = if (isActive) 1.5.dp else 0.5.dp,
                 color = if (isActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
-                shape = RoundedCornerShape(10.dp)
+                shape = cardShape
+            )
+            .clip(cardShape)
+            .combinedClickable(
+                role = Role.Button,
+                onClick = onClick,
+                onLongClick = { }
             )
     ) {
         Column(modifier = Modifier.padding(14.dp)) {

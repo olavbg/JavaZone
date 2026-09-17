@@ -25,6 +25,7 @@ class SettingsRepository(private val context: Context) {
         val NOTIFICATION_LEAD_TIME = intPreferencesKey("notification_lead_time_minutes")
         val SIMULATED_TIME_OFFSET = longPreferencesKey("simulated_time_offset_millis")
         val BACKGROUND_MODE = stringPreferencesKey("background_mode")
+        val NOTIFICATION_PROMPT_SHOWN = booleanPreferencesKey("notification_prompt_shown")
     }
 
     val notificationLeadTime: Flow<Int> = context.dataStore.data
@@ -65,6 +66,18 @@ class SettingsRepository(private val context: Context) {
                 ?: BackgroundMode.Animated
         }
 
+    val notificationPromptShown: Flow<Boolean> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[PreferencesKeys.NOTIFICATION_PROMPT_SHOWN] ?: false
+        }
+
     suspend fun updateNotificationLeadTime(minutes: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.NOTIFICATION_LEAD_TIME] = minutes
@@ -92,6 +105,12 @@ class SettingsRepository(private val context: Context) {
         val key = booleanPreferencesKey("conference_done_notified_$year")
         context.dataStore.edit { preferences ->
             preferences[key] = true
+        }
+    }
+
+    suspend fun markNotificationPromptShown() {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.NOTIFICATION_PROMPT_SHOWN] = true
         }
     }
 }

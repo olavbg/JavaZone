@@ -1,23 +1,16 @@
 package com.olavbg.javazone
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowCompat
-import androidx.appcompat.app.AlertDialog
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.core.content.ContextCompat
 import androidx.room.Room
 import com.olavbg.javazone.data.local.AppDatabase
 import com.olavbg.javazone.data.remote.SleepingPillApi
@@ -33,28 +26,9 @@ import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 
 class MainActivity : ComponentActivity() {
-    
-    private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { isGranted ->
-        if (!isGranted) {
-            Log.w("MainActivity", "Notification permission denied. Reminders will not be shown.")
-            showPermissionDeniedDialog()
-        }
-    }
-
-    private fun showPermissionDeniedDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Varslinger er deaktivert")
-            .setMessage("Uten tillatelse til å sende varslinger vil du ikke få påminnelser om foredragene du har lagt til som favoritter. Du kan endre dette i systeminnstillingene.")
-            .setPositiveButton("OK", null)
-            .show()
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        requestNotificationPermission()
 
         val db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "javazone.db")
             .addMigrations(AppDatabase.MIGRATION_3_4)
@@ -95,18 +69,6 @@ class MainActivity : ComponentActivity() {
                         onNavigation = { reanimateSignal++ }
                     )
                 }
-            }
-        }
-    }
-
-    private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }

@@ -110,14 +110,6 @@ class ReminderManager(private val context: Context) {
         }
     }
 
-    fun canScheduleExact(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            alarmManager.canScheduleExactAlarms()
-        } else {
-            true
-        }
-    }
-
     fun scheduleConferenceDoneReminder(conferenceEndMillis: Long, timeOffsetMillis: Long = 0L) {
         val pendingIntent = buildConferenceDonePendingIntent()
 
