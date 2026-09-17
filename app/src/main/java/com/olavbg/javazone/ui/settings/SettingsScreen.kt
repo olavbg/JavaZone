@@ -10,6 +10,7 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -100,6 +102,7 @@ fun SettingsScreen(
     val notificationLeadTime by viewModel.notificationLeadTime.collectAsState()
     val simulatedTimeOffset by viewModel.simulatedTimeOffset.collectAsState()
     val backgroundMode by viewModel.backgroundMode.collectAsState()
+    val batteryHintDismissed by viewModel.batteryHintDismissed.collectAsState()
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -141,12 +144,14 @@ fun SettingsScreen(
         simulatedTimeOffset = simulatedTimeOffset,
         permissions = permissions,
         backgroundMode = backgroundMode,
+        batteryHintDismissed = batteryHintDismissed,
         onNotificationLeadTimeChange = viewModel::setNotificationLeadTime,
         onSimulatedTimeChange = viewModel::setSimulatedTime,
         onResetSimulation = viewModel::resetSimulation,
         onBackgroundModeChange = viewModel::setBackgroundMode,
         onPermissionsAction = onPermissionsAction,
         onOpenNotificationSettings = onOpenNotificationSettings,
+        onDismissBatteryHint = viewModel::dismissBatteryHint,
         onBackClick = onBackClick,
         modifier = modifier,
         contentPadding = contentPadding,
@@ -241,6 +246,49 @@ private fun PermissionsGrantedCard(onOpenNotificationSettings: () -> Unit) {
     }
 }
 
+@Composable
+private fun BatteryOptimizationHintCard(
+    onOpenBatterySettings: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 4.dp)
+        ) {
+            Row(verticalAlignment = Alignment.Top) {
+                Icon(
+                    Icons.Rounded.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+                Text(
+                    text = "Opplever du at varsler ikke kommer til forventet tid? Det kan skyldes batterioptimalisering. Prøv å ekskludere JavaZone i innstillingene for batterioptimalisering.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(start = 12.dp)
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text("Ikke vis igjen", style = MaterialTheme.typography.labelMedium)
+                }
+                TextButton(onClick = onOpenBatterySettings) {
+                    Text("Åpne innstillinger", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+    }
+}
+
 private fun computeAppPermissions(context: Context): AppPermissions {
     val canScheduleExact = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
@@ -257,8 +305,49 @@ private fun computeAppPermissions(context: Context): AppPermissions {
     }
     return AppPermissions(
         canScheduleExact = canScheduleExact,
-        canPostNotifications = canPostNotifications
+        canPostNotifications = canPostNotifications,
+        isAggressiveOem = isAggressiveOem(),
+        isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations(context)
     )
+}
+
+private val AGGRESSIVE_OEM_MANUFACTURERS = setOf(
+    "xiaomi", "redmi", "poco",
+    "huawei", "honor",
+    "oppo", "realme", "oneplus",
+    "vivo", "iqoo",
+    "samsung",
+    "meizu",
+    "asus", "nokia", "tecno", "infinix", "itel", "wiko"
+)
+
+private fun isAggressiveOem(): Boolean = isAggressiveOem(Build.MANUFACTURER, Build.BRAND)
+
+internal fun isAggressiveOem(manufacturer: String, brand: String): Boolean {
+    val manufacturerLower = manufacturer.lowercase()
+    val brandLower = brand.lowercase()
+    return AGGRESSIVE_OEM_MANUFACTURERS.any {
+        manufacturerLower.contains(it) || brandLower.contains(it)
+    }
+}
+
+private fun isIgnoringBatteryOptimizations(context: Context): Boolean {
+    val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+    return powerManager.isIgnoringBatteryOptimizations(context.packageName)
+}
+
+private fun openBatteryOptimizationSettings(context: Context) {
+    runCatching {
+        context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+    }.onFailure {
+        runCatching {
+            context.startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", context.packageName, null)
+                }
+            )
+        }
+    }
 }
 
 @Suppress("InlinedApi")
@@ -308,9 +397,12 @@ private fun isLocalBuild(context: Context): Boolean {
 
 data class AppPermissions(
     val canScheduleExact: Boolean,
-    val canPostNotifications: Boolean
+    val canPostNotifications: Boolean,
+    val isAggressiveOem: Boolean = false,
+    val isIgnoringBatteryOptimizations: Boolean = true
 ) {
     val allGranted: Boolean get() = canScheduleExact && canPostNotifications
+    val showBatteryHint: Boolean get() = isAggressiveOem && !isIgnoringBatteryOptimizations
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -320,12 +412,14 @@ fun SettingsContent(
     simulatedTimeOffset: Long,
     permissions: AppPermissions,
     backgroundMode: BackgroundMode,
+    batteryHintDismissed: Boolean,
     onNotificationLeadTimeChange: (Int) -> Unit,
     onSimulatedTimeChange: (LocalDateTime) -> Unit,
     onResetSimulation: () -> Unit,
     onBackgroundModeChange: (BackgroundMode) -> Unit,
     onPermissionsAction: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
+    onDismissBatteryHint: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues()
@@ -396,6 +490,12 @@ fun SettingsContent(
                             Text("$minutes min")
                         }
                     }
+                }
+                if (permissions.canPostNotifications && permissions.showBatteryHint && !batteryHintDismissed) {
+                    BatteryOptimizationHintCard(
+                        onOpenBatterySettings = { openBatteryOptimizationSettings(context) },
+                        onDismiss = onDismissBatteryHint
+                    )
                 }
                 if (BuildConfig.DEBUG) {
                     TextButton(
@@ -590,12 +690,14 @@ fun SettingsScreenPreview() {
             simulatedTimeOffset = 0,
             permissions = AppPermissions(canScheduleExact = true, canPostNotifications = true),
             backgroundMode = BackgroundMode.Animated,
+            batteryHintDismissed = false,
             onNotificationLeadTimeChange = {},
             onSimulatedTimeChange = {},
             onResetSimulation = {},
             onBackgroundModeChange = {},
             onPermissionsAction = {},
             onOpenNotificationSettings = {},
+            onDismissBatteryHint = {},
             onBackClick = {}
         )
     }

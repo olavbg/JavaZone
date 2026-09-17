@@ -27,6 +27,15 @@ class SettingsViewModel(
     val backgroundMode: StateFlow<BackgroundMode> = repository.backgroundMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BackgroundMode.Animated)
 
+    val batteryHintDismissed: StateFlow<Boolean> = repository.batteryHintDismissed
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun dismissBatteryHint() {
+        viewModelScope.launch {
+            repository.dismissBatteryHint()
+        }
+    }
+
     fun setNotificationLeadTime(minutes: Int) {
         viewModelScope.launch {
             repository.updateNotificationLeadTime(minutes)
