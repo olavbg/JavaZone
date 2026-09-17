@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.RingtoneManager
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.olavbg.javazone.MainActivity
 import com.olavbg.javazone.R
@@ -75,28 +74,26 @@ class SessionReminderReceiver : BroadcastReceiver() {
     }
 
     private fun createNotificationChannel(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            
-            val notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            val audioAttributes = AudioAttributes.Builder()
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
-                .build()
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Session Reminders",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Reminders for favorited sessions"
-                enableLights(true)
-                enableVibration(true)
-                setShowBadge(true)
-                setSound(notificationSound, audioAttributes)
-            }
-            notificationManager.createNotificationChannel(channel)
+        val notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        val audioAttributes = AudioAttributes.Builder()
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+            .build()
+
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Session Reminders",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Reminders for favorited sessions"
+            enableLights(true)
+            enableVibration(true)
+            setShowBadge(true)
+            setSound(notificationSound, audioAttributes)
         }
+        notificationManager.createNotificationChannel(channel)
     }
 
     companion object {

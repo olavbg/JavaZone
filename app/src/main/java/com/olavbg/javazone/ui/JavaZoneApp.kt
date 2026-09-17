@@ -74,9 +74,8 @@ fun JavaZoneApp(
         rememberNavBackStack(NavDestination.Timeline)
     }
 
-    // Ask the background to reanimate on every screen change (push or pop). The simplest
-    // possible contract: nav mutates the back stack -> onNavigation() is called. The
-    // background itself ignores calls that arrive while a reanimate is still playing.
+    // Reanimate the background on every screen change; the background ignores calls
+    // made while a reanimate is still playing.
     var isFirstNav by remember { mutableStateOf(true) }
     LaunchedEffect(backStack.size) {
         if (isFirstNav) {
@@ -103,10 +102,8 @@ fun JavaZoneApp(
                 fadeIn(animationSpec = tween(350, delayMillis = 350)) togetherWith
                     fadeOut(animationSpec = tween(350))
             },
-            // The predictive back gesture (edge swipe) must re-use the same fade-through.
-            // The default predictive back spec scales the outgoing scene down to 70% while
-            // fading the incoming scene in, which reads as a shrinking/crossfading detail
-            // screen layered on top of the shared element transition.
+            // Predictive back re-uses the same fade-through; the default spec scales and
+            // crossfades, which clashes with the shared element transition.
             predictivePopTransitionSpec = { _ ->
                 fadeIn(animationSpec = tween(350, delayMillis = 350)) togetherWith
                     fadeOut(animationSpec = tween(350))

@@ -2,7 +2,13 @@ package com.olavbg.javazone.data.repository
 
 import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.olavbg.javazone.model.BackgroundMode
 import kotlinx.coroutines.flow.Flow
@@ -55,7 +61,7 @@ class SettingsRepository(private val context: Context) {
         }
         .map { preferences ->
             preferences[PreferencesKeys.BACKGROUND_MODE]
-                ?.let { raw -> BackgroundMode.values().firstOrNull { it.name == raw } }
+                ?.let { raw -> BackgroundMode.entries.firstOrNull { it.name == raw } }
                 ?: BackgroundMode.Animated
         }
 

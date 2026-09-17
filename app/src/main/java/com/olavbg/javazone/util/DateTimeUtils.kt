@@ -85,3 +85,14 @@ fun calculateSessionDurationMinutes(session: Session): Long {
         60
     }
 }
+
+fun isSessionActive(session: Session, currentTime: Instant): Boolean {
+    val start = session.start ?: return false
+    val end = session.end ?: return false
+    return (currentTime.isAfter(start) || currentTime == start) && currentTime.isBefore(end)
+}
+
+fun extractRoomNumber(room: String): Int {
+    val digits = room.filter { it.isDigit() }
+    return digits.toIntOrNull() ?: Int.MAX_VALUE
+}

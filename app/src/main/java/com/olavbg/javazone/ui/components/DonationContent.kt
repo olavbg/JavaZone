@@ -1,7 +1,6 @@
 package com.olavbg.javazone.ui.components
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -28,6 +27,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.olavbg.javazone.BuildConfig
 import com.olavbg.javazone.R
 
@@ -49,12 +49,12 @@ fun DonationButtons(modifier: Modifier = Modifier) {
 
     fun openBrowser(url: String) {
         runCatching {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
         }
     }
 
     fun openVippsBox(url: String) {
-        val vippsIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+        val vippsIntent = Intent(Intent.ACTION_VIEW, url.toUri()).apply {
             setPackage(VIPPS_PACKAGE)
         }
         if (vippsIntent.resolveActivity(context.packageManager) != null) {

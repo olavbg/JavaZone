@@ -17,7 +17,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import com.olavbg.javazone.model.Speaker
-import com.olavbg.javazone.ui.theme.*
+import com.olavbg.javazone.ui.theme.LightningAmber
+import com.olavbg.javazone.ui.theme.PresentationBlue
+import com.olavbg.javazone.ui.theme.RoomAccentColors
+import com.olavbg.javazone.ui.theme.WorkshopPurple
 import kotlin.math.abs
 
 private val ROOM_NUMBER_REGEX = Regex("[^0-9]")
@@ -167,11 +170,8 @@ private fun resolveLinkedInUrl(value: String): String? {
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun sharedElementModifier(
-    sharedScope: SharedTransitionScope?,
-    boundsKey: String
-): Modifier {
-    val scope = sharedScope ?: return Modifier
+fun Modifier.sharedElementModifier(sharedScope: SharedTransitionScope?, boundsKey: String): Modifier {
+    val scope = sharedScope ?: return this
     return with(scope) {
         Modifier.sharedElement(
             sharedContentState = rememberSharedContentState(key = boundsKey),

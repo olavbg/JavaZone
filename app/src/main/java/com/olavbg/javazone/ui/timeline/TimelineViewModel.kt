@@ -6,11 +6,21 @@ import androidx.lifecycle.viewModelScope
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.model.Session
+import com.olavbg.javazone.util.extractRoomNumber
 import com.olavbg.javazone.util.shortDayName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
@@ -119,6 +129,7 @@ class TimelineViewModel(
             .toList()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    @Suppress("UNCHECKED_CAST")
     val sessions: StateFlow<List<Session>> = combine(
         allSessions,
         _selectedDay,
@@ -173,33 +184,33 @@ class TimelineViewModel(
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
 val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList ->
-    val grouped = sessionList
-        .sortedWith(
-            compareBy<Session> { it.startTimeZulu }
-                .thenBy { extractRoomNumber(it.room) }
-                .thenBy { it.room },
-        )
-        .groupBy { session ->
-            val date = session.start?.atZone(OSLO_ZONE)?.toLocalDate()
-            "${date ?: java.time.LocalDate.MIN}|${formatTime(session.start)}"
+        val grouped = sessionList
+            .sortedWith(
+                compareBy<Session> { it.startTimeZulu }
+                    .thenBy { extractRoomNumber(it.room) }
+                    .thenBy { it.room },
+            )
+            .groupBy { session ->
+                val date = session.start?.atZone(OSLO_ZONE)?.toLocalDate()
+                "${date ?: java.time.LocalDate.MIN}|${formatTime(session.start)}"
+            }
+        val multiDay = grouped.keys.map { it.substringBefore('|') }.distinct().size > 1
+        grouped.map { (key, groupSessions) ->
+            val dayKey = runCatching {
+                java.time.LocalDate.parse(key.substringBefore('|'))
+                    .format(DateTimeFormatter.ofPattern("EEEE", java.util.Locale.ENGLISH))
+            }.getOrDefault("")
+            val time = key.substringAfter('|')
+            AgendaGroup(
+                key = key,
+                headerLabel = if (multiDay) "${shortDayName(dayKey)} $time".trim() else time,
+                sessions = groupSessions
+            )
         }
-    val multiDay = grouped.keys.map { it.substringBefore('|') }.distinct().size > 1
-    grouped.map { (key, groupSessions) ->
-        val dayKey = runCatching {
-            java.time.LocalDate.parse(key.substringBefore('|'))
-                .format(DateTimeFormatter.ofPattern("EEEE", java.util.Locale.ENGLISH))
-        }.getOrDefault("")
-        val time = key.substringAfter('|')
-        AgendaGroup(
-            key = key,
-            headerLabel = if (multiDay) "${shortDayName(dayKey)} $time".trim() else time,
-            sessions = groupSessions
-        )
-    }
-    // Sorting + grouping + formatting runs off the main thread so the eagerly-shared
-    // pipeline never blocks the first frames/scroll.
-}.flowOn(Dispatchers.Default)
-    .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        // Sorting + grouping + formatting runs off the main thread so the eagerly-shared
+        // pipeline never blocks the first frames/scroll.
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _isLoading = MutableStateFlow(value = true)
     val isLoading: StateFlow<Boolean> = combine(
@@ -346,12 +357,6 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
         }
     }
 
-    private fun isSessionActive(session: Session, currentTime: Instant): Boolean {
-        val start = session.start ?: return false
-        val end = session.end ?: return false
-        return (currentTime.isAfter(start) || currentTime == start) && currentTime.isBefore(end)
-    }
-
     private fun isFormatMatch(sessionFormat: String, targetFormat: String): Boolean {
         val s = sessionFormat.lowercase().trim()
         val target = targetFormat.lowercase().trim()
@@ -362,11 +367,4 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
             else -> s == target
         }
     }
-
-    private fun extractRoomNumber(room: String): Int {
-        val digits = room.filter { it.isDigit() }
-        return digits.toIntOrNull() ?: Int.MAX_VALUE
-    }
 }
-
-

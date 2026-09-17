@@ -1,40 +1,82 @@
 package com.olavbg.javazone.ui.detail
 
 import android.content.Context
+import android.content.Intent
+import android.widget.Toast
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.core.net.toUri
-import android.content.Intent
-import androidx.annotation.DrawableRes
-import androidx.compose.ui.res.painterResource
-import android.widget.Toast
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import com.olavbg.javazone.R
 import com.olavbg.javazone.data.repository.SessionRepository
@@ -45,8 +87,11 @@ import com.olavbg.javazone.ui.components.buildSpeakerSocialLinks
 import com.olavbg.javazone.ui.components.resolveSpeakerImageUrl
 import com.olavbg.javazone.ui.components.resolveVideoUrl
 import com.olavbg.javazone.ui.components.sharedElementModifier
-import com.olavbg.javazone.ui.theme.*
-import com.olavbg.javazone.util.*
+import com.olavbg.javazone.ui.theme.FavoriteRed
+import com.olavbg.javazone.util.calculateSessionDurationMinutes
+import com.olavbg.javazone.util.formatDay
+import com.olavbg.javazone.util.formatFullDay
+import com.olavbg.javazone.util.formatTime
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.Duration
@@ -59,13 +104,13 @@ import java.util.Locale
 @Composable
 fun SessionDetailScreen(
     sessionId: String,
-    year: Int? = null,
     repository: SessionRepository,
     settingsRepository: SettingsRepository,
     onBackClick: () -> Unit,
     onSpeakerClick: (String) -> Unit,
-    showLiveBanners: Boolean = true,
     modifier: Modifier = Modifier,
+    year: Int? = null,
+    showLiveBanners: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(),
     sharedScope: SharedTransitionScope? = null,
 ) {
@@ -135,7 +180,7 @@ fun SessionDetailScreen(
                                     imageVector = if (s.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = null,
                                     tint = if (s.isFavorite) FavoriteRed else LocalContentColor.current,
-                                    modifier = sharedElementModifier(sharedScope, "session-favorite-${s.id}")
+                                    modifier = Modifier.sharedElementModifier(sharedScope, "session-favorite-${s.id}")
                                 )
                             }
                         }
@@ -364,7 +409,7 @@ fun SessionDetailScreen(
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Black,
                                 lineHeight = 32.sp,
-                                modifier = sharedElementModifier(sharedScope, "session-title-${s.id}")
+                                modifier = Modifier.sharedElementModifier(sharedScope, "session-title-${s.id}")
                             )
                             
                             Spacer(modifier = Modifier.height(16.dp))
@@ -376,7 +421,7 @@ fun SessionDetailScreen(
                                 if (sharedScope != null) {
                                     FormatBadge(
                                         format = s.format,
-                                        modifier = sharedElementModifier(sharedScope, "session-format-${s.id}")
+                                        modifier = Modifier.sharedElementModifier(sharedScope, "session-format-${s.id}")
                                     )
                                 } else {
                                     FormatBadge(format = s.format)
@@ -720,6 +765,3 @@ private fun openUrl(context: Context, url: String) {
         context.startActivity(intent)
     } catch (_: Exception) {}
 }
-
-
-

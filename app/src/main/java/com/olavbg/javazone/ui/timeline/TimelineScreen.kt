@@ -1,13 +1,37 @@
 package com.olavbg.javazone.ui.timeline
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -16,11 +40,51 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.EventBusy
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -40,7 +104,11 @@ import com.olavbg.javazone.ui.components.FormatBadge
 import com.olavbg.javazone.ui.components.RoomTag
 import com.olavbg.javazone.ui.components.sharedElementModifier
 import com.olavbg.javazone.ui.theme.FavoriteRed
-import com.olavbg.javazone.util.*
+import com.olavbg.javazone.util.calculateSessionDurationMinutes
+import com.olavbg.javazone.util.extractRoomNumber
+import com.olavbg.javazone.util.formatTime
+import com.olavbg.javazone.util.isSessionActive
+import com.olavbg.javazone.util.localizedDayName
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Duration
@@ -87,19 +155,17 @@ fun TimelineScreen(
     }
 
     val listState = rememberLazyListState()
-    // Bottom inset of the gesture/3-button navigation bar. The Scaffold is configured
-    // with zero content insets so list content can scroll behind the bar; this value is
-    // added to the scrollable content padding instead, keeping the last row reachable.
+    // Bottom inset of the navigation bar; the Scaffold uses zero insets so list content
+    // can scroll behind it, and this is added to the content padding instead.
     val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val yearState = rememberUpdatedState(selectedYear)
     val scope = rememberCoroutineScope()
-    // List index of the active/upcoming time slot, used for the auto "scroll to now"
-    // behaviour and the "Nå" jump button.
+    // Index of the active/upcoming time slot, used for the auto-scroll and "Nå" button.
     val nowIndex = remember(groupedSessions, currentTime) {
         findFirstActiveOrUpcomingIndex(groupedSessions, currentTime)
     }
 
-    var previousYear by remember { mutableStateOf(selectedYear) }
+    var previousYear by remember { mutableIntStateOf(selectedYear) }
 
     // Scroll back to the very top when the selected year changes
     LaunchedEffect(selectedYear) {
@@ -109,11 +175,8 @@ fun TimelineScreen(
         }
     }
 
-    // Auto-scroll to the active/upcoming slot when opening the app or when switching
-    // the day filter. For the current year we wait until a day is actually selected:
-    // the ViewModel auto-selects today shortly after launch, and scrolling against the
-    // transient all-days snapshot (mismatched list indices) would leave the list at
-    // the wrong position and consume the scroll flag for the real target day.
+    // Auto-scroll to now once the current day is settled (the ViewModel auto-selects
+    // today shortly after launch).
     val daySettled = !isCurrentYear || selectedDay != null
     LaunchedEffect(groupedSessions, selectedDay) {
         if (daySettled && groupedSessions.isNotEmpty() && viewModel.shouldScrollToNow()) {
@@ -194,8 +257,7 @@ fun TimelineScreen(
 
                     if (sessions.isEmpty()) {
                         if (isLoading) {
-                            // Centered loading state (mirrors the empty-state layout) so it is
-                            // clearly visible at startup, also for archive years.
+                            // Mirrors the empty-state layout, clearly visible at startup (also for archive years).
                             TimelineLoadingState()
                         } else if (allSessions.isEmpty() && !isCurrentYear) {
                             // The selected archive year has no sessions registered at all
@@ -237,10 +299,9 @@ fun TimelineScreen(
             }
         }
 
-        // "Scroll to now" button – a compact, centered pill that only appears once the
-        // viewport is several rows away from the active/upcoming slot, so it does not
-        // pop up on every little scroll. The arrow points at where "now" lies: up
-        // when we have scrolled past it, down when it is still further down.
+        // "Scroll to now" pill, shown only when the viewport is several rows away from
+        // the active/upcoming slot. The arrow points towards "now": up when already
+        // scrolled past it, down when it is still further down.
         val nowFabState by remember(groupedSessions, nowIndex, isCurrentYear) {
             derivedStateOf {
                 if (!isCurrentYear || groupedSessions.isEmpty() || nowIndex <= 0) {
@@ -661,9 +722,7 @@ fun AgendaListView(
                 nextStickyIndex += 1 + group.sessions.size
                 val isLiveSlot = group.sessions.any { isSessionActive(it, currentTime) }
 
-                // A sticky header counts as "pinned" while the next group's rows are being
-                // scrolled under it; while it sits at its natural position in the list it
-                // is not overlapping any content.
+                // Pinned while the next group's rows scroll under it.
                 val visibleIndex = listState.firstVisibleItemIndex
                 val isPinned = visibleIndex >= stickyIndex + 1 && visibleIndex < nextStickyIndex
 
@@ -863,9 +922,9 @@ fun DetailedSessionCard(
     currentTime: Instant,
     onFavoriteClick: () -> Unit,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     showFavorite: Boolean = true,
-    sharedScope: SharedTransitionScope? = null,
-    modifier: Modifier = Modifier
+    sharedScope: SharedTransitionScope? = null
 ) {
     val alpha by animateFloatAsState(if (isPast) 0.55f else 1f, label = "alpha")
     val id = session.id
@@ -910,7 +969,7 @@ fun DetailedSessionCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 FormatBadge(
                     format = session.format,
-                    modifier = sharedElementModifier(sharedScope, "session-format-$id")
+                    modifier = Modifier.sharedElementModifier(sharedScope, "session-format-$id")
                 )
                 if (session.language != null) {
                     Spacer(modifier = Modifier.width(6.dp))
@@ -941,7 +1000,7 @@ fun DetailedSessionCard(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = sharedElementModifier(sharedScope, "session-title-$id")
+                modifier = Modifier.sharedElementModifier(sharedScope, "session-title-$id")
             )
 
             if (session.speakers.isNotEmpty()) {
@@ -1075,13 +1134,6 @@ fun EmptyStateView(
     }
 }
 
-
-private fun isSessionActive(session: Session, currentTime: Instant): Boolean {
-    val start = session.start ?: return false
-    val end = session.end ?: return false
-    return (currentTime.isAfter(start) || currentTime == start) && currentTime.isBefore(end)
-}
-
 private fun isSessionPast(session: Session, currentTime: Instant): Boolean {
     val end = session.end ?: return false
     return currentTime.isAfter(end)
@@ -1105,11 +1157,6 @@ private fun calculateMinutesUntilStart(session: Session, currentTime: Instant): 
     val start = session.start ?: return 0
     val minutes = Duration.between(currentTime, start).toMinutes()
     return if (minutes < 0) 0 else minutes
-}
-
-private fun extractRoomNumber(room: String): Int {
-    val digits = room.filter { it.isDigit() }
-    return digits.toIntOrNull() ?: Int.MAX_VALUE
 }
 
 private fun findFirstActiveOrUpcomingIndex(
@@ -1136,9 +1183,7 @@ private fun findFirstActiveOrUpcomingIndex(
     return if (bestIndex != -1) bestIndex else 0
 }
 
-// How many rows the viewport must move away from the active/upcoming slot before the
-// "Scroll to now" pill appears. Gives a little slack so minor scrolling does not
-// flash the button.
+// Rows the viewport must move away from now before the "Scroll to now" pill appears.
 private const val NOW_FAB_SLOP_ITEMS = 8
 
 private enum class NowFabState { Hidden, ShowUp, ShowDown }

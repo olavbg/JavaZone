@@ -29,7 +29,7 @@ class BootReceiver : BroadcastReceiver() {
             context.applicationContext,
             AppDatabase::class.java,
             "javazone.db"
-        ).fallbackToDestructiveMigration(true)
+        ).fallbackToDestructiveMigration(dropAllTables = true)
             .build()
         
         val reminderManager = ReminderManager(context)

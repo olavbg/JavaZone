@@ -12,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -26,9 +27,9 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.lerp
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.olavbg.javazone.model.BackgroundMode
@@ -100,8 +101,8 @@ fun AnimatedDiagonalBackground(
     baseColor: Color,
     tintPrimary: Color,
     tintSecondary: Color,
-    mode: BackgroundMode = BackgroundMode.Animated,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    mode: BackgroundMode = BackgroundMode.Animated
 ) {
     val context = LocalContext.current
     val animationsEnabled = remember { animatorScaleFactor(context) != 0f }
@@ -141,7 +142,7 @@ fun AnimatedDiagonalBackground(
 
     // Wall-clock stamp of the last reanimate that actually started. reanimate() returns
     // early while less than REANIMATE_DURATION_MILLIS has passed since this stamp.
-    var lastReanimateStartMillis by remember { mutableStateOf(-1L) }
+    var lastReanimateStartMillis by remember { mutableLongStateOf(-1L) }
 
     // Screen size captured once the layers lay out; used to scale drift to pixels.
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }

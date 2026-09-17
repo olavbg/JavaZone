@@ -6,7 +6,6 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.olavbg.javazone.MainActivity
@@ -61,20 +60,18 @@ class ConferenceDoneReceiver : BroadcastReceiver() {
         }
 
         private fun createNotificationChannel(context: Context) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val notificationManager =
-                    context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val notificationManager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-                val channel = NotificationChannel(
-                    CHANNEL_ID,
-                    "JavaZone",
-                    NotificationManager.IMPORTANCE_DEFAULT
-                ).apply {
-                    description = "Informasjon om konferansen."
-                    setShowBadge(false)
-                }
-                notificationManager.createNotificationChannel(channel)
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "JavaZone",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Informasjon om konferansen."
+                setShowBadge(false)
             }
+            notificationManager.createNotificationChannel(channel)
         }
     }
 }
