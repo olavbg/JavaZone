@@ -28,10 +28,18 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 // Shared, thread-safe formatters/zones so per-item formatting never allocates a new one.
-private val OSLO_ZONE: ZoneId = ZoneId.of("Europe/Oslo")
-private val ENGLISH_DAY_FORMATTER: DateTimeFormatter =
+internal val OSLO_ZONE: ZoneId = ZoneId.of("Europe/Oslo")
+internal val ENGLISH_DAY_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEEE", java.util.Locale.ENGLISH)
 private val SHORT_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+internal fun getDayFromZulu(instant: Instant?): String {
+    return try {
+        instant?.atZone(OSLO_ZONE)?.format(ENGLISH_DAY_FORMATTER) ?: ""
+    } catch (_: Exception) {
+        ""
+    }
+}
 
 @Immutable
 data class AgendaGroup(
@@ -102,6 +110,15 @@ class TimelineViewModel(
         if (year != SessionRepository.CURRENT_YEAR) false
         else sessions.any { it.end?.isAfter(time) == true }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val currentConferenceDay: StateFlow<String?> = combine(allSessions, currentTime, _selectedYear) { list, time, year ->
+        if (year != SessionRepository.CURRENT_YEAR || list.isEmpty()) null
+        else {
+            val currentDayName = getDayFromZulu(time)
+            list.map { getDayFromZulu(it.start) }
+                .firstOrNull { it.equals(currentDayName, ignoreCase = true) }
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     // Sessions filtered by selected day only (used for calculating dynamic filter options)
     val daySessions: StateFlow<List<Session>> = combine(allSessions, _selectedDay) { list, day ->
@@ -223,7 +240,6 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     private var hasAutoSelectedDay = false
-    private var hasScrolledForDay = false
 
     init {
         viewModelScope.launch {
@@ -238,24 +254,12 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
         }
         // Auto-select current day matching effective currentTime (including simulated time settings)
         viewModelScope.launch {
-            combine(allSessions, currentTime, _selectedYear) { list, time, year -> list to (time to year) }
-                .collect { (list, pair) ->
-                    val time = pair.first
-                    val year = pair.second
-                    if (!hasAutoSelectedDay && year == SessionRepository.CURRENT_YEAR && list.isNotEmpty()) {
-                        val currentDayName = try {
-                            time.atZone(OSLO_ZONE).format(ENGLISH_DAY_FORMATTER)
-                        } catch (_: Exception) { "" }
-
-                        val matchingDay = list.map { getDayFromZulu(it.start) }
-                            .firstOrNull { it.equals(currentDayName, ignoreCase = true) }
-
-                        if (matchingDay != null) {
-                            _selectedDay.value = matchingDay
-                            hasAutoSelectedDay = true
-                        }
-                    }
+            currentConferenceDay.collect { matchingDay ->
+                if (!hasAutoSelectedDay && _selectedDay.value == null && matchingDay != null) {
+                    _selectedDay.value = matchingDay
+                    hasAutoSelectedDay = true
                 }
+            }
         }
         // Update current time every minute
         viewModelScope.launch {
@@ -277,7 +281,6 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
         _filterSpeaker.value = null
         _searchQuery.value = ""
         _onlyFavorites.value = false
-        hasScrolledForDay = true
         if (year == SessionRepository.CURRENT_YEAR) {
             hasAutoSelectedDay = false
         } else {
@@ -289,7 +292,6 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
 
     fun setDay(day: String?) {
         _selectedDay.value = day
-        hasScrolledForDay = false
         // Clear format/room selection if no longer available in the new day
         if (_selectedFormat.value != null && !(availableFormats.value.contains(_selectedFormat.value))) {
             _selectedFormat.value = null
@@ -297,14 +299,6 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
         if (_selectedRoom.value != null && !availableRooms.value.contains(_selectedRoom.value)) {
             _selectedRoom.value = null
         }
-    }
-
-    fun shouldScrollToNow(): Boolean {
-        return !hasScrolledForDay
-    }
-
-    fun markScrolledToNow() {
-        hasScrolledForDay = true
     }
 
     fun setOnlyFavorites(only: Boolean) {
@@ -344,14 +338,6 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
     private fun formatTime(instant: Instant?): String {
         return try {
             instant?.atZone(OSLO_ZONE)?.format(SHORT_TIME_FORMATTER) ?: ""
-        } catch (_: Exception) {
-            ""
-        }
-    }
-
-    private fun getDayFromZulu(instant: Instant?): String {
-        return try {
-            instant?.atZone(OSLO_ZONE)?.format(ENGLISH_DAY_FORMATTER) ?: ""
         } catch (_: Exception) {
             ""
         }

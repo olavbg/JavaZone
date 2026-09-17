@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -33,6 +34,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyLayoutScrollScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -84,11 +87,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -109,8 +115,11 @@ import com.olavbg.javazone.util.extractRoomNumber
 import com.olavbg.javazone.util.formatTime
 import com.olavbg.javazone.util.isSessionActive
 import com.olavbg.javazone.util.localizedDayName
+import kotlin.math.abs
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Duration
 import java.time.Instant
 
@@ -144,6 +153,7 @@ fun TimelineScreen(
     val availableYears by viewModel.availableYears.collectAsState()
     val availableDays by viewModel.availableDays.collectAsState()
     val showLiveIndicators by viewModel.showLiveIndicators.collectAsState()
+    val currentConferenceDay by viewModel.currentConferenceDay.collectAsState()
 
     var isSearchVisible by remember { mutableStateOf(value = false) }
     var isYearPickerVisible by remember { mutableStateOf(value = false) }
@@ -160,12 +170,14 @@ fun TimelineScreen(
     val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val yearState = rememberUpdatedState(selectedYear)
     val scope = rememberCoroutineScope()
-    // Index of the active/upcoming time slot, used for the auto-scroll and "Nå" button.
+    // Index of the active/upcoming time slot on the current day, or null if none
     val nowIndex = remember(groupedSessions, currentTime) {
         findFirstActiveOrUpcomingIndex(groupedSessions, currentTime)
     }
 
     var previousYear by remember { mutableIntStateOf(selectedYear) }
+    var previousDay by remember { mutableStateOf(selectedDay) }
+    var hasAutoScrolledColdStart by rememberSaveable { mutableStateOf(false) }
 
     // Scroll back to the very top when the selected year changes
     LaunchedEffect(selectedYear) {
@@ -175,15 +187,56 @@ fun TimelineScreen(
         }
     }
 
-    // Auto-scroll to now once the current day is settled (the ViewModel auto-selects
-    // today shortly after launch).
-    val daySettled = !isCurrentYear || selectedDay != null
-    LaunchedEffect(groupedSessions, selectedDay) {
-        if (daySettled && groupedSessions.isNotEmpty() && viewModel.shouldScrollToNow()) {
-            if (nowIndex > 0) {
-                listState.animateScrollToItem(nowIndex)
+    // Auto-scroll to now on cold start once the list is loaded for the current conference day
+    LaunchedEffect(groupedSessions, selectedDay, currentConferenceDay, nowIndex) {
+        if (!hasAutoScrolledColdStart &&
+            isCurrentYear &&
+            selectedDay != null &&
+            selectedDay.equals(currentConferenceDay, ignoreCase = true) &&
+            isGroupedSessionsForDay(groupedSessions, selectedDay)
+        ) {
+            if (listState.awaitContent()) {
+                delay(120) // Give the window and initial Compose pass a brief moment to settle
+                val target = nowIndex
+                if (target != null) {
+                    if (target > 0) {
+                        listState.smoothScrollToItemEased(target)
+                    }
+                    hasAutoScrolledColdStart = true
+                }
             }
-            viewModel.markScrolledToNow()
+        }
+    }
+
+    // Auto-scroll when switching days:
+    // - If switching to current conference day: smoothly scroll to "live nå"
+    // - If switching to any other day: scroll to top (item 0)
+    // The first transition (null -> auto-selected today) is owned by the cold-start effect
+    // above, but still records previousDay so later manual day switches scroll as expected.
+    LaunchedEffect(selectedDay, groupedSessions, currentConferenceDay) {
+        if (selectedDay != previousDay) {
+            if (!isGroupedSessionsForDay(groupedSessions, selectedDay)) {
+                // Wait until groupedSessions emits sessions matching the newly selected day
+                return@LaunchedEffect
+            }
+            val fromInitialSelection = previousDay == null
+            previousDay = selectedDay
+
+            // The cold-start effect owns the scroll for the day auto-selected at launch.
+            if (fromInitialSelection) return@LaunchedEffect
+
+            if (listState.awaitContent()) {
+                if (selectedDay != null && selectedDay.equals(currentConferenceDay, ignoreCase = true)) {
+                    val target = nowIndex
+                    if (target != null) {
+                        listState.smoothScrollToItemEased(target)
+                    } else {
+                        listState.scrollToItem(0)
+                    }
+                } else {
+                    listState.scrollToItem(0)
+                }
+            }
         }
     }
 
@@ -302,9 +355,10 @@ fun TimelineScreen(
         // "Scroll to now" pill, shown only when the viewport is several rows away from
         // the active/upcoming slot. The arrow points towards "now": up when already
         // scrolled past it, down when it is still further down.
-        val nowFabState by remember(groupedSessions, nowIndex, isCurrentYear) {
+        val nowFabState by remember(groupedSessions, nowIndex, isCurrentYear, selectedDay, currentConferenceDay) {
             derivedStateOf {
-                if (!isCurrentYear || groupedSessions.isEmpty() || nowIndex <= 0) {
+                val isToday = isCurrentYear && selectedDay != null && selectedDay.equals(currentConferenceDay, ignoreCase = true)
+                if (!isToday || groupedSessions.isEmpty() || nowIndex == null) {
                     NowFabState.Hidden
                 } else {
                     val delta = nowIndex - listState.firstVisibleItemIndex
@@ -326,8 +380,11 @@ fun TimelineScreen(
         ) {
             Surface(
                 onClick = {
-                    scope.launch {
-                        listState.animateScrollToItem(nowIndex)
+                    val target = nowIndex
+                    if (target != null) {
+                        scope.launch {
+                            listState.smoothScrollToItemEased(target)
+                        }
                     }
                 },
                 shape = RoundedCornerShape(22.dp),
@@ -722,17 +779,16 @@ fun AgendaListView(
                 nextStickyIndex += 1 + group.sessions.size
                 val isLiveSlot = group.sessions.any { isSessionActive(it, currentTime) }
 
-                // Pinned while the next group's rows scroll under it.
-                val visibleIndex = listState.firstVisibleItemIndex
-                val isPinned = visibleIndex >= stickyIndex + 1 && visibleIndex < nextStickyIndex
-
-                // Sticky time header.
+                // Sticky time header. The pin state reads the scroll position inside the header
+                // itself (deferred through derivedStateOf), so the outer content builder is not
+                // re-executed on every scroll frame just to compute it.
                 stickyHeader(key = "agenda-sticky-${group.key}") {
                     TimelineStickyTimeHeader(
                         timeSlot = group.headerLabel,
                         isLiveSlot = isLiveSlot,
                         sessionCount = group.sessions.size,
-                        isPinned = isPinned
+                        pinnedRange = (stickyIndex + 1) until nextStickyIndex,
+                        listState = listState
                     )
                 }
 
@@ -762,8 +818,16 @@ fun TimelineStickyTimeHeader(
     timeSlot: String,
     isLiveSlot: Boolean,
     sessionCount: Int,
-    isPinned: Boolean = false
+    pinnedRange: IntRange,
+    listState: LazyListState
 ) {
+    // Pinned while the first visible row is one of this group's sessions (the header then sticks
+    // above the scrolling rows). Reading the scroll position via derivedStateOf keeps the churn
+    // contained to this single header instead of recomposing the entire list content per frame.
+    val isPinned by remember(pinnedRange) {
+        derivedStateOf { listState.firstVisibleItemIndex in pinnedRange }
+    }
+
     // The header background is nearly invisible in its natural list position, but
     // fades to a readable translucent tint while pinned over scrolling rows. It uses
     // the screen background colour (not the raised "surface" tone) so it never reads
@@ -926,8 +990,8 @@ fun DetailedSessionCard(
     showFavorite: Boolean = true,
     sharedScope: SharedTransitionScope? = null
 ) {
-    val alpha by animateFloatAsState(if (isPast) 0.55f else 1f, label = "alpha")
     val id = session.id
+    val cardAlpha = if (isPast) 0.55f else 1f
 
     Card(
         onClick = onClick,
@@ -938,7 +1002,7 @@ fun DetailedSessionCard(
         elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 3.dp else 1.dp),
         shape = RoundedCornerShape(10.dp),
         modifier = modifier
-            .alpha(alpha)
+            .graphicsLayer { this.alpha = cardAlpha }
             .border(
                 width = if (isActive) 1.5.dp else 0.5.dp,
                 color = if (isActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
@@ -1162,28 +1226,161 @@ private fun calculateMinutesUntilStart(session: Session, currentTime: Instant): 
 private fun findFirstActiveOrUpcomingIndex(
     groupedSessions: List<AgendaGroup>,
     currentTime: Instant
-): Int {
+): Int? {
     var index = 0
-    var bestIndex = -1
+    var bestIndex: Int? = null
 
     for (group in groupedSessions) {
         val anyActive = group.sessions.any { isSessionActive(it, currentTime) }
-        val isFuture = group.sessions.firstOrNull()?.start?.isAfter(currentTime) ?: false
+        val isFuture = group.sessions.firstOrNull()?.start?.let { it.isAfter(currentTime) || it == currentTime } ?: false
 
         if (anyActive) {
             return index
         }
-        if (isFuture && bestIndex == -1) {
+        if (isFuture && bestIndex == null) {
             bestIndex = index
         }
 
         index += 1 + group.sessions.size // header + sessions count
     }
 
-    return if (bestIndex != -1) bestIndex else 0
+    return bestIndex
 }
 
+private fun isGroupedSessionsForDay(groupedSessions: List<AgendaGroup>, selectedDay: String?): Boolean {
+    if (groupedSessions.isEmpty()) return false
+    if (selectedDay == null) return true
+    val firstSession = groupedSessions.firstOrNull()?.sessions?.firstOrNull() ?: return false
+    return getDayFromZulu(firstSession.start).equals(selectedDay, ignoreCase = true)
+}
+
+// Wait until the list has laid-out content, giving up after a timeout so callers never stall.
+private suspend fun LazyListState.awaitContent(): Boolean =
+    withTimeoutOrNull(SCROLL_READY_TIMEOUT_MS) {
+        snapshotFlow { layoutInfo.visibleItemsInfo.isNotEmpty() }.first { it }
+    } == true
+
+// Drive the scroll with a single, continuous eased glide. Starts with an ease-in acceleration
+// from a standstill, cruises smoothly at high speed, and decelerates into the target with exact
+// pixel landing - no intermediate stops, no hitches, no overshoot.
+@OptIn(ExperimentalFoundationApi::class)
+private suspend fun LazyListState.smoothScrollToItemEased(targetIndex: Int): Boolean {
+    if (!awaitContent()) return false
+
+    val totalItems = layoutInfo.totalItemsCount
+    if (totalItems <= 0) return false
+    val target = targetIndex.coerceIn(0, totalItems - 1)
+
+    var finishedSuccessfully = false
+    scroll {
+        val itemScope = LazyLayoutScrollScope(this@smoothScrollToItemEased, this)
+        if (itemScope.itemCount <= 0) return@scroll
+
+        // A sticky header is the landing target, but while it is "stuck" pinned at the top the
+        // list measures its distance as ~0 even though the first card is still sliding under it.
+        // Anchor the landing to the first card below the header, sitting exactly one header height
+        // below the top, so the trip always ends with the header at the very top and the first
+        // card tucked right underneath - no overlap, no extra offset.
+        fun remainingToLanding(): Float {
+            val headerInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.index == target }
+            return if (headerInfo != null && target + 1 < itemScope.itemCount) {
+                (itemScope.calculateDistanceTo(target + 1) - headerInfo.size).toFloat()
+            } else {
+                itemScope.calculateDistanceTo(target).toFloat()
+            }
+        }
+
+        val initialDistance = remainingToLanding()
+        if (initialDistance == 0f) {
+            finishedSuccessfully = true
+            return@scroll
+        }
+
+        val rowsToMove = abs(target - firstVisibleItemIndex)
+        // Per-frame pixel step cap: keeps the number of rows composed per frame low enough to
+        // avoid frame drops. Higher cap = faster long trips (more rows stream past per frame).
+        val maxStepPx = (layoutInfo.viewportSize.height * 0.45f).coerceIn(720f, 1500f)
+
+        // For a quick trip the eased duration (~160-260ms) is used as-is. For long trips the
+        // duration is stretched to the minimum that fits the eased curve inside the step cap,
+        // so the scroll cruises at full allowed speed instead of being clamped (which would
+        // add a drawn-out catch-up tail).
+        val easedMs = (150 + rowsToMove * 3).coerceIn(160, 260)
+        val capAwareMs = (1.35f * abs(initialDistance) / maxStepPx * 16.7f).toInt()
+        val durationMs = maxOf(easedMs, capAwareMs).coerceIn(160, 420)
+
+        var previousProgress = 0f
+        var lastFrameNanos = 0L
+        var accumulatedMillis = 0f
+
+        while (true) {
+            val frameNanos = withFrameNanos { it }
+            if (lastFrameNanos == 0L) {
+                lastFrameNanos = frameNanos
+                continue
+            }
+
+            // Clamp frame delta time to at most 20ms to prevent frame drop cascades
+            val deltaNanos = frameNanos - lastFrameNanos
+            lastFrameNanos = frameNanos
+            val deltaMillis = (deltaNanos / 1_000_000f).coerceIn(1f, 20f)
+            accumulatedMillis += deltaMillis
+
+            val remainingDistance = remainingToLanding()
+            if (abs(remainingDistance) < 1f) {
+                if (remainingDistance != 0f) {
+                    itemScope.scrollBy(remainingDistance)
+                }
+                break
+            }
+
+            val rawFraction = (accumulatedMillis / durationMs).coerceIn(0f, 1f)
+            val currentProgress = ScrollToNowEasing.transform(rawFraction)
+
+            // While the eased ramp is running the step is a fixed share of the travel left, so
+            // the easing curve is honoured all the way (including its deceleration into the
+            // target - no drawn-out crawl at the end). Only when the ramp has already finished
+            // but the position is still catching up (frame-drop lag) do we settle the leftover
+            // quickly instead of stalling.
+            val stepFraction = if (rawFraction >= 1f) {
+                LANDING_CATCHUP_PER_FRAME
+            } else {
+                val progressRemaining = (1f - previousProgress).coerceAtLeast(0.0001f)
+                ((currentProgress - previousProgress) / progressRemaining).coerceIn(0f, 1f)
+            }
+
+            var stepPx = remainingDistance * stepFraction
+
+            // Clamp stepPx to maxStepPx so Compose never has to compose multiple cards in one frame
+            stepPx = stepPx.coerceIn(-maxStepPx, maxStepPx)
+
+            if (abs(stepPx) > 0.001f) {
+                val consumed = itemScope.scrollBy(stepPx)
+                if (abs(consumed) < 0.001f && abs(stepPx) > 1f) {
+                    break
+                }
+            }
+
+            previousProgress = currentProgress
+        }
+
+        finishedSuccessfully = true
+    }
+
+    return finishedSuccessfully
+}
+
+// Ease-in curve with a visible acceleration ramp and a mild deceleration into the landing zone.
+private val ScrollToNowEasing = CubicBezierEasing(0.25f, 0.0f, 0.25f, 1.0f)
+
+// If the eased ramp finishes while the position is still catching up (e.g. a frame-dropping
+// spell during cold start), the leftover is settled fast - a few frames, never a drawn-out tail.
+private const val LANDING_CATCHUP_PER_FRAME = 0.35f
+
+// How long to wait for the list to have laid-out content before giving up on the auto-scroll.
+private const val SCROLL_READY_TIMEOUT_MS = 5_000L
+
 // Rows the viewport must move away from now before the "Scroll to now" pill appears.
-private const val NOW_FAB_SLOP_ITEMS = 8
+private const val NOW_FAB_SLOP_ITEMS = 6
 
 private enum class NowFabState { Hidden, ShowUp, ShowDown }
