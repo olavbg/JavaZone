@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Red background -->
+    <path
+        android:fillColor="#BA0C2F"
+        android:pathData="M0,0h24v24h-24z" />
+    <!-- White cross -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M0,10h24v4h-24z M7,0h4v24h-4z" />
+    <!-- Blue cross -->
+    <path
+        android:fillColor="#00205B"
+        android:pathData="M0,11h24v2h-24z M8,0h2v24h-2z" />
+</vector>
