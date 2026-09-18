@@ -1,24 +1,12 @@
 package com.olavbg.javazone.ui.settings
 
 import android.Manifest
-import android.app.Activity
-import android.app.AlarmManager
-import android.content.Context
-import android.content.ContextWrapper
-import android.content.Intent
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
-import android.os.PowerManager
-import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -34,15 +22,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -75,14 +58,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -162,275 +142,6 @@ fun SettingsScreen(
         modifier = modifier,
         contentPadding = contentPadding,
     )
-}
-
-@Composable
-private fun PermissionsWarningCard(
-    permissions: AppPermissions,
-    onPermissionsAction: () -> Unit,
-    onOpenNotificationSettings: () -> Unit
-) {
-    val message = when {
-        !permissions.canPostNotifications && !permissions.canScheduleExact ->
-            "Notifications and exact alarms are disabled. Tap to request access."
-        !permissions.canPostNotifications ->
-            "Notifications are disabled. Tap to request access."
-        else ->
-            "Exact alarms are disabled. Tap to request access."
-    }
-    Card(
-        onClick = onPermissionsAction,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
-        ),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Rounded.Warning,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error
-            )
-            Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
-                Text(
-                    text = "Permissions needed",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
-            TextButton(
-                onClick = onOpenNotificationSettings,
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Text("Settings", style = MaterialTheme.typography.labelMedium)
-            }
-        }
-    }
-}
-
-@Composable
-private fun PermissionsGrantedCard(onOpenNotificationSettings: () -> Unit) {
-    Surface(
-        onClick = onOpenNotificationSettings,
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Rounded.CheckCircle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
-                Text(
-                    text = "Notifications enabled",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Tap to open this app's notification settings.",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun BatteryOptimizationHintCard(
-    onOpenBatterySettings: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Rounded.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Text(
-                    text = "Batterioptimalisering",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.padding(start = 12.dp)
-                )
-            }
-            Text(
-                text = "Opplever du at varsler ikke kommer til forventet tid? Det kan skyldes batterioptimalisering. Prøv å ekskludere JavaZone i innstillingene for batterioptimalisering.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.padding(top = 12.dp)
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text("Ikke vis igjen")
-                }
-                Spacer(modifier = Modifier.width(4.dp))
-                Button(
-                    onClick = onOpenBatterySettings,
-                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp)
-                ) {
-                    Text("Åpne innstillinger")
-                }
-            }
-        }
-    }
-}
-
-private fun computeAppPermissions(context: Context): AppPermissions {
-    val canScheduleExact = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
-    } else {
-        true
-    }
-    val canPostNotifications = when {
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU -> true
-        ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.POST_NOTIFICATIONS
-        ) == PackageManager.PERMISSION_GRANTED -> true
-        else -> false
-    }
-    return AppPermissions(
-        canScheduleExact = canScheduleExact,
-        canPostNotifications = canPostNotifications,
-        isAggressiveOem = isAggressiveOem(),
-        isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations(context)
-    )
-}
-
-private val AGGRESSIVE_OEM_MANUFACTURERS = setOf(
-    "xiaomi", "redmi", "poco",
-    "huawei", "honor",
-    "oppo", "realme", "oneplus",
-    "vivo", "iqoo",
-    "samsung",
-    "meizu",
-    "asus", "nokia", "tecno", "infinix", "itel", "wiko"
-)
-
-private fun isAggressiveOem(): Boolean = isAggressiveOem(Build.MANUFACTURER, Build.BRAND)
-
-internal fun isAggressiveOem(manufacturer: String, brand: String): Boolean {
-    val manufacturerLower = manufacturer.lowercase()
-    val brandLower = brand.lowercase()
-    return AGGRESSIVE_OEM_MANUFACTURERS.any {
-        manufacturerLower.contains(it) || brandLower.contains(it)
-    }
-}
-
-private fun isIgnoringBatteryOptimizations(context: Context): Boolean {
-    val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-    return powerManager.isIgnoringBatteryOptimizations(context.packageName)
-}
-
-private fun openBatteryOptimizationSettings(context: Context) {
-    runCatching {
-        context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-    }.onFailure {
-        runCatching {
-            context.startActivity(
-                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                    data = Uri.fromParts("package", context.packageName, null)
-                }
-            )
-        }
-    }
-}
-
-@Suppress("InlinedApi")
-private fun openExactAlarmSettings(context: Context) {
-    runCatching {
-        context.startActivity(
-            Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                data = Uri.fromParts("package", context.packageName, null)
-            }
-        )
-    }
-}
-
-private fun openAppNotificationSettings(context: Context) {
-    runCatching {
-        context.startActivity(
-            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-            }
-        )
-    }
-}
-
-private fun shouldShowPermissionRationale(context: Context, permission: String): Boolean {
-    val activity = context.findActivity() ?: return true
-    return ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
-}
-
-private tailrec fun Context.findActivity(): Activity? = when (this) {
-    is Activity -> this
-    is ContextWrapper -> baseContext.findActivity()
-    else -> null
-}
-
-private fun isLocalBuild(context: Context): Boolean {
-    if ((context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) return true
-    val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        runCatching {
-            context.packageManager.getInstallSourceInfo(context.packageName).installingPackageName
-        }.getOrNull()
-    } else {
-        @Suppress("DEPRECATION")
-        context.packageManager.getInstallerPackageName(context.packageName)
-    }
-    return installer != "com.android.vending"
-}
-
-data class AppPermissions(
-    val canScheduleExact: Boolean,
-    val canPostNotifications: Boolean,
-    val isAggressiveOem: Boolean = false,
-    val isIgnoringBatteryOptimizations: Boolean = true
-) {
-    val allGranted: Boolean get() = canScheduleExact && canPostNotifications
-    val showBatteryHint: Boolean get() = isAggressiveOem && !isIgnoringBatteryOptimizations
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
