@@ -33,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
@@ -70,10 +69,6 @@ fun DetailedSessionCard(
     Box(
         modifier = modifier
             .graphicsLayer { this.alpha = cardAlpha }
-            .shadow(
-                elevation = if (isActive) 3.dp else 1.dp,
-                shape = cardShape
-            )
             .background(
                 color = if (isActive) MaterialTheme.colorScheme.surfaceVariant.copy(
                     alpha = MaterialTheme.colorScheme.surface.alpha
@@ -82,7 +77,9 @@ fun DetailedSessionCard(
             )
             .border(
                 width = if (isActive) 1.5.dp else 0.5.dp,
-                color = if (isActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                color = if (isActive) MaterialTheme.colorScheme.surfaceVariant.copy(
+                    alpha = MaterialTheme.colorScheme.surface.alpha
+                ) else MaterialTheme.colorScheme.surface,
                 shape = cardShape
             )
             .clip(cardShape)
