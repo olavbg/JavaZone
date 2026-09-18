@@ -25,14 +25,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -256,9 +257,9 @@ fun SessionDetailScreen(
                                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                                             ) {
                                                 Icon(
-                                                    Icons.Default.PlayCircle,
+                                                    Icons.Default.VideoLibrary,
                                                     contentDescription = null,
-                                                    modifier = Modifier.size(16.dp),
+                                                    modifier = Modifier.size(24.dp),
                                                     tint = MaterialTheme.colorScheme.error
                                                 )
                                                 Spacer(modifier = Modifier.width(8.dp))
@@ -348,9 +349,9 @@ fun SessionDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    Icons.Default.PlayCircle,
+                                    Icons.Default.VideoLibrary,
                                     contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
+                                    modifier = Modifier.size(36.dp),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -369,10 +370,11 @@ fun SessionDetailScreen(
                                         )
                                     }
                                 }
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Icon(
-                                    Icons.Default.PlayArrow,
+                                    Icons.Default.ChevronRight,
                                     contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
+                                    modifier = Modifier.size(28.dp),
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
                                 )
                             }
