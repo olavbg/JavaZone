@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.model.BackgroundMode
+import com.olavbg.javazone.model.Session
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -29,6 +31,21 @@ class SettingsViewModel(
 
     val batteryHintDismissed: StateFlow<Boolean> = repository.batteryHintDismissed
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val missedReminderCount: StateFlow<Int> = combine(
+        sessionRepository.getSessionsFlow(),
+        simulatedTimeOffset,
+        notificationLeadTime,
+        repository.firedReminderSessionIds
+    ) { sessions, timeOffset, leadTimeMinutes, firedIds ->
+        countMissedReminders(
+            sessions = sessions,
+            firedSessionIds = firedIds,
+            timeOffsetMillis = timeOffset,
+            leadTimeMinutes = leadTimeMinutes,
+            nowMillis = System.currentTimeMillis()
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     fun dismissBatteryHint() {
         viewModelScope.launch {
@@ -64,5 +81,21 @@ class SettingsViewModel(
         viewModelScope.launch {
             repository.updateBackgroundMode(mode)
         }
+    }
+}
+
+internal fun countMissedReminders(
+    sessions: List<Session>,
+    firedSessionIds: Set<String>,
+    timeOffsetMillis: Long,
+    leadTimeMinutes: Int,
+    nowMillis: Long
+): Int {
+    val now = nowMillis + timeOffsetMillis
+    return sessions.count { session ->
+        session.isFavorite &&
+            session.start != null &&
+            session.start.toEpochMilli() - leadTimeMinutes * 60_000L <= now &&
+            session.id !in firedSessionIds
     }
 }

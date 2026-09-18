@@ -332,7 +332,6 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
     }
 
     fun toggleFavorite(session: Session) {
-        if (_selectedYear.value != SessionRepository.CURRENT_YEAR) return
         viewModelScope.launch {
             repository.toggleFavorite(session.id, !session.isFavorite)
         }

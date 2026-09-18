@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.olavbg.javazone.model.BackgroundMode
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +28,8 @@ class SettingsRepository(private val context: Context) {
         val BACKGROUND_MODE = stringPreferencesKey("background_mode")
         val NOTIFICATION_PROMPT_SHOWN = booleanPreferencesKey("notification_prompt_shown")
         val BATTERY_HINT_DISMISSED = booleanPreferencesKey("battery_hint_dismissed")
+        val FIRED_REMINDER_IDS =
+            stringSetPreferencesKey("fired_reminder_session_ids_${SessionRepository.CURRENT_YEAR}")
     }
 
     val notificationLeadTime: Flow<Int> = context.dataStore.data
@@ -91,6 +94,18 @@ class SettingsRepository(private val context: Context) {
             preferences[PreferencesKeys.BATTERY_HINT_DISMISSED] ?: false
         }
 
+    val firedReminderSessionIds: Flow<Set<String>> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[PreferencesKeys.FIRED_REMINDER_IDS] ?: emptySet()
+        }
+
     suspend fun updateNotificationLeadTime(minutes: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.NOTIFICATION_LEAD_TIME] = minutes
@@ -130,6 +145,14 @@ class SettingsRepository(private val context: Context) {
     suspend fun dismissBatteryHint() {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.BATTERY_HINT_DISMISSED] = true
+        }
+    }
+
+    suspend fun markSessionReminderFired(sessionId: String) {
+        context.dataStore.edit { preferences ->
+            val fired = preferences[PreferencesKeys.FIRED_REMINDER_IDS].orEmpty().toMutableSet()
+            fired.add(sessionId)
+            preferences[PreferencesKeys.FIRED_REMINDER_IDS] = fired
         }
     }
 }

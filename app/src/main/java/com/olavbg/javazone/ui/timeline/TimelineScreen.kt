@@ -341,7 +341,7 @@ fun TimelineScreen(
                                 onSessionClick(session.id, yearState.value)
                             },
                             onFavoriteClick = viewModel::toggleFavorite,
-                            showFavorite = isCurrentYear,
+                            favoriteDisplay = if (isCurrentYear) FavoriteDisplay.Toggle else FavoriteDisplay.FavoriteOnly,
                             liveIndicators = showLiveIndicators,
                             sharedScope = sharedScope,
                             contentPadding = PaddingValues(
@@ -738,7 +738,8 @@ fun TimelineHeader(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+enum class FavoriteDisplay { Toggle, FavoriteOnly }
+
 @Composable
 fun AgendaListView(
     groupedSessions: List<AgendaGroup>,
@@ -746,7 +747,7 @@ fun AgendaListView(
     listState: androidx.compose.foundation.lazy.LazyListState,
     onSessionClick: (Session) -> Unit,
     onFavoriteClick: (Session) -> Unit,
-    showFavorite: Boolean = true,
+    favoriteDisplay: FavoriteDisplay = FavoriteDisplay.Toggle,
     liveIndicators: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(bottom = 32.dp),
     sharedScope: SharedTransitionScope? = null,
@@ -805,7 +806,7 @@ fun AgendaListView(
                         currentTime = currentTime,
                         onFavoriteClick = remember(session) { { onFavoriteClick(session) } },
                         onClick = remember(session) { { onSessionClick(session) } },
-                        showFavorite = showFavorite,
+                        favoriteDisplay = favoriteDisplay,
                         sharedScope = sharedScope
                     )
                 }
@@ -911,7 +912,7 @@ fun TimelineSessionRow(
     currentTime: Instant,
     onFavoriteClick: () -> Unit,
     onClick: () -> Unit,
-    showFavorite: Boolean = true,
+    favoriteDisplay: FavoriteDisplay = FavoriteDisplay.Toggle,
     sharedScope: SharedTransitionScope? = null
 ) {
     Row(
@@ -971,7 +972,7 @@ fun TimelineSessionRow(
                 currentTime = currentTime,
                 onFavoriteClick = onFavoriteClick,
                 onClick = onClick,
-                showFavorite = showFavorite,
+                favoriteDisplay = favoriteDisplay,
                 sharedScope = sharedScope,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -989,7 +990,7 @@ fun DetailedSessionCard(
     onFavoriteClick: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    showFavorite: Boolean = true,
+    favoriteDisplay: FavoriteDisplay = FavoriteDisplay.Toggle,
     sharedScope: SharedTransitionScope? = null
 ) {
     val id = session.id
@@ -1056,14 +1057,23 @@ fun DetailedSessionCard(
                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                     )
                 }
-                if (showFavorite) {
+                if (favoriteDisplay == FavoriteDisplay.Toggle || session.isFavorite) {
                     Spacer(modifier = Modifier.weight(1f))
-                    IconButton(onClick = onFavoriteClick, modifier = Modifier.size(28.dp)) {
+                    if (favoriteDisplay == FavoriteDisplay.Toggle) {
+                        IconButton(onClick = onFavoriteClick, modifier = Modifier.size(28.dp)) {
+                            Icon(
+                                imageVector = if (session.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = null,
+                                tint = if (session.isFavorite) FavoriteRed else LocalContentColor.current,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    } else {
                         Icon(
-                            imageVector = if (session.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            imageVector = Icons.Default.Favorite,
                             contentDescription = null,
-                            tint = if (session.isFavorite) FavoriteRed else LocalContentColor.current,
-                            modifier = Modifier.size(18.dp)
+                            tint = FavoriteRed,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }

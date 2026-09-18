@@ -48,8 +48,13 @@ class SessionRepository(
                 }
             }
         } else {
-            archiveSessions.map { map ->
-                (map[year] ?: emptyList()).sortedBy { it.startTimeZulu }
+            combine(
+                archiveSessions.map { map ->
+                    (map[year] ?: emptyList()).sortedBy { it.startTimeZulu }
+                },
+                dao.getFavoriteSessionIds()
+            ) { sessions, favoriteIds ->
+                sessions.map { it.copy(isFavorite = favoriteIds.contains(it.id)) }
             }
         }
     }

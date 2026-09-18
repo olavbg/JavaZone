@@ -172,22 +172,20 @@ fun SessionDetailScreen(
                         }
                     },
                     actions = {
-                        if (effectiveYear == SessionRepository.CURRENT_YEAR) {
-                            session?.let { s ->
-                                IconButton(
-                                    onClick = {
-                                        scope.launch {
-                                            repository.toggleFavorite(s.id, !s.isFavorite)
-                                        }
+                        session?.let { s ->
+                            IconButton(
+                                onClick = {
+                                    scope.launch {
+                                        repository.toggleFavorite(s.id, !s.isFavorite)
                                     }
-                                ) {
-                                    Icon(
-                                        imageVector = if (s.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                        contentDescription = null,
-                                        tint = if (s.isFavorite) FavoriteRed else LocalContentColor.current,
-                                        modifier = Modifier.sharedElementModifier(sharedScope, "session-favorite-${s.id}")
-                                    )
                                 }
+                            ) {
+                                Icon(
+                                    imageVector = if (s.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = null,
+                                    tint = if (s.isFavorite) FavoriteRed else LocalContentColor.current,
+                                    modifier = Modifier.sharedElementModifier(sharedScope, "session-favorite-${s.id}")
+                                )
                             }
                         }
                     }

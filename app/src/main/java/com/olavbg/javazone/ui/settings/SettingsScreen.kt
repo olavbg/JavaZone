@@ -15,8 +15,10 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,8 +31,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -71,6 +75,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -81,7 +86,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.olavbg.javazone.BuildConfig
 import com.olavbg.javazone.model.BackgroundMode
 import com.olavbg.javazone.notifications.ConferenceDoneReceiver
 import com.olavbg.javazone.ui.components.DonationButtons
@@ -103,6 +107,7 @@ fun SettingsScreen(
     val simulatedTimeOffset by viewModel.simulatedTimeOffset.collectAsState()
     val backgroundMode by viewModel.backgroundMode.collectAsState()
     val batteryHintDismissed by viewModel.batteryHintDismissed.collectAsState()
+    val missedReminderCount by viewModel.missedReminderCount.collectAsState()
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -145,6 +150,7 @@ fun SettingsScreen(
         permissions = permissions,
         backgroundMode = backgroundMode,
         batteryHintDismissed = batteryHintDismissed,
+        missedReminderCount = missedReminderCount,
         onNotificationLeadTimeChange = viewModel::setNotificationLeadTime,
         onSimulatedTimeChange = viewModel::setSimulatedTime,
         onResetSimulation = viewModel::resetSimulation,
@@ -255,34 +261,56 @@ private fun BatteryOptimizationHintCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer
         ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 4.dp)
-        ) {
-            Row(verticalAlignment = Alignment.Top) {
-                Icon(
-                    Icons.Rounded.Info,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Rounded.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
                 Text(
-                    text = "Opplever du at varsler ikke kommer til forventet tid? Det kan skyldes batterioptimalisering. Prøv å ekskludere JavaZone i innstillingene for batterioptimalisering.",
-                    style = MaterialTheme.typography.bodyLarge,
+                    text = "Batterioptimalisering",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.padding(start = 12.dp)
                 )
             }
+            Text(
+                text = "Opplever du at varsler ikke kommer til forventet tid? Det kan skyldes batterioptimalisering. Prøv å ekskludere JavaZone i innstillingene for batterioptimalisering.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.padding(top = 12.dp)
+            )
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = onDismiss) {
-                    Text("Ikke vis igjen", style = MaterialTheme.typography.labelMedium)
+                    Text("Ikke vis igjen")
                 }
-                TextButton(onClick = onOpenBatterySettings) {
-                    Text("Åpne innstillinger", style = MaterialTheme.typography.labelMedium)
+                Spacer(modifier = Modifier.width(4.dp))
+                Button(
+                    onClick = onOpenBatterySettings,
+                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp)
+                ) {
+                    Text("Åpne innstillinger")
                 }
             }
         }
@@ -413,6 +441,7 @@ fun SettingsContent(
     permissions: AppPermissions,
     backgroundMode: BackgroundMode,
     batteryHintDismissed: Boolean,
+    missedReminderCount: Int,
     onNotificationLeadTimeChange: (Int) -> Unit,
     onSimulatedTimeChange: (LocalDateTime) -> Unit,
     onResetSimulation: () -> Unit,
@@ -431,6 +460,7 @@ fun SettingsContent(
 
     var showDatePicker by remember { mutableStateOf(value = false) }
     var showTimePicker by remember { mutableStateOf(value = false) }
+    var batteryHintExpanded by remember { mutableStateOf(false) }
 
     // Navigation bar inset added to the scroll content so the screen can draw behind it.
     val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -491,13 +521,38 @@ fun SettingsContent(
                         }
                     }
                 }
-                if (permissions.canPostNotifications && permissions.showBatteryHint && !batteryHintDismissed) {
-                    BatteryOptimizationHintCard(
-                        onOpenBatterySettings = { openBatteryOptimizationSettings(context) },
-                        onDismiss = onDismissBatteryHint
-                    )
+                if (permissions.canPostNotifications &&
+                    permissions.showBatteryHint &&
+                    missedReminderCount > 0 &&
+                    !batteryHintDismissed
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clickable { batteryHintExpanded = !batteryHintExpanded }
+                            .padding(start = 4.dp, top = 2.dp, bottom = 2.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Får du ikke varsler som forventet?",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    if (batteryHintExpanded) {
+                        BatteryOptimizationHintCard(
+                            onOpenBatterySettings = { openBatteryOptimizationSettings(context) },
+                            onDismiss = onDismissBatteryHint
+                        )
+                    }
                 }
-                if (BuildConfig.DEBUG) {
+                if (isLocalBuild(context)) {
                     TextButton(
                         onClick = { ConferenceDoneReceiver.showConferenceDoneNotification(context) }
                     ) {
@@ -691,6 +746,7 @@ fun SettingsScreenPreview() {
             permissions = AppPermissions(canScheduleExact = true, canPostNotifications = true),
             backgroundMode = BackgroundMode.Animated,
             batteryHintDismissed = false,
+            missedReminderCount = 0,
             onNotificationLeadTimeChange = {},
             onSimulatedTimeChange = {},
             onResetSimulation = {},

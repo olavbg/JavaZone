@@ -11,9 +11,13 @@ import android.media.RingtoneManager
 import androidx.core.app.NotificationCompat
 import com.olavbg.javazone.MainActivity
 import com.olavbg.javazone.R
+import com.olavbg.javazone.data.repository.SettingsRepository
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class SessionReminderReceiver : BroadcastReceiver() {
 
@@ -32,6 +36,12 @@ class SessionReminderReceiver : BroadcastReceiver() {
         }
 
         showNotification(context, sessionId, title, room, startTimeFormatted)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            runCatching {
+                SettingsRepository(context).markSessionReminderFired(sessionId)
+            }
+        }
     }
 
     private fun showNotification(
