@@ -76,6 +76,7 @@ import com.olavbg.javazone.ui.components.FormatBadge
 import com.olavbg.javazone.ui.components.resolveVideoUrl
 import com.olavbg.javazone.ui.components.sharedElementModifier
 import com.olavbg.javazone.ui.theme.FavoriteRed
+import com.olavbg.javazone.ui.theme.LocalJavaZoneThemeTokens
 import com.olavbg.javazone.util.calculateSessionDurationMinutes
 import com.olavbg.javazone.util.formatDay
 import com.olavbg.javazone.util.formatFullDay
@@ -135,7 +136,9 @@ fun SessionDetailScreen(
     Scaffold(
         topBar = {
             Surface(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+                color = MaterialTheme.colorScheme.surface.copy(
+                    alpha = LocalJavaZoneThemeTokens.current.topBarSurfaceAlpha
+                ),
                 shadowElevation = 2.dp
             ) {
                 TopAppBar(

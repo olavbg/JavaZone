@@ -46,6 +46,7 @@ import com.olavbg.javazone.ui.components.FormatBadge
 import com.olavbg.javazone.ui.components.RoomTag
 import com.olavbg.javazone.ui.components.sharedElementModifier
 import com.olavbg.javazone.ui.theme.FavoriteRed
+import com.olavbg.javazone.ui.theme.LocalJavaZoneThemeTokens
 import com.olavbg.javazone.util.calculateSessionDurationMinutes
 import com.olavbg.javazone.util.formatTime
 import java.time.Duration
@@ -67,21 +68,19 @@ fun DetailedSessionCard(
     val id = session.id
     val cardAlpha = if (isPast) 0.55f else 1f
     val cardShape = RoundedCornerShape(10.dp)
+    val tokens = LocalJavaZoneThemeTokens.current
+
+    val cardContainer = if (isActive) tokens.activeSessionCardContainer else MaterialTheme.colorScheme.surface
+    val cardBorder = if (isActive) tokens.activeSessionCardBorder else tokens.sessionCardBorder
+    val cardBorderWidth = if (isActive) 1.5.dp else 0.5.dp
 
     Box(
         modifier = modifier
             .graphicsLayer { this.alpha = cardAlpha }
-            .background(
-                color = if (isActive) MaterialTheme.colorScheme.surfaceVariant.copy(
-                    alpha = MaterialTheme.colorScheme.surface.alpha
-                ) else MaterialTheme.colorScheme.surface,
-                shape = cardShape
-            )
+            .background(color = cardContainer, shape = cardShape)
             .border(
-                width = if (isActive) 1.5.dp else 0.5.dp,
-                color = if (isActive) MaterialTheme.colorScheme.surfaceVariant.copy(
-                    alpha = MaterialTheme.colorScheme.surface.alpha
-                ) else MaterialTheme.colorScheme.surface,
+                width = cardBorderWidth,
+                color = cardBorder,
                 shape = cardShape
             )
             .clip(cardShape)

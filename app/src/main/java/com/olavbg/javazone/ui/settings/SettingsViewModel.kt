@@ -7,6 +7,7 @@ import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.model.AppLanguage
 import com.olavbg.javazone.model.BackgroundMode
 import com.olavbg.javazone.model.Session
+import com.olavbg.javazone.model.ThemeMode
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -29,6 +30,9 @@ class SettingsViewModel(
 
     val backgroundMode: StateFlow<BackgroundMode> = repository.backgroundMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BackgroundMode.Animated)
+
+    val themeMode: StateFlow<ThemeMode> = repository.themeMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.Dark)
 
     val batteryHintDismissed: StateFlow<Boolean> = repository.batteryHintDismissed
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
@@ -84,6 +88,12 @@ class SettingsViewModel(
     fun setBackgroundMode(mode: BackgroundMode) {
         viewModelScope.launch {
             repository.updateBackgroundMode(mode)
+        }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch {
+            repository.updateThemeMode(mode)
         }
     }
 

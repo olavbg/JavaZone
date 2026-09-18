@@ -37,6 +37,7 @@ import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.random.Random
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Run the background ticker at about 30 fps instead of every frame. */
 private const val TICK_RATE_MILLIS = 33L
@@ -90,6 +91,9 @@ val LocalBackgroundReanimate = compositionLocalOf { 0L }
  * @param baseColor opaque backdrop painted underneath the bands.
  * @param tintPrimary first pastel tone (rendered as the dominant band).
  * @param tintSecondary second pastel tone (rendered as a lighter opposing band).
+ * @param bandScale multiplier for the band peak alphas. Light themes pass a value > 1 so
+ *   the bands stay clearly visible through the translucent white surfaces; dark themes keep
+ *   the default 1f.
  * @param mode how the background is rendered: [BackgroundMode.Animated] (default) runs the
  *   full ticker, [BackgroundMode.Static] paints one frozen frame, and
  *   [BackgroundMode.None] skips the bands entirely.
@@ -100,14 +104,15 @@ fun AnimatedDiagonalBackground(
     tintPrimary: Color,
     tintSecondary: Color,
     modifier: Modifier = Modifier,
-    mode: BackgroundMode = BackgroundMode.Animated
+    mode: BackgroundMode = BackgroundMode.Animated,
+    bandScale: Float = 1f
 ) {
     val context = LocalContext.current
     val animationsEnabled = remember { animatorScaleFactor(context) != 0f }
 
     // Per-composition band intensities (kept stable so the gradient brushes can be cached).
-    val band1Alpha = remember { 0.38f + Random.Default.nextFloat() * 0.10f }
-    val band2Alpha = remember { 0.24f + Random.Default.nextFloat() * 0.10f }
+    val band1Alpha = remember { (0.38f + Random.nextFloat() * 0.10f) * bandScale }
+    val band2Alpha = remember { (0.24f + Random.nextFloat() * 0.10f) * bandScale }
 
     val band1Brush = remember(tintPrimary, band1Alpha) {
         bandBrush(tintPrimary, band1Alpha)
@@ -204,7 +209,7 @@ fun AnimatedDiagonalBackground(
     LaunchedEffect(lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (true) {
-                delay(TICK_RATE_MILLIS)
+                delay(TICK_RATE_MILLIS.milliseconds)
 
                 val elapsed = activeTime.tick()
 

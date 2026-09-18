@@ -8,17 +8,21 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowCompat
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.room.Room
+import androidx.activity.SystemBarStyle
 import com.olavbg.javazone.data.local.AppDatabase
 import com.olavbg.javazone.data.remote.SleepingPillApi
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.model.BackgroundMode
+import com.olavbg.javazone.model.ThemeMode
 import com.olavbg.javazone.notifications.ConferenceDoneReceiver
 import com.olavbg.javazone.notifications.ReminderManager
 import com.olavbg.javazone.ui.JavaZoneApp
@@ -71,10 +75,28 @@ class MainActivity : ComponentActivity() {
             var reanimateSignal by remember { mutableLongStateOf(0L) }
             val backgroundMode by settingsRepository.backgroundMode
                 .collectAsState(initial = BackgroundMode.Animated)
+            val themeMode by settingsRepository.themeMode
+                .collectAsState(initial = ThemeMode.Dark)
+            val darkTheme = themeMode.resolveDark(isSystemInDarkTheme())
+
+            // The app no longer follows the phone's theme by default, so the system bar
+            // icon colors must follow the resolved in-app theme instead of the OS theme.
+            LaunchedEffect(darkTheme) {
+                val style = if (darkTheme) {
+                    SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+                } else {
+                    SystemBarStyle.light(
+                        scrim = android.graphics.Color.TRANSPARENT,
+                        darkScrim = android.graphics.Color.TRANSPARENT
+                    )
+                }
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+            }
+
             CompositionLocalProvider(
                 LocalBackgroundReanimate provides reanimateSignal
             ) {
-                JavaZoneTheme(backgroundMode = backgroundMode) {
+                JavaZoneTheme(darkTheme = darkTheme, backgroundMode = backgroundMode) {
                     JavaZoneApp(
                         repository,
                         settingsRepository,

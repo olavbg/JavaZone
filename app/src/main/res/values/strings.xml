@@ -12,7 +12,7 @@
 
     <!-- Language -->
     <string name="settings_section_language">Language</string>
-    <string name="settings_language_description">Choose the language of the app. By default, it follows your phone&#8217;s language.</string>
+    <string name="settings_language_description">Choose the language of the app.</string>
     <string name="language_system">System</string>
     <string name="language_norwegian">Norwegian</string>
     <string name="language_english">English</string>
@@ -20,8 +20,19 @@
     <!-- Notifications -->
     <string name="settings_section_notifications">Notifications</string>
     <string name="notification_lead_time_description">How many minutes before a talk starts should you be notified?</string>
+    <string name="setting_lead_time">Notify before</string>
     <string name="battery_hint_title">Not getting reminders as expected?</string>
     <string name="notification_test_button">Send test notification now</string>
+
+    <!-- Appearance -->
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_appearance_description">Choose the theme of the app. Dark mode is used by default.</string>
+    <string name="setting_theme">Theme</string>
+    <string name="setting_language">Language</string>
+    <string name="setting_background">Background</string>
+    <string name="theme_mode_dark">Dark</string>
+    <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_system">System</string>
 
     <!-- Background -->
     <string name="settings_section_background">Background</string>
@@ -31,7 +42,7 @@
     <string name="background_mode_animated">Animated</string>
     <string name="background_mode_none_detail">Only the plain background color.</string>
     <string name="background_mode_static_detail">Bands visible, but frozen in place.</string>
-    <string name="background_mode_animated_detail">Bands drift, tilt and sweep on navigation.</string>
+    <string name="background_mode_animated_detail">Bands drift slowly, continuously.</string>
 
     <!-- Time simulation (debug builds) -->
     <string name="settings_section_time_simulation">Time Simulation</string>
@@ -43,10 +54,14 @@
 
     <!-- About -->
     <string name="settings_section_about">About</string>
+    <string name="settings_section_open_source">Open source &amp; privacy</string>
     <string name="about_paragraph_1">This is a completely unofficial app, made by a JavaZone fan whose hobby project has taken on a life of its own. The goal is to explore new technologies in my spare time, and to play around with AI.</string>
     <string name="about_paragraph_2">Yes, the app is mostly vibe-coded: the AI assistants have done the typing while I stood behind them saying &#8220;Looks good!&#8221;. Most of the time it works surprisingly well. The rest of the time I&#8217;m glad this is only a hobby project.</string>
     <string name="about_paragraph_3">Without JavaZone and JavaBin&#8217;s open APIs, this would just have been a good idea with no content. Thanks for sharing!</string>
     <string name="about_paragraph_4">Enjoying the app and want to support its development? I&#8217;d appreciate a small contribution &#8211; either via Vipps or &#8220;Buy Me a Coffee&#8221;:</string>
+    <string name="about_open_source_body">The code is open, and suggestions, bug reports and pull requests are welcome.</string>
+    <string name="about_open_source_link">github.com/olavbg/JavaZone</string>
+    <string name="about_privacy_paragraph">Your favorites and settings are stored only on your device, and no analytics or tracking are used. The app fetches the conference schedule from the public JavaZone API.</string>
 
     <!-- Donation dialog -->
     <string name="donation_dialog_title">What a year!</string>
@@ -117,7 +132,7 @@
     <string name="permission_warning_notifications">Notifications are disabled. Tap to request access.</string>
     <string name="permission_warning_alarms">Exact alarms are disabled. Tap to request access.</string>
     <string name="notifications_enabled">Notifications enabled</string>
-    <string name="notifications_enabled_hint">Tap to open this app&#8217;s notification settings.</string>
+    <string name="notifications_enabled_hint">Tap to change.</string>
     <string name="battery_optimization_title">Battery optimization</string>
     <string name="battery_optimization_body">Are your notifications not arriving at the expected time? This may be due to battery optimization. Try excluding JavaZone in the battery optimization settings.</string>
     <string name="dont_show_again">Don&#8217;t show again</string>

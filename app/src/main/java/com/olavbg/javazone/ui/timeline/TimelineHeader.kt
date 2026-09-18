@@ -64,8 +64,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.olavbg.javazone.R
 import com.olavbg.javazone.ui.theme.FavoriteRed
+import com.olavbg.javazone.ui.theme.LocalJavaZoneThemeTokens
 import com.olavbg.javazone.util.localizedDayName
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -161,14 +163,16 @@ fun TimelineHeader(
     // focus, so the keyboard slides in together with the field.
     LaunchedEffect(isSearchVisible) {
         if (isSearchVisible) {
-            delay(300)
+            delay(300.milliseconds)
             runCatching { searchFocusRequester.requestFocus() }
             keyboardController?.show()
         }
     }
 
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+        color = MaterialTheme.colorScheme.surface.copy(
+            alpha = LocalJavaZoneThemeTokens.current.topBarSurfaceAlpha
+        ),
         tonalElevation = 3.dp,
         shadowElevation = 1.dp
     ) {

@@ -13,6 +13,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.olavbg.javazone.model.AppLanguage
 import com.olavbg.javazone.model.BackgroundMode
+import com.olavbg.javazone.model.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -31,6 +32,7 @@ class SettingsRepository(private val context: Context) {
         val NOTIFICATION_LEAD_TIME = intPreferencesKey("notification_lead_time_minutes")
         val SIMULATED_TIME_OFFSET = longPreferencesKey("simulated_time_offset_millis")
         val BACKGROUND_MODE = stringPreferencesKey("background_mode")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
         val NOTIFICATION_PROMPT_SHOWN = booleanPreferencesKey("notification_prompt_shown")
         val BATTERY_HINT_DISMISSED = booleanPreferencesKey("battery_hint_dismissed")
         val FIRED_REMINDER_IDS =
@@ -73,6 +75,18 @@ class SettingsRepository(private val context: Context) {
             preferences[PreferencesKeys.BACKGROUND_MODE]
                 ?.let { raw -> BackgroundMode.entries.firstOrNull { it.name == raw } }
                 ?: BackgroundMode.Animated
+        }
+
+    val themeMode: Flow<ThemeMode> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            ThemeMode.fromStorage(preferences[PreferencesKeys.THEME_MODE]) ?: ThemeMode.Dark
         }
 
     val notificationPromptShown: Flow<Boolean> = context.dataStore.data
@@ -144,6 +158,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun updateBackgroundMode(mode: BackgroundMode) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.BACKGROUND_MODE] = mode.name
+        }
+    }
+
+    suspend fun updateThemeMode(mode: ThemeMode) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.THEME_MODE] = mode.storageValue
         }
     }
 

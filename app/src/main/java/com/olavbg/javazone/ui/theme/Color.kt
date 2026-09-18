@@ -10,10 +10,17 @@ val DarkOutline = Color(0xFF4A525C)
 val DarkOnSurface = Color(0xFFF2F4F7)
 
 // ---- Light neutrals ----
-val LightBackground = Color(0xFFF3F4F5)
-val LightSurface = Color(0xFFFAFBFB)
+val LightBackground = Color(0xFFEFF1F3)
+val LightSurface = Color(0xFFFFFFFF)
 val LightSurfaceVariant = Color(0xFFE7EAEC)
 val LightOnSurface = Color(0xFF1B1E21)
+val LightPrimary = Color(0xFF3C7A63)
+val LightOutlineVariant = Color(0xFFDDE1E5)
+
+// ---- Active (live) session card ----
+// A soft primary tint used only in light mode so a live talk clearly stands out from the
+// white cards around it. Dark mode keeps its surfaceVariant-based highlight.
+val ActiveSessionCardLight = Color(0xFFD8EBE2)
 
 // ---- Muted pastel accents ----
 val AccentMint = Color(0xFF7BC4A6)
@@ -33,6 +40,12 @@ val AccentRoseLight = Color(0xFFE2AFBB)
 // Soft pastel tints for the animated diagonal background
 val DiagonalMintLight = Color(0xFF8FDFBA)
 val DiagonalBlueLight = Color(0xFF9FC2F0)
+
+// Light-theme diagonal tints. Deeper mid-tones than the accent palette so the animated
+// bands stay visible through the translucent white surfaces in light mode (the bright
+// pastels above wash out against a light backdrop).
+val LightModeDiagonalMint = Color(0xFF4FA98A)
+val LightModeDiagonalBlue = Color(0xFF5B8FC0)
 
 // Favorite heart color — clear, warm red that reads as "red" on both dark and light surfaces
 val FavoriteRed = Color(0xFFEF5350)
