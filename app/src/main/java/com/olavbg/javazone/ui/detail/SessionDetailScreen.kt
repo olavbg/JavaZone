@@ -88,7 +88,6 @@ fun SessionDetailScreen(
     repository: SessionRepository,
     settingsRepository: SettingsRepository,
     onBackClick: () -> Unit,
-    onSpeakerClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     year: Int? = null,
     showLiveBanners: Boolean = true,
@@ -571,10 +570,7 @@ fun SessionDetailScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                             
                             s.speakers.forEach { speaker ->
-                                SpeakerItem(
-                                    speaker = speaker,
-                                    onClick = { onSpeakerClick(speaker.name) }
-                                )
+                                SpeakerItem(speaker = speaker)
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
                         }

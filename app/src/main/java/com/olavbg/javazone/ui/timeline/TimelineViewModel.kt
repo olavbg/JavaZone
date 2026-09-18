@@ -85,9 +85,6 @@ class TimelineViewModel(
     private val _selectedRoom = MutableStateFlow<String?>(null)
     val selectedRoom = _selectedRoom.asStateFlow()
 
-    private val _filterSpeaker = MutableStateFlow<String?>(null)
-    val filterSpeaker = _filterSpeaker.asStateFlow()
-
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
 
@@ -155,7 +152,6 @@ class TimelineViewModel(
         _onlyFavorites,
         _selectedFormat,
         _selectedLanguage,
-        _filterSpeaker,
         _selectedRoom,
         _searchQuery
     ) { args: Array<Any?> ->
@@ -164,12 +160,11 @@ class TimelineViewModel(
         val favoritesOnly = args[2] as Boolean
         val format = args[3] as String?
         val language = args[4] as String?
-        val speaker = args[5] as String?
-        val room = args[6] as String?
-        val query = args[7] as String
+        val room = args[5] as String?
+        val query = args[6] as String
 
         var filtered = list
-        if (day != null && speaker == null) { // Don't filter by day if looking for a specific speaker's all talks
+        if (day != null) {
             filtered = filtered.filter { getDayFromZulu(it.start) == day }
         }
         if (favoritesOnly) {
@@ -180,9 +175,6 @@ class TimelineViewModel(
         }
         if (language != null) {
             filtered = filtered.filter { it.language?.equals(language, ignoreCase = true) == true }
-        }
-        if (speaker != null) {
-            filtered = filtered.filter { it.speakers.any { s -> s.name.equals(speaker, ignoreCase = true) } }
         }
         if (room != null) {
             filtered = filtered.filter { it.room.equals(room, ignoreCase = true) }
@@ -281,7 +273,6 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
         _selectedFormat.value = null
         _selectedLanguage.value = null
         _selectedRoom.value = null
-        _filterSpeaker.value = null
         _searchQuery.value = ""
         _onlyFavorites.value = false
         if (year == SessionRepository.CURRENT_YEAR) {
@@ -318,13 +309,6 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
 
     fun setRoom(room: String?) {
         _selectedRoom.value = room
-    }
-
-    fun setFilterSpeaker(speaker: String?) {
-        _filterSpeaker.value = speaker
-        if (speaker != null) {
-            _selectedDay.value = null // Show all days for the speaker
-        }
     }
 
     fun setSearchQuery(query: String) {

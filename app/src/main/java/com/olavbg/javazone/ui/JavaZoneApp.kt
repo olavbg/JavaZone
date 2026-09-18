@@ -164,10 +164,6 @@ fun JavaZoneApp(
                             settingsRepository = settingsRepository,
                             showLiveBanners = showLiveBanners,
                             onBackClick = { backStack.removeAt(backStack.size - 1) },
-                            onSpeakerClick = { name ->
-                                timelineViewModel.setFilterSpeaker(name)
-                                backStack.removeAt(backStack.size - 1)
-                            },
                             sharedScope = this@SharedTransitionLayout
                         )
                     }

@@ -24,15 +24,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -82,7 +79,6 @@ fun TimelineScreen(
     val selectedLanguage by viewModel.selectedLanguage.collectAsState()
     val selectedRoom by viewModel.selectedRoom.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
-    val filterSpeaker by viewModel.filterSpeaker.collectAsState()
     val selectedYear by viewModel.selectedYear.collectAsState()
     val isCurrentYear by viewModel.isCurrentYear.collectAsState()
     val availableYears by viewModel.availableYears.collectAsState()
@@ -219,30 +215,6 @@ fun TimelineScreen(
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    if (filterSpeaker != null) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "Foredrag av $filterSpeaker",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                IconButton(onClick = { viewModel.setFilterSpeaker(null) }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Fjern filter")
-                                }
-                            }
-                        }
-                    }
-
                     if (sessions.isEmpty()) {
                         if (isLoading) {
                             // Mirrors the empty-state layout, clearly visible at startup (also for archive years).

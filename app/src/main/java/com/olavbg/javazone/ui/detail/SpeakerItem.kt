@@ -22,8 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -48,12 +46,10 @@ import com.olavbg.javazone.ui.components.resolveSpeakerImageUrl
 
 @Composable
 fun SpeakerItem(
-    speaker: Speaker,
-    onClick: () -> Unit
+    speaker: Speaker
 ) {
     val context = LocalContext.current
     Surface(
-        onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
@@ -132,18 +128,6 @@ fun SpeakerItem(
                     style = MaterialTheme.typography.bodyMedium,
                     lineHeight = 22.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Se alle foredrag fra denne foreleseren",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
                 )
             }
         }
