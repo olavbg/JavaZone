@@ -1,3 +1,139 @@
 <resources>
     <string name="app_name">JavaZone</string>
+
+    <!-- Common -->
+    <string name="back">Back</string>
+    <string name="close">Close</string>
+    <string name="cancel">Cancel</string>
+    <string name="next">Next</string>
+    <string name="settings">Settings</string>
+    <string name="now">Now</string>
+    <string name="duration_minutes">%d min</string>
+
+    <!-- Language -->
+    <string name="settings_section_language">Language</string>
+    <string name="settings_language_description">Choose the language of the app. By default, it follows your phone&#8217;s language.</string>
+    <string name="language_system">System</string>
+    <string name="language_norwegian">Norwegian</string>
+    <string name="language_english">English</string>
+
+    <!-- Notifications -->
+    <string name="settings_section_notifications">Notifications</string>
+    <string name="notification_lead_time_description">How many minutes before a talk starts should you be notified?</string>
+    <string name="battery_hint_title">Not getting reminders as expected?</string>
+    <string name="notification_test_button">Send test notification now</string>
+
+    <!-- Background -->
+    <string name="settings_section_background">Background</string>
+    <string name="background_description">Choose how the diagonal bands behind the app content are rendered.</string>
+    <string name="background_mode_none">None</string>
+    <string name="background_mode_static">Static</string>
+    <string name="background_mode_animated">Animated</string>
+    <string name="background_mode_none_detail">Only the plain background color.</string>
+    <string name="background_mode_static_detail">Bands visible, but frozen in place.</string>
+    <string name="background_mode_animated_detail">Bands drift, tilt and sweep on navigation.</string>
+
+    <!-- Time simulation (debug builds) -->
+    <string name="settings_section_time_simulation">Time Simulation</string>
+    <string name="time_simulation_description">Simulate the app&#8217;s current time. Useful for demoing the &#8220;Now&#8221; indicator and past-talk logic.</string>
+    <string name="time_simulation_current_label">Current Simulation</string>
+    <string name="time_simulation_actual_time">Actual Time</string>
+    <string name="time_simulation_reset">Reset to Actual Time</string>
+    <string name="time_simulation_set_time">Set Time</string>
+
+    <!-- About -->
+    <string name="settings_section_about">About</string>
+    <string name="about_paragraph_1">This is a completely unofficial app, made by a JavaZone fan whose hobby project has taken on a life of its own. The goal is to explore new technologies in my spare time, and to play around with AI.</string>
+    <string name="about_paragraph_2">Yes, the app is mostly vibe-coded: the AI assistants have done the typing while I stood behind them saying &#8220;Looks good!&#8221;. Most of the time it works surprisingly well. The rest of the time I&#8217;m glad this is only a hobby project.</string>
+    <string name="about_paragraph_3">Without JavaZone and JavaBin&#8217;s open APIs, this would just have been a good idea with no content. Thanks for sharing!</string>
+    <string name="about_paragraph_4">Enjoying the app and want to support its development? I&#8217;d appreciate a small contribution &#8211; either via Vipps or &#8220;Buy Me a Coffee&#8221;:</string>
+
+    <!-- Donation dialog -->
+    <string name="donation_dialog_title">What a year!</string>
+    <string name="donation_dialog_text">JavaZone %1$d is over. Did you like the app and want to support further development? I&#8217;d appreciate a small contribution &#8211; either via Vipps or &#8220;Buy Me a Coffee&#8221;:</string>
+
+    <!-- Notification permission prompt -->
+    <string name="notification_prompt_title">Want reminders?</string>
+    <string name="notification_prompt_text">We can send you a notification before your favorited talks start. To make that work, we&#8217;ll ask for permission to send notifications.</string>
+    <string name="notification_prompt_accept">Ask for permission</string>
+    <string name="notification_prompt_dismiss">Not now</string>
+
+    <!-- Timeline -->
+    <string name="timeline_loading">Loading talks&#8230;</string>
+    <string name="empty_archive_title">No talks found for JavaZone %1$d</string>
+    <string name="empty_archive_subtitle">No talks were registered for this year.</string>
+    <string name="empty_filtered_title">No talks match your search or filters</string>
+    <string name="empty_filtered_subtitle">Try different search terms or reset the filters.</string>
+    <string name="empty_title">No talks found</string>
+    <string name="empty_subtitle">Check your internet connection and try again later.</string>
+    <string name="reset_filters">Reset all filters</string>
+
+    <!-- Timeline header -->
+    <string name="select_year">Select year</string>
+    <plurals name="year_talk_count">
+        <item quantity="one">%d talk</item>
+        <item quantity="other">%d talks</item>
+    </plurals>
+    <string name="search_placeholder">Search title, speaker, room&#8230;</string>
+    <string name="search">Search</string>
+    <string name="clear">Clear</string>
+    <string name="all_days">All days</string>
+    <string name="favorites">Favorites</string>
+    <string name="format_talk">Talk</string>
+    <string name="format_lightning_talk">Lightning talk</string>
+    <string name="format_workshop">Workshop</string>
+
+    <!-- Session card -->
+    <string name="minutes_left">%d min left</string>
+    <string name="ending_now">Ending now</string>
+    <string name="in_minutes">In %d min</string>
+    <string name="in_less_than_a_minute">In &lt; 1 min</string>
+
+    <!-- Session detail -->
+    <string name="session_title">Talk</string>
+    <string name="session_finished">This talk has already ended</string>
+    <string name="watch_recording">Watch recording</string>
+    <string name="live_banner">Happening now in %1$s &#8211; %2$d min left</string>
+    <string name="starts_banner">Starts in %1$d minutes in %2$s</string>
+    <string name="recording_from_year">Recording from JavaZone %1$d</string>
+    <string name="missing_time">Time missing</string>
+    <string name="about_talk">About this talk</string>
+    <string name="intended_audience">Intended audience</string>
+    <string name="keywords">Tags</string>
+    <plurals name="speakers_count">
+        <item quantity="one">Speaker</item>
+        <item quantity="other">Speakers</item>
+    </plurals>
+
+    <!-- Agenda list -->
+    <plurals name="sticky_session_count">
+        <item quantity="one">%d talk</item>
+        <item quantity="other">%d parallel tracks</item>
+    </plurals>
+
+    <!-- Permissions -->
+    <string name="permissions_needed">Permissions needed</string>
+    <string name="permission_warning_both">Notifications and exact alarms are disabled. Tap to request access.</string>
+    <string name="permission_warning_notifications">Notifications are disabled. Tap to request access.</string>
+    <string name="permission_warning_alarms">Exact alarms are disabled. Tap to request access.</string>
+    <string name="notifications_enabled">Notifications enabled</string>
+    <string name="notifications_enabled_hint">Tap to open this app&#8217;s notification settings.</string>
+    <string name="battery_optimization_title">Battery optimization</string>
+    <string name="battery_optimization_body">Are your notifications not arriving at the expected time? This may be due to battery optimization. Try excluding JavaZone in the battery optimization settings.</string>
+    <string name="dont_show_again">Don&#8217;t show again</string>
+    <string name="open_settings">Open settings</string>
+
+    <!-- Speaker social links -->
+    <string name="bluesky_profile">Bluesky profile</string>
+    <string name="linkedin_profile">LinkedIn profile</string>
+    <string name="x_profile">X profile</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_conference_description">Information about the conference.</string>
+    <string name="conference_done_title">JavaZone %1$d is over</string>
+    <string name="conference_done_text">What did you think of the app?</string>
+    <string name="reminder_fallback_title">Talk reminder</string>
+    <string name="reminder_body">Starts at %1$s in %2$s</string>
+    <string name="notification_channel_reminders_name">Talk reminders</string>
+    <string name="notification_channel_reminders_description">Reminders for favorited talks</string>
 </resources>

@@ -1,5 +1,7 @@
 package com.olavbg.javazone
 
+import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,10 +24,23 @@ import com.olavbg.javazone.notifications.ReminderManager
 import com.olavbg.javazone.ui.JavaZoneApp
 import com.olavbg.javazone.ui.components.LocalBackgroundReanimate
 import com.olavbg.javazone.ui.theme.JavaZoneTheme
+import com.olavbg.javazone.util.AppLocale
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 
 class MainActivity : ComponentActivity() {
+
+    // On API < 33 the per-app language override is applied by re-creating the
+    // activity through a localized base context (see AppLocale). On API 33+ the
+    // system LocaleManager owns this and a wrapping would fight it.
+    override fun attachBaseContext(newBase: Context) {
+        val base = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            newBase
+        } else {
+            AppLocale.localizedContext(newBase)
+        }
+        super.attachBaseContext(base)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

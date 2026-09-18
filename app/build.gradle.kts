@@ -50,6 +50,14 @@ android {
             }
         }
     }
+
+    // The in-app language switcher must be able to switch languages at runtime,
+    // so never split the bundle by locale (Play Core is not used).
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11

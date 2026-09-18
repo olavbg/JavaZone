@@ -57,9 +57,12 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.olavbg.javazone.R
 import com.olavbg.javazone.ui.theme.FavoriteRed
 import com.olavbg.javazone.util.localizedDayName
 import kotlinx.coroutines.delay
@@ -77,7 +80,7 @@ fun YearPickerSheet(
         onDismissRequest = onDismiss
     ) {
         Text(
-            text = "Velg år",
+            text = stringResource(R.string.select_year),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
@@ -102,7 +105,7 @@ fun YearPickerSheet(
                         )
                         if (count != null) {
                             Text(
-                                text = "$count foredrag",
+                                text = pluralStringResource(R.plurals.year_talk_count, count, count),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -111,7 +114,7 @@ fun YearPickerSheet(
                     if (isSelected) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "Valgt år",
+                            contentDescription = stringResource(R.string.select_year),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -197,7 +200,7 @@ fun TimelineHeader(
                                 )
                                 Icon(
                                     imageVector = Icons.Default.ArrowDropDown,
-                                    contentDescription = "Velg år",
+                                    contentDescription = stringResource(R.string.select_year),
                                     modifier = Modifier.size(22.dp),
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
@@ -209,18 +212,18 @@ fun TimelineHeader(
                     IconButton(onClick = onToggleSearch) {
                         Icon(
                             imageVector = if (isSearchVisible) Icons.Default.Close else Icons.Outlined.Search,
-                            contentDescription = "Søk"
+                            contentDescription = stringResource(R.string.search)
                         )
                     }
                     IconButton(onClick = { onFavoritesToggled(!onlyFavorites) }) {
                         Icon(
                             imageVector = if (onlyFavorites) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "Favoritter",
+                            contentDescription = stringResource(R.string.favorites),
                             tint = if (onlyFavorites) FavoriteRed else LocalContentColor.current
                         )
                     }
                     IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Rounded.Settings, contentDescription = "Innstillinger")
+                        Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.settings))
                     }
                 },
                 windowInsets = WindowInsets.statusBars,
@@ -237,12 +240,12 @@ fun TimelineHeader(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = onSearchQueryChange,
-                    placeholder = { Text("Søk tittel, foredragsholder, rom...") },
+                    placeholder = { Text(stringResource(R.string.search_placeholder)) },
                     leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { onSearchQueryChange("") }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Nullstill")
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear))
                             }
                         }
                     },
@@ -270,7 +273,7 @@ fun TimelineHeader(
                             onClick = { onDaySelected(null) },
                             shape = SegmentedButtonDefaults.itemShape(index = 0, count = count)
                         ) {
-                            Text("Alle dager", fontSize = 11.sp)
+                            Text(stringResource(R.string.all_days), fontSize = 11.sp)
                         }
                         availableDays.forEachIndexed { index, day ->
                             SegmentedButton(
@@ -295,7 +298,7 @@ fun TimelineHeader(
                         FilterChip(
                             selected = true,
                             onClick = { onFavoritesToggled(false) },
-                            label = { Text("Favoritter") },
+                            label = { Text(stringResource(R.string.favorites)) },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Favorite,
@@ -316,9 +319,9 @@ fun TimelineHeader(
                         label = {
                             Text(
                                 when {
-                                    format.contains("presentation", ignoreCase = true) -> "Foredrag"
-                                    format.contains("lightning", ignoreCase = true) -> "Lynforedrag"
-                                    format.contains("workshop", ignoreCase = true) -> "Workshop"
+                                    format.contains("presentation", ignoreCase = true) -> stringResource(R.string.format_talk)
+                                    format.contains("lightning", ignoreCase = true) -> stringResource(R.string.format_lightning_talk)
+                                    format.contains("workshop", ignoreCase = true) -> stringResource(R.string.format_workshop)
                                     else -> format
                                 }
                             )

@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.olavbg.javazone.model.AppLanguage
 import com.olavbg.javazone.model.BackgroundMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -21,6 +22,10 @@ import java.io.IOException
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 class SettingsRepository(private val context: Context) {
+
+    companion object {
+        val APP_LANGUAGE_KEY = stringPreferencesKey("app_language")
+    }
 
     private object PreferencesKeys {
         val NOTIFICATION_LEAD_TIME = intPreferencesKey("notification_lead_time_minutes")
@@ -94,6 +99,18 @@ class SettingsRepository(private val context: Context) {
             preferences[PreferencesKeys.BATTERY_HINT_DISMISSED] ?: false
         }
 
+    val appLanguage: Flow<AppLanguage> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            AppLanguage.fromStorage(preferences[APP_LANGUAGE_KEY]) ?: AppLanguage.System
+        }
+
     val firedReminderSessionIds: Flow<Set<String>> = context.dataStore.data
         .catch { exception ->
             if (exception is IOException) {
@@ -109,6 +126,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun updateNotificationLeadTime(minutes: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.NOTIFICATION_LEAD_TIME] = minutes
+        }
+    }
+
+    suspend fun updateAppLanguage(language: AppLanguage) {
+        context.dataStore.edit { preferences ->
+            preferences[APP_LANGUAGE_KEY] = language.storageValue
         }
     }
 

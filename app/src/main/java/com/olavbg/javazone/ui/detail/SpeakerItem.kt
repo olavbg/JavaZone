@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -34,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -110,7 +112,7 @@ fun SpeakerItem(
                                 socials.forEach { link ->
                                     SpeakerSocialButton(
                                         iconRes = socialIconRes(link.kind),
-                                        contentDescription = socialContentDescription(link.kind),
+                                        contentDescriptionRes = socialContentDescriptionRes(link.kind),
                                         url = link.url,
                                         context = context
                                     )
@@ -138,7 +140,7 @@ fun SpeakerItem(
 @Composable
 private fun SpeakerSocialButton(
     @DrawableRes iconRes: Int,
-    contentDescription: String?,
+    @StringRes contentDescriptionRes: Int,
     url: String,
     context: Context
 ) {
@@ -162,7 +164,7 @@ private fun SpeakerSocialButton(
     ) {
         Icon(
             painter = painterResource(iconRes),
-            contentDescription = contentDescription,
+            contentDescription = stringResource(contentDescriptionRes),
             modifier = Modifier.size(19.dp),
             tint = MaterialTheme.colorScheme.secondary
         )
@@ -176,10 +178,11 @@ private fun socialIconRes(kind: String): Int = when (kind) {
     else -> R.drawable.ic_x_logo
 }
 
-private fun socialContentDescription(kind: String): String = when (kind) {
-    "bluesky" -> "Bluesky-profil"
-    "linkedin" -> "LinkedIn-profil"
-    else -> "X-profil"
+@StringRes
+private fun socialContentDescriptionRes(kind: String): Int = when (kind) {
+    "bluesky" -> R.string.bluesky_profile
+    "linkedin" -> R.string.linkedin_profile
+    else -> R.string.x_profile
 }
 
 private fun openUrl(context: Context, url: String) {

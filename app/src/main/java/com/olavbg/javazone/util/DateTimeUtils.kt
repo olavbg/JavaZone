@@ -7,14 +7,26 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-// DateTimeFormatter and ZoneId are immutable and thread-safe; creating them once
-// avoids expensive object allocation on every formatting call (called per list item).
+// ZoneId is immutable and thread-safe; creating it once avoids expensive object
+// allocation on every formatting call (called per list item).
 private val OSLO_ZONE: ZoneId = ZoneId.of("Europe/Oslo")
 private val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-private val DAY_FORMATTER: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("EEEE", Locale.forLanguageTag("no"))
-private val FULL_DAY_FORMATTER: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("EEE d. MMM yyyy", Locale.forLanguageTag("no"))
+
+// The day pattern differs between Norwegian ("mandag 7. sep") and English
+// ("Mon, Sep 7"), and formatters are locale-specific, so they are built per
+// locale rather than cached globally.
+private fun dayFormatter(locale: Locale): DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEEE", locale)
+
+private fun fullDayFormatter(locale: Locale): DateTimeFormatter =
+    DateTimeFormatter.ofPattern(
+        if (locale.language == "no" || locale.language == "nb" || locale.language == "nn") {
+            "EEE d. MMM yyyy"
+        } else {
+            "EEE, MMM d, yyyy"
+        },
+        locale
+    )
 
 fun formatTime(zulu: String): String {
     return try {
@@ -34,45 +46,67 @@ fun formatTime(instant: Instant?): String {
     }
 }
 
-fun formatDay(zulu: String): String {
+fun formatDay(zulu: String, locale: Locale = Locale.getDefault()): String {
     return try {
         val instant = Instant.parse(zulu)
-        instant.atZone(OSLO_ZONE).format(DAY_FORMATTER)
+        instant.atZone(OSLO_ZONE).format(dayFormatter(locale))
             .replaceFirstChar { it.uppercase() }
     } catch (_: Exception) {
         ""
     }
 }
 
-fun formatFullDay(zulu: String): String? {
+fun formatFullDay(zulu: String, locale: Locale = Locale.getDefault()): String? {
     return try {
         val instant = Instant.parse(zulu)
-        instant.atZone(OSLO_ZONE).format(FULL_DAY_FORMATTER)
+        instant.atZone(OSLO_ZONE).format(fullDayFormatter(locale))
     } catch (_: Exception) {
         null
     }
 }
 
-fun localizedDayName(dayKey: String): String = when (dayKey) {
-    "Monday" -> "Mandag"
-    "Tuesday" -> "Tirsdag"
-    "Wednesday" -> "Onsdag"
-    "Thursday" -> "Torsdag"
-    "Friday" -> "Fredag"
-    "Saturday" -> "Lørdag"
-    "Sunday" -> "Søndag"
+private val NORWEGIAN_DAYS: Map<String, String> = mapOf(
+    "Monday" to "Mandag",
+    "Tuesday" to "Tirsdag",
+    "Wednesday" to "Onsdag",
+    "Thursday" to "Torsdag",
+    "Friday" to "Fredag",
+    "Saturday" to "Lørdag",
+    "Sunday" to "Søndag"
+)
+
+private val NORWEGIAN_SHORT_DAYS: Map<String, String> = mapOf(
+    "Monday" to "man.",
+    "Tuesday" to "tir.",
+    "Wednesday" to "ons.",
+    "Thursday" to "tor.",
+    "Friday" to "fre.",
+    "Saturday" to "lør.",
+    "Sunday" to "søn."
+)
+
+private val ENGLISH_SHORT_DAYS: Map<String, String> = mapOf(
+    "Monday" to "Mon",
+    "Tuesday" to "Tue",
+    "Wednesday" to "Wed",
+    "Thursday" to "Thu",
+    "Friday" to "Fri",
+    "Saturday" to "Sat",
+    "Sunday" to "Sun"
+)
+
+private fun isNorwegian(locale: Locale): Boolean =
+    locale.language == "no" || locale.language == "nb" || locale.language == "nn"
+
+/** Localizes a weekday key coming from the API (always an English day name). */
+fun localizedDayName(dayKey: String, locale: Locale = Locale.getDefault()): String = when {
+    isNorwegian(locale) -> NORWEGIAN_DAYS[dayKey] ?: dayKey
     else -> dayKey
 }
 
-fun shortDayName(dayKey: String): String = when (dayKey) {
-    "Monday" -> "man."
-    "Tuesday" -> "tir."
-    "Wednesday" -> "ons."
-    "Thursday" -> "tor."
-    "Friday" -> "fre."
-    "Saturday" -> "lør."
-    "Sunday" -> "søn."
-    else -> dayKey
+fun shortDayName(dayKey: String, locale: Locale = Locale.getDefault()): String = when {
+    isNorwegian(locale) -> NORWEGIAN_SHORT_DAYS[dayKey] ?: dayKey
+    else -> ENGLISH_SHORT_DAYS[dayKey] ?: dayKey
 }
 
 fun calculateSessionDurationMinutes(session: Session): Long {

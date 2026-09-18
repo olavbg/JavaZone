@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
+import com.olavbg.javazone.model.AppLanguage
 import com.olavbg.javazone.model.BackgroundMode
 import com.olavbg.javazone.model.Session
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,6 +32,9 @@ class SettingsViewModel(
 
     val batteryHintDismissed: StateFlow<Boolean> = repository.batteryHintDismissed
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val appLanguage: StateFlow<AppLanguage> = repository.appLanguage
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppLanguage.System)
 
     val missedReminderCount: StateFlow<Int> = combine(
         sessionRepository.getSessionsFlow(),
@@ -81,6 +85,15 @@ class SettingsViewModel(
         viewModelScope.launch {
             repository.updateBackgroundMode(mode)
         }
+    }
+
+    /**
+     * Persists the selected language. The caller is expected to await this before
+     * telling [com.olavbg.javazone.util.AppLocale] to apply the change, so the
+     * recreated UI reads the freshly stored value.
+     */
+    suspend fun setAppLanguage(language: AppLanguage) {
+        repository.updateAppLanguage(language)
     }
 }
 

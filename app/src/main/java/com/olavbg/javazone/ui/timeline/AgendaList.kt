@@ -36,8 +36,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.olavbg.javazone.R
 import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.util.isSessionActive
 import java.time.Instant
@@ -196,7 +198,7 @@ fun TimelineStickyTimeHeader(
                 Spacer(modifier = Modifier.width(8.dp))
                 
                 Text(
-                    text = "$sessionCount ${if (sessionCount == 1) "foredrag" else "parallell-løp"}",
+                    text = pluralStringResource(R.plurals.sticky_session_count, sessionCount, sessionCount),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Medium

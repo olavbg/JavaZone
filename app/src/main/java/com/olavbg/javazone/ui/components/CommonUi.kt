@@ -12,10 +12,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
+import com.olavbg.javazone.R
 import com.olavbg.javazone.model.Speaker
 import com.olavbg.javazone.ui.theme.LightningAmber
 import com.olavbg.javazone.ui.theme.PresentationBlue
@@ -27,11 +29,11 @@ private val ROOM_NUMBER_REGEX = Regex("[^0-9]")
 
 @Composable
 fun FormatBadge(format: String, modifier: Modifier = Modifier) {
-    val (color, label) = remember(format) {
+    val (color, labelRes) = remember(format) {
         when {
-            format.contains("lightning", ignoreCase = true) -> LightningAmber to "Lynforedrag"
-            format.contains("workshop", ignoreCase = true) -> WorkshopPurple to "Workshop"
-            else -> PresentationBlue to "Foredrag"
+            format.contains("lightning", ignoreCase = true) -> LightningAmber to R.string.format_lightning_talk
+            format.contains("workshop", ignoreCase = true) -> WorkshopPurple to R.string.format_workshop
+            else -> PresentationBlue to R.string.format_talk
         }
     }
 
@@ -41,7 +43,7 @@ fun FormatBadge(format: String, modifier: Modifier = Modifier) {
         modifier = modifier
     ) {
         Text(
-            text = label,
+            text = stringResource(labelRes),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             color = color,

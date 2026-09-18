@@ -35,10 +35,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.olavbg.javazone.R
 import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.ui.components.FormatBadge
 import com.olavbg.javazone.ui.components.RoomTag
@@ -100,7 +102,7 @@ fun DetailedSessionCard(
                         border = BorderStroke(1.dp, if (isActive) MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                     ) {
                         Text(
-                            text = "$durationMins min",
+                            text = stringResource(R.string.duration_minutes, durationMins),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -202,7 +204,7 @@ fun DetailedSessionCard(
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                     Text(
-                        text = if (remainingMins > 0) "$remainingMins min igjen" else "Avsluttes nå",
+                        text = if (remainingMins > 0) stringResource(R.string.minutes_left, remainingMins) else stringResource(R.string.ending_now),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -228,7 +230,7 @@ fun DetailedSessionCard(
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                         ) {
                             Text(
-                                text = if (minsUntil > 0) "Om $minsUntil min" else "Om < 1 min",
+                                text = if (minsUntil > 0) stringResource(R.string.in_minutes, minsUntil) else stringResource(R.string.in_less_than_a_minute),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,

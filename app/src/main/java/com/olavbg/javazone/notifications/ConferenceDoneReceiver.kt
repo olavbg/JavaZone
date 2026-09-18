@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import com.olavbg.javazone.MainActivity
 import com.olavbg.javazone.R
 import com.olavbg.javazone.data.repository.SessionRepository
+import com.olavbg.javazone.util.AppLocale
 
 class ConferenceDoneReceiver : BroadcastReceiver() {
 
@@ -25,7 +26,8 @@ class ConferenceDoneReceiver : BroadcastReceiver() {
         const val EXTRA_SHOW_DONATION_DIALOG = "show_donation_dialog"
 
         fun showConferenceDoneNotification(context: Context) {
-            createNotificationChannel(context)
+            val localizedContext = AppLocale.localizedContext(context)
+            createNotificationChannel(localizedContext)
             val notificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -43,8 +45,8 @@ class ConferenceDoneReceiver : BroadcastReceiver() {
 
             val notification = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentTitle("JavaZone ${SessionRepository.CURRENT_YEAR} er over")
-                .setContentText("Hvordan syntes du app'en fungerte?")
+                .setContentTitle(localizedContext.getString(R.string.conference_done_title, SessionRepository.CURRENT_YEAR))
+                .setContentText(localizedContext.getString(R.string.conference_done_text))
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setCategory(NotificationCompat.CATEGORY_EVENT)
                 .setContentIntent(pendingIntent)
@@ -68,7 +70,7 @@ class ConferenceDoneReceiver : BroadcastReceiver() {
                 "JavaZone",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "Informasjon om konferansen."
+                description = context.getString(R.string.notification_channel_conference_description)
                 setShowBadge(false)
             }
             notificationManager.createNotificationChannel(channel)

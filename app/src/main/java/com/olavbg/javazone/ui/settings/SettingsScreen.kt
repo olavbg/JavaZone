@@ -55,21 +55,27 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.olavbg.javazone.model.AppLanguage
 import com.olavbg.javazone.model.BackgroundMode
 import com.olavbg.javazone.notifications.ConferenceDoneReceiver
+import com.olavbg.javazone.R
 import com.olavbg.javazone.ui.components.DonationButtons
 import com.olavbg.javazone.ui.theme.JavaZoneTheme
+import com.olavbg.javazone.util.AppLocale
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -87,6 +93,7 @@ fun SettingsScreen(
     val simulatedTimeOffset by viewModel.simulatedTimeOffset.collectAsState()
     val backgroundMode by viewModel.backgroundMode.collectAsState()
     val batteryHintDismissed by viewModel.batteryHintDismissed.collectAsState()
+    val appLanguage by viewModel.appLanguage.collectAsState()
     val missedReminderCount by viewModel.missedReminderCount.collectAsState()
 
     val context = LocalContext.current
@@ -122,6 +129,14 @@ fun SettingsScreen(
     }
     val onOpenNotificationSettings: () -> Unit = { openAppNotificationSettings(context) }
 
+    val scope = rememberCoroutineScope()
+    val onLanguageChange: (AppLanguage) -> Unit = { language ->
+        scope.launch {
+            viewModel.setAppLanguage(language)
+            AppLocale.apply(context, language)
+        }
+    }
+
     BackHandler(onBack = onBackClick)
 
     SettingsContent(
@@ -130,11 +145,13 @@ fun SettingsScreen(
         permissions = permissions,
         backgroundMode = backgroundMode,
         batteryHintDismissed = batteryHintDismissed,
+        appLanguage = appLanguage,
         missedReminderCount = missedReminderCount,
         onNotificationLeadTimeChange = viewModel::setNotificationLeadTime,
         onSimulatedTimeChange = viewModel::setSimulatedTime,
         onResetSimulation = viewModel::resetSimulation,
         onBackgroundModeChange = viewModel::setBackgroundMode,
+        onAppLanguageChange = onLanguageChange,
         onPermissionsAction = onPermissionsAction,
         onOpenNotificationSettings = onOpenNotificationSettings,
         onDismissBatteryHint = viewModel::dismissBatteryHint,
@@ -152,11 +169,13 @@ fun SettingsContent(
     permissions: AppPermissions,
     backgroundMode: BackgroundMode,
     batteryHintDismissed: Boolean,
+    appLanguage: AppLanguage,
     missedReminderCount: Int,
     onNotificationLeadTimeChange: (Int) -> Unit,
     onSimulatedTimeChange: (LocalDateTime) -> Unit,
     onResetSimulation: () -> Unit,
     onBackgroundModeChange: (BackgroundMode) -> Unit,
+    onAppLanguageChange: (AppLanguage) -> Unit,
     onPermissionsAction: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
     onDismissBatteryHint: () -> Unit,
@@ -183,10 +202,10 @@ fun SettingsContent(
                 shadowElevation = 2.dp
             ) {
                 TopAppBar(
-                    title = { Text("Settings") },
+                    title = { Text(stringResource(R.string.settings)) },
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -208,7 +227,7 @@ fun SettingsContent(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            SettingsSection(title = "Notifications") {
+            SettingsSection(title = stringResource(R.string.settings_section_notifications)) {
                 if (!permissions.allGranted) {
                     PermissionsWarningCard(
                         permissions = permissions,
@@ -217,7 +236,7 @@ fun SettingsContent(
                     )
                 }
                 Text(
-                    "How many minutes before a session starts should you be notified?",
+                    stringResource(R.string.notification_lead_time_description),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -228,7 +247,7 @@ fun SettingsContent(
                             onClick = { onNotificationLeadTimeChange(minutes) },
                             shape = SegmentedButtonDefaults.itemShape(index = index, count = 3)
                         ) {
-                            Text("$minutes min")
+                            Text(stringResource(R.string.duration_minutes, minutes))
                         }
                     }
                 }
@@ -251,7 +270,7 @@ fun SettingsContent(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Får du ikke varsler som forventet?",
+                            text = stringResource(R.string.battery_hint_title),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -267,7 +286,7 @@ fun SettingsContent(
                     TextButton(
                         onClick = { ConferenceDoneReceiver.showConferenceDoneNotification(context) }
                     ) {
-                        Text("Send test notification now")
+                        Text(stringResource(R.string.notification_test_button))
                     }
                 }
                 if (permissions.allGranted) {
@@ -277,16 +296,42 @@ fun SettingsContent(
 
             HorizontalDivider()
 
-            SettingsSection(title = "Background") {
+            SettingsSection(title = stringResource(R.string.settings_section_language)) {
                 Text(
-                    "Choose how the diagonal bands behind the app content are rendered.",
+                    stringResource(R.string.settings_language_description),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                val languages = listOf(
+                    AppLanguage.System to stringResource(R.string.language_system),
+                    AppLanguage.Norwegian to stringResource(R.string.language_norwegian),
+                    AppLanguage.English to stringResource(R.string.language_english),
+                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    languages.forEachIndexed { index, (language, label) ->
+                        SegmentedButton(
+                            selected = appLanguage == language,
+                            onClick = { onAppLanguageChange(language) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = languages.size)
+                        ) {
+                            Text(label)
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
+            SettingsSection(title = stringResource(R.string.settings_section_background)) {
+                Text(
+                    stringResource(R.string.background_description),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 val modes = listOf(
-                    BackgroundMode.None to "Ingen",
-                    BackgroundMode.Static to "Statisk",
-                    BackgroundMode.Animated to "Animasjon"
+                    BackgroundMode.None to stringResource(R.string.background_mode_none),
+                    BackgroundMode.Static to stringResource(R.string.background_mode_static),
+                    BackgroundMode.Animated to stringResource(R.string.background_mode_animated)
                 )
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     modes.forEachIndexed { index, (mode, label) ->
@@ -301,9 +346,9 @@ fun SettingsContent(
                 }
                 Text(
                     text = when (backgroundMode) {
-                        BackgroundMode.None -> "Only the plain background color."
-                        BackgroundMode.Static -> "Bands visible, but frozen in place."
-                        BackgroundMode.Animated -> "Bands drift, tilt and sweep on navigation."
+                        BackgroundMode.None -> stringResource(R.string.background_mode_none_detail)
+                        BackgroundMode.Static -> stringResource(R.string.background_mode_static_detail)
+                        BackgroundMode.Animated -> stringResource(R.string.background_mode_animated_detail)
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -313,9 +358,9 @@ fun SettingsContent(
             if (showTimeSimulation) {
                 HorizontalDivider()
 
-                SettingsSection(title = "Time Simulation") {
+                SettingsSection(title = stringResource(R.string.settings_section_time_simulation)) {
                     Text(
-                        "Simulate the app's current time. Useful for demoing 'NOW' indicator and past session logic.",
+                        stringResource(R.string.time_simulation_description),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -329,9 +374,9 @@ fun SettingsContent(
                                 .clickable { showDatePicker = true }
                                 .padding(vertical = 4.dp)
                         ) {
-                            Text("Current Simulation", style = MaterialTheme.typography.labelMedium)
+                            Text(stringResource(R.string.time_simulation_current_label), style = MaterialTheme.typography.labelMedium)
                             Text(
-                                if (simulatedTimeOffset == 0L) "Actual Time" else simulatedDateTime.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, HH:mm")),
+                                if (simulatedTimeOffset == 0L) stringResource(R.string.time_simulation_actual_time) else simulatedDateTime.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, HH:mm")),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -341,7 +386,7 @@ fun SettingsContent(
                             onClick = onResetSimulation,
                             enabled = simulatedTimeOffset != 0L
                         ) {
-                            Text("Reset to Actual Time")
+                            Text(stringResource(R.string.time_simulation_reset))
                         }
                     }
                 }
@@ -349,7 +394,7 @@ fun SettingsContent(
 
             HorizontalDivider()
 
-            SettingsSection(title = "About") {
+            SettingsSection(title = stringResource(R.string.settings_section_about)) {
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -361,22 +406,22 @@ fun SettingsContent(
                         modifier = Modifier.padding(20.dp)
                     ) {
                         Text(
-                            "Dette er en helt uoffisiell app, laget av en JavaZone-fan med et hobbyprosjekt som har fått eget liv. Målet er å utforske nye teknologier på fritiden, og å leke med AI.",
+                            stringResource(R.string.about_paragraph_1),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            "Ja, appen er hovedsakelig vibe-kodet: AI-assistentene har banket på tastaturet mens jeg har stått bak og sagt \"Det ser bra ut!\". Mesteparten av tiden fungerer det overraskende bra. Resten av tiden er jeg glad for at dette kun er et hobbyprosjekt.",
+                            stringResource(R.string.about_paragraph_2),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            "Uten JavaZone og JavaBin sine åpne API-er ville dette bare vært en god idé uten innhold. Takk for at dere deler!",
+                            stringResource(R.string.about_paragraph_3),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            "Liker du app'en, og har lyst til å støtte videreutviklingen? Da setter jeg pris på et lite bidrag – enten via Vipps, eller \"Buy Me a Coffee\":",
+                            stringResource(R.string.about_paragraph_4),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -408,7 +453,7 @@ fun SettingsContent(
                         showTimePicker = true
                     }
                 ) {
-                    Text("Next")
+                    Text(stringResource(R.string.next))
                 }
             }
         ) {
@@ -432,12 +477,12 @@ fun SettingsContent(
                         showTimePicker = false
                     }
                 ) {
-                    Text("Set Time")
+                    Text(stringResource(R.string.time_simulation_set_time))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showTimePicker = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             },
             text = {
@@ -457,11 +502,13 @@ fun SettingsScreenPreview() {
             permissions = AppPermissions(canScheduleExact = true, canPostNotifications = true),
             backgroundMode = BackgroundMode.Animated,
             batteryHintDismissed = false,
+            appLanguage = AppLanguage.System,
             missedReminderCount = 0,
             onNotificationLeadTimeChange = {},
             onSimulatedTimeChange = {},
             onResetSimulation = {},
             onBackgroundModeChange = {},
+            onAppLanguageChange = {},
             onPermissionsAction = {},
             onOpenNotificationSettings = {},
             onDismissBatteryHint = {},

@@ -1,0 +1,139 @@
+<resources>
+    <string name="app_name">JavaZone</string>
+
+    <!-- Common -->
+    <string name="back">Tilbake</string>
+    <string name="close">Lukk</string>
+    <string name="cancel">Avbryt</string>
+    <string name="next">Neste</string>
+    <string name="settings">Innstillinger</string>
+    <string name="now">Nå</string>
+    <string name="duration_minutes">%d min</string>
+
+    <!-- Language -->
+    <string name="settings_section_language">Språk</string>
+    <string name="settings_language_description">Velg språket i appen. Som standard følger den telefonens språk.</string>
+    <string name="language_system">System</string>
+    <string name="language_norwegian">Norsk</string>
+    <string name="language_english">English</string>
+
+    <!-- Notifications -->
+    <string name="settings_section_notifications">Varsler</string>
+    <string name="notification_lead_time_description">Hvor mange minutter før et foredrag starter vil du varsles?</string>
+    <string name="battery_hint_title">Får du ikke varsler som forventet?</string>
+    <string name="notification_test_button">Send testvarsel nå</string>
+
+    <!-- Background -->
+    <string name="settings_section_background">Bakgrunn</string>
+    <string name="background_description">Velg hvordan de diagonale båndene bak app-innholdet vises.</string>
+    <string name="background_mode_none">Ingen</string>
+    <string name="background_mode_static">Statisk</string>
+    <string name="background_mode_animated">Animasjon</string>
+    <string name="background_mode_none_detail">Kun den vanlige bakgrunnsfargen.</string>
+    <string name="background_mode_static_detail">Båndene vises, men står stille.</string>
+    <string name="background_mode_animated_detail">Båndene driver, vipper og glir ved navigering.</string>
+
+    <!-- Time simulation (debug builds) -->
+    <string name="settings_section_time_simulation">Tidssimulering</string>
+    <string name="time_simulation_description">Simuler appens nåværende tid. Nyttig for å demoe «Nå»-markøren og logikken for avsluttede foredrag.</string>
+    <string name="time_simulation_current_label">Nåværende simulering</string>
+    <string name="time_simulation_actual_time">Virkelig tid</string>
+    <string name="time_simulation_reset">Tilbakestill til virkelig tid</string>
+    <string name="time_simulation_set_time">Sett tid</string>
+
+    <!-- About -->
+    <string name="settings_section_about">Om</string>
+    <string name="about_paragraph_1">Dette er en helt uoffisiell app, laget av en JavaZone-fan med et hobbyprosjekt som har fått eget liv. Målet er å utforske nye teknologier på fritiden, og å leke med AI.</string>
+    <string name="about_paragraph_2">Ja, appen er hovedsakelig vibe-kodet: AI-assistentene har banket på tastaturet mens jeg har stått bak og sagt «Det ser bra ut!». Mesteparten av tiden fungerer det overraskende bra. Resten av tiden er jeg glad for at dette kun er et hobbyprosjekt.</string>
+    <string name="about_paragraph_3">Uten JavaZone og JavaBin sine åpne API-er ville dette bare vært en god idé uten innhold. Takk for at dere deler!</string>
+    <string name="about_paragraph_4">Liker du appen og har du lyst til å støtte videreutviklingen? Da setter jeg pris på et lite bidrag – enten via Vipps eller «Buy Me a Coffee»:</string>
+
+    <!-- Donation dialog -->
+    <string name="donation_dialog_title">Takk for i år!</string>
+    <string name="donation_dialog_text">JavaZone %1$d er over. Likte du appen, og har du lyst til å støtte videreutviklingen? Da setter jeg pris på et lite bidrag – enten via Vipps eller «Buy Me a Coffee»:</string>
+
+    <!-- Notification permission prompt -->
+    <string name="notification_prompt_title">Vil du ha påminnelser?</string>
+    <string name="notification_prompt_text">Vi kan sende deg et varsel før foredragene du favorittmarkerer starter. For at det skal fungere, ber vi om tillatelse til å sende varslinger.</string>
+    <string name="notification_prompt_accept">Be om tillatelse</string>
+    <string name="notification_prompt_dismiss">Ikke nå</string>
+
+    <!-- Timeline -->
+    <string name="timeline_loading">Laster inn foredrag…</string>
+    <string name="empty_archive_title">Fant ingen foredrag for JavaZone %1$d</string>
+    <string name="empty_archive_subtitle">Det var ingen registrerte foredrag for dette året.</string>
+    <string name="empty_filtered_title">Ingen foredrag passer søket eller filteret</string>
+    <string name="empty_filtered_subtitle">Prøv å endre på søkeordene eller tilbakestill filtrene.</string>
+    <string name="empty_title">Ingen foredrag funnet</string>
+    <string name="empty_subtitle">Sjekk internettforbindelsen eller prøv igjen senere.</string>
+    <string name="reset_filters">Nullstill alle filtre</string>
+
+    <!-- Timeline header -->
+    <string name="select_year">Velg år</string>
+    <plurals name="year_talk_count">
+        <item quantity="one">%d foredrag</item>
+        <item quantity="other">%d foredrag</item>
+    </plurals>
+    <string name="search_placeholder">Søk tittel, foredragsholder, rom…</string>
+    <string name="search">Søk</string>
+    <string name="clear">Nullstill</string>
+    <string name="all_days">Alle dager</string>
+    <string name="favorites">Favoritter</string>
+    <string name="format_talk">Foredrag</string>
+    <string name="format_lightning_talk">Lynforedrag</string>
+    <string name="format_workshop">Workshop</string>
+
+    <!-- Session card -->
+    <string name="minutes_left">%d min igjen</string>
+    <string name="ending_now">Avsluttes nå</string>
+    <string name="in_minutes">Om %d min</string>
+    <string name="in_less_than_a_minute">Om &lt; 1 min</string>
+
+    <!-- Session detail -->
+    <string name="session_title">Foredrag</string>
+    <string name="session_finished">Dette foredraget er allerede avsluttet</string>
+    <string name="watch_recording">Se videoopptak</string>
+    <string name="live_banner">Går nå i %1$s – %2$d min igjen</string>
+    <string name="starts_banner">Starter om %1$d minutter i %2$s</string>
+    <string name="recording_from_year">Opptak fra JavaZone %1$d</string>
+    <string name="missing_time">Mangler tidspunkt</string>
+    <string name="about_talk">Om foredraget</string>
+    <string name="intended_audience">Passer for</string>
+    <string name="keywords">Emneknagger</string>
+    <plurals name="speakers_count">
+        <item quantity="one">Foredragsholder</item>
+        <item quantity="other">Foredragsholdere</item>
+    </plurals>
+
+    <!-- Agenda list -->
+    <plurals name="sticky_session_count">
+        <item quantity="one">%d foredrag</item>
+        <item quantity="other">%d parallell-løp</item>
+    </plurals>
+
+    <!-- Permissions -->
+    <string name="permissions_needed">Tillatelser kreves</string>
+    <string name="permission_warning_both">Varslinger og eksakte alarmer er deaktivert. Trykk for å be om tilgang.</string>
+    <string name="permission_warning_notifications">Varslinger er deaktivert. Trykk for å be om tilgang.</string>
+    <string name="permission_warning_alarms">Eksakte alarmer er deaktivert. Trykk for å be om tilgang.</string>
+    <string name="notifications_enabled">Varslinger aktivert</string>
+    <string name="notifications_enabled_hint">Trykk for å åpne denne appens varslingsinnstillinger.</string>
+    <string name="battery_optimization_title">Batterioptimalisering</string>
+    <string name="battery_optimization_body">Opplever du at varsler ikke kommer til forventet tid? Det kan skyldes batterioptimalisering. Prøv å ekskludere JavaZone i innstillingene for batterioptimalisering.</string>
+    <string name="dont_show_again">Ikke vis igjen</string>
+    <string name="open_settings">Åpne innstillinger</string>
+
+    <!-- Speaker social links -->
+    <string name="bluesky_profile">Bluesky-profil</string>
+    <string name="linkedin_profile">LinkedIn-profil</string>
+    <string name="x_profile">X-profil</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_conference_description">Informasjon om konferansen.</string>
+    <string name="conference_done_title">JavaZone %1$d er over</string>
+    <string name="conference_done_text">Hva syntes du om appen?</string>
+    <string name="reminder_fallback_title">Påminnelse om foredrag</string>
+    <string name="reminder_body">Starter %1$s i %2$s</string>
+    <string name="notification_channel_reminders_name">Påminnelser om foredrag</string>
+    <string name="notification_channel_reminders_description">Påminnelser for favorittmarkerte foredrag</string>
+</resources>

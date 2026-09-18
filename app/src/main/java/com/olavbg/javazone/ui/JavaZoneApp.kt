@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,6 +46,7 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
+import com.olavbg.javazone.R
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.notifications.ReminderManager
@@ -190,11 +192,11 @@ fun JavaZoneApp(
         AlertDialog(
             onDismissRequest = { showDonationDialog = false },
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 1f),
-            title = { Text("Takk for i år!") },
+            title = { Text(stringResource(R.string.donation_dialog_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
                     Text(
-                        "JavaZone ${SessionRepository.CURRENT_YEAR} er over. Likte du appen, og har du lyst til å støtte videreutviklingen? Da setter jeg pris på et lite bidrag – enten via Vipps eller \"Buy Me a Coffee\":",
+                        stringResource(R.string.donation_dialog_text, SessionRepository.CURRENT_YEAR),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Medium,
@@ -215,7 +217,7 @@ fun JavaZoneApp(
                             contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
-                        Text("Lukk")
+                        Text(stringResource(R.string.close))
                     }
                 }
             }
@@ -226,11 +228,9 @@ fun JavaZoneApp(
         AlertDialog(
             onDismissRequest = { showNotificationPrompt = false },
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 1f),
-            title = { Text("Vil du ha påminnelser?") },
+            title = { Text(stringResource(R.string.notification_prompt_title)) },
             text = {
-                Text(
-                    "Vi kan sende deg et varsel før foredragene du favorittmarkerer starter. For at det skal fungere, ber vi om tillatelse til å sende varslinger."
-                )
+                Text(stringResource(R.string.notification_prompt_text))
             },
             confirmButton = {
                 TextButton(
@@ -241,12 +241,12 @@ fun JavaZoneApp(
                         }
                     }
                 ) {
-                    Text("Be om tillatelse")
+                    Text(stringResource(R.string.notification_prompt_accept))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showNotificationPrompt = false }) {
-                    Text("Ikke nå")
+                    Text(stringResource(R.string.notification_prompt_dismiss))
                 }
             }
         )

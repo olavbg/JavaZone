@@ -12,6 +12,7 @@ import androidx.core.app.NotificationCompat
 import com.olavbg.javazone.MainActivity
 import com.olavbg.javazone.R
 import com.olavbg.javazone.data.repository.SettingsRepository
+import com.olavbg.javazone.util.AppLocale
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -23,7 +24,9 @@ class SessionReminderReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val sessionId = intent.getStringExtra(ReminderManager.EXTRA_SESSION_ID) ?: return
-        val title = intent.getStringExtra(ReminderManager.EXTRA_SESSION_TITLE) ?: "Session Reminder"
+        val localizedContext = AppLocale.localizedContext(context)
+        val title = intent.getStringExtra(ReminderManager.EXTRA_SESSION_TITLE)
+            ?: localizedContext.getString(R.string.reminder_fallback_title)
         val room = intent.getStringExtra(ReminderManager.EXTRA_SESSION_ROOM) ?: ""
         val startTimeZulu = intent.getStringExtra(ReminderManager.EXTRA_SESSION_START_TIME) ?: ""
 
@@ -35,7 +38,7 @@ class SessionReminderReceiver : BroadcastReceiver() {
             ""
         }
 
-        showNotification(context, sessionId, title, room, startTimeFormatted)
+        showNotification(localizedContext, sessionId, title, room, startTimeFormatted)
 
         CoroutineScope(Dispatchers.IO).launch {
             runCatching {
@@ -71,7 +74,7 @@ class SessionReminderReceiver : BroadcastReceiver() {
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(title)
-            .setContentText("Starts at $startTime in $room")
+            .setContentText(context.getString(R.string.reminder_body, startTime, room))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_EVENT)
             .setSound(notificationSound)
@@ -94,10 +97,10 @@ class SessionReminderReceiver : BroadcastReceiver() {
 
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Session Reminders",
+            context.getString(R.string.notification_channel_reminders_name),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "Reminders for favorited sessions"
+            description = context.getString(R.string.notification_channel_reminders_description)
             enableLights(true)
             enableVibration(true)
             setShowBadge(true)

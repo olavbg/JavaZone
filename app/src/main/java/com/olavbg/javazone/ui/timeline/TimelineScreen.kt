@@ -49,9 +49,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.olavbg.javazone.R
 import com.olavbg.javazone.util.extractRoomNumber
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -224,8 +226,8 @@ fun TimelineScreen(
                             // The selected archive year has no sessions registered at all
                             EmptyStateView(
                                 isSearchActive = false,
-                                title = "Fant ingen foredrag for JavaZone $selectedYear",
-                                subtitle = "Det var ingen registrerte foredrag for dette året."
+                                title = stringResource(R.string.empty_archive_title, selectedYear),
+                                subtitle = stringResource(R.string.empty_archive_subtitle)
                             )
                         } else {
                             EmptyStateView(
@@ -331,7 +333,7 @@ fun TimelineScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Nå",
+                        text = stringResource(R.string.now),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -366,7 +368,7 @@ private fun TimelineLoadingState() {
             CircularProgressIndicator()
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Laster inn foredrag…",
+                text = stringResource(R.string.timeline_loading),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
@@ -397,14 +399,14 @@ fun EmptyStateView(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = title ?: if (isSearchActive) "Ingen foredrag passer søket/filteret" else "Ingen foredrag funnet",
+                text = title ?: if (isSearchActive) stringResource(R.string.empty_filtered_title) else stringResource(R.string.empty_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = subtitle ?: if (isSearchActive) "Prøv å endre på søkeordene eller tilbakestill filtrene." else "Sjekk internettforbindelsen eller prøv igjen senere.",
+                text = subtitle ?: if (isSearchActive) stringResource(R.string.empty_filtered_subtitle) else stringResource(R.string.empty_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -412,7 +414,7 @@ fun EmptyStateView(
             if (isSearchActive) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(onClick = onClearFilters) {
-                    Text("Nullstill alle filter")
+                    Text(stringResource(R.string.reset_filters))
                 }
             }
         }

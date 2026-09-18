@@ -60,6 +60,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,6 +69,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.olavbg.javazone.R
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.ui.components.FormatBadge
@@ -138,7 +141,7 @@ fun SessionDetailScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            text = "Foredrag",
+                            text = stringResource(R.string.session_title),
                             fontWeight = FontWeight.Black,
                             style = MaterialTheme.typography.titleLarge,
                         )
@@ -148,7 +151,7 @@ fun SessionDetailScreen(
                     ),
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Tilbake")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                         }
                     },
                     actions = {
@@ -229,7 +232,7 @@ fun SessionDetailScreen(
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Dette foredraget er allerede avsluttet",
+                                        text = stringResource(R.string.session_finished),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onErrorContainer
@@ -264,7 +267,7 @@ fun SessionDetailScreen(
                                                 )
                                                 Spacer(modifier = Modifier.width(8.dp))
                                                 Text(
-                                                    text = "Se videoopptak",
+                                                    text = stringResource(R.string.watch_recording),
                                                     style = MaterialTheme.typography.labelLarge,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.error
@@ -293,7 +296,7 @@ fun SessionDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
-                                    text = "Går nå i ${s.room} – $minutesRemaining min igjen",
+                                    text = stringResource(R.string.live_banner, s.room, minutesRemaining),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -317,7 +320,7 @@ fun SessionDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
-                                    text = "Starter om $minutesUntilStart minutter i ${s.room}",
+                                    text = stringResource(R.string.starts_banner, minutesUntilStart, s.room),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -357,14 +360,14 @@ fun SessionDetailScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Se videoopptak",
+                                        text = stringResource(R.string.watch_recording),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                     if (effectiveYear != SessionRepository.CURRENT_YEAR) {
                                         Text(
-                                            text = "Opptak fra JavaZone $effectiveYear",
+                                            text = stringResource(R.string.recording_from_year, effectiveYear),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                                         )
@@ -426,7 +429,7 @@ fun SessionDetailScreen(
                                                 modifier = Modifier.padding(start = 10.dp)
                                             )
                                             Text(
-                                                text = if (isNorwegian) "Norsk" else "Engelsk",
+                                                text = if (isNorwegian) stringResource(R.string.language_norwegian) else stringResource(R.string.language_english),
                                                 style = MaterialTheme.typography.labelMedium,
                                                 fontWeight = FontWeight.Medium,
                                                 modifier = Modifier.padding(start = 4.dp, end = 10.dp, top = 6.dp, bottom = 6.dp)
@@ -454,7 +457,7 @@ fun SessionDetailScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     val timeLabel = if (s.startTimeZulu.isBlank()) {
-                                        "Mangler tidspunkt"
+                                        stringResource(R.string.missing_time)
                                     } else if (effectiveYear == SessionRepository.CURRENT_YEAR) {
                                         "${formatDay(s.startTimeZulu)}, ${formatTime(s.startTimeZulu)} – ${formatTime(s.endTimeZulu)}"
                                     } else {
@@ -488,7 +491,7 @@ fun SessionDetailScreen(
                                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
                                     ) {
                                         Text(
-                                            text = "$duration min",
+                                            text = stringResource(R.string.duration_minutes, duration),
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary,
@@ -502,7 +505,7 @@ fun SessionDetailScreen(
                         Spacer(modifier = Modifier.height(24.dp))
 
                         Text(
-                            text = "Om foredraget",
+                            text = stringResource(R.string.about_talk),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -517,7 +520,7 @@ fun SessionDetailScreen(
                         if (!s.intendedAudience.isNullOrBlank()) {
                             Spacer(modifier = Modifier.height(24.dp))
                             Text(
-                                text = "Passer for",
+                                text = stringResource(R.string.intended_audience),
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -533,7 +536,7 @@ fun SessionDetailScreen(
                         if (!s.suggestedKeywords.isNullOrBlank()) {
                             Spacer(modifier = Modifier.height(24.dp))
                             Text(
-                                text = "Emneknagger",
+                                text = stringResource(R.string.keywords),
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -565,7 +568,7 @@ fun SessionDetailScreen(
                         if (s.speakers.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(32.dp))
                             Text(
-                                text = if (s.speakers.size > 1) "Foredragsholdere" else "Foredragsholder",
+                                text = pluralStringResource(R.plurals.speakers_count, s.speakers.size, s.speakers.size),
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )

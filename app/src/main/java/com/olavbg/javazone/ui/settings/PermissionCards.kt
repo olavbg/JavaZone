@@ -30,8 +30,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.olavbg.javazone.R
 
 @Composable
 internal fun PermissionsWarningCard(
@@ -41,11 +43,11 @@ internal fun PermissionsWarningCard(
 ) {
     val message = when {
         !permissions.canPostNotifications && !permissions.canScheduleExact ->
-            "Notifications and exact alarms are disabled. Tap to request access."
+            stringResource(R.string.permission_warning_both)
         !permissions.canPostNotifications ->
-            "Notifications are disabled. Tap to request access."
+            stringResource(R.string.permission_warning_notifications)
         else ->
-            "Exact alarms are disabled. Tap to request access."
+            stringResource(R.string.permission_warning_alarms)
     }
     Card(
         onClick = onPermissionsAction,
@@ -65,7 +67,7 @@ internal fun PermissionsWarningCard(
             )
             Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
                 Text(
-                    text = "Permissions needed",
+                    text = stringResource(R.string.permissions_needed),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -78,7 +80,7 @@ internal fun PermissionsWarningCard(
                 onClick = onOpenNotificationSettings,
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
             ) {
-                Text("Settings", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.settings), style = MaterialTheme.typography.labelMedium)
             }
         }
     }
@@ -103,12 +105,12 @@ internal fun PermissionsGrantedCard(onOpenNotificationSettings: () -> Unit) {
             )
             Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
                 Text(
-                    text = "Notifications enabled",
+                    text = stringResource(R.string.notifications_enabled),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Tap to open this app's notification settings.",
+                    text = stringResource(R.string.notifications_enabled_hint),
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
@@ -151,7 +153,7 @@ internal fun BatteryOptimizationHintCard(
                     )
                 }
                 Text(
-                    text = "Batterioptimalisering",
+                    text = stringResource(R.string.battery_optimization_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -159,7 +161,7 @@ internal fun BatteryOptimizationHintCard(
                 )
             }
             Text(
-                text = "Opplever du at varsler ikke kommer til forventet tid? Det kan skyldes batterioptimalisering. PrÃ¸v Ã¥ ekskludere JavaZone i innstillingene for batterioptimalisering.",
+                text = stringResource(R.string.battery_optimization_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.padding(top = 12.dp)
@@ -172,14 +174,14 @@ internal fun BatteryOptimizationHintCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = onDismiss) {
-                    Text("Ikke vis igjen")
+                    Text(stringResource(R.string.dont_show_again))
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 Button(
                     onClick = onOpenBatterySettings,
                     contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp)
                 ) {
-                    Text("Ã…pne innstillinger")
+                    Text(stringResource(R.string.open_settings))
                 }
             }
         }

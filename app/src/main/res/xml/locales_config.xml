@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Declares the languages this app supports for the system per-app-language
+    feature (API 33+). "nb" is Norwegian Bokmål (the legacy "no" tag aliases
+    "nb" on Android, so "nb" alone is sufficient); "en" is the fallback/default.
+    Booking the tags here lets the OS picker and LocaleManager treat the app
+    as localizable, and keeps system-triggered recreation in sync with the
+    in-app language override in Settings.
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="nb" />
+    <locale android:name="en" />
+</locale-config>
