@@ -2,6 +2,7 @@ package com.olavbg.javazone.ui.timeline
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -277,8 +278,24 @@ fun TimelineScreen(
                 }
             }
         }
+        // The pill's visibility is driven through a MutableTransitionState so we can detect when it
+        // is mid-transition. The arrow direction is frozen on exit: it only updates when the pill
+        // (re)appears, so the arrow never visibly flips at the same moment the pill animates away.
+        val fabTransition = remember { MutableTransitionState(false) }
+        fabTransition.targetState = nowFabState != NowFabState.Hidden
+        var frozenArrowDown by remember { mutableStateOf(true) }
+        LaunchedEffect(fabTransition.targetState) {
+            if (fabTransition.targetState) {
+                frozenArrowDown = nowFabState == NowFabState.ShowDown
+            }
+        }
+        LaunchedEffect(nowFabState) {
+            if (nowFabState != NowFabState.Hidden && fabTransition.isIdle && fabTransition.targetState) {
+                frozenArrowDown = nowFabState == NowFabState.ShowDown
+            }
+        }
         AnimatedVisibility(
-            visible = nowFabState != NowFabState.Hidden,
+            visibleState = fabTransition,
             enter = fadeIn() + scaleIn(),
             exit = fadeOut() + scaleOut(),
             modifier = Modifier
@@ -305,7 +322,7 @@ fun TimelineScreen(
                     modifier = Modifier.padding(horizontal = 16.dp)
                 ) {
                     Icon(
-                        imageVector = if (nowFabState == NowFabState.ShowDown)
+                        imageVector = if (frozenArrowDown)
                             Icons.Filled.KeyboardArrowDown
                         else
                             Icons.Filled.KeyboardArrowUp,
