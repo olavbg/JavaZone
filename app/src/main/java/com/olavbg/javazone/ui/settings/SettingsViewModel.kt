@@ -25,6 +25,9 @@ class SettingsViewModel(
     val notificationLeadTime: StateFlow<Int> = repository.notificationLeadTime
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 10)
 
+    val notificationsEnabled: StateFlow<Boolean> = repository.notificationsEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     val simulatedTimeOffset: StateFlow<Long> = repository.simulatedTimeOffset
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
@@ -64,6 +67,13 @@ class SettingsViewModel(
     fun setNotificationLeadTime(minutes: Int) {
         viewModelScope.launch {
             repository.updateNotificationLeadTime(minutes)
+            sessionRepository.rescheduleAllFavorites()
+        }
+    }
+
+    fun setNotificationsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.updateNotificationsEnabled(enabled)
             sessionRepository.rescheduleAllFavorites()
         }
     }

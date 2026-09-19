@@ -30,11 +30,13 @@ class SettingsRepository(private val context: Context) {
 
     private object PreferencesKeys {
         val NOTIFICATION_LEAD_TIME = intPreferencesKey("notification_lead_time_minutes")
+        val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         val SIMULATED_TIME_OFFSET = longPreferencesKey("simulated_time_offset_millis")
         val BACKGROUND_MODE = stringPreferencesKey("background_mode")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val NOTIFICATION_PROMPT_SHOWN = booleanPreferencesKey("notification_prompt_shown")
         val BATTERY_HINT_DISMISSED = booleanPreferencesKey("battery_hint_dismissed")
+        val FILTERS_EXPANDED = booleanPreferencesKey("filters_expanded")
         val FIRED_REMINDER_IDS =
             stringSetPreferencesKey("fired_reminder_session_ids_${SessionRepository.CURRENT_YEAR}")
     }
@@ -49,6 +51,18 @@ class SettingsRepository(private val context: Context) {
         }
         .map { preferences ->
             preferences[PreferencesKeys.NOTIFICATION_LEAD_TIME] ?: 10
+        }
+
+    val notificationsEnabled: Flow<Boolean> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[PreferencesKeys.NOTIFICATIONS_ENABLED] ?: true
         }
 
     val simulatedTimeOffset: Flow<Long> = context.dataStore.data
@@ -113,6 +127,18 @@ class SettingsRepository(private val context: Context) {
             preferences[PreferencesKeys.BATTERY_HINT_DISMISSED] ?: false
         }
 
+    val filtersExpanded: Flow<Boolean> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[PreferencesKeys.FILTERS_EXPANDED] ?: false
+        }
+
     val appLanguage: Flow<AppLanguage> = context.dataStore.data
         .catch { exception ->
             if (exception is IOException) {
@@ -140,6 +166,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun updateNotificationLeadTime(minutes: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.NOTIFICATION_LEAD_TIME] = minutes
+        }
+    }
+
+    suspend fun updateNotificationsEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.NOTIFICATIONS_ENABLED] = enabled
         }
     }
 
@@ -188,6 +220,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun dismissBatteryHint() {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.BATTERY_HINT_DISMISSED] = true
+        }
+    }
+
+    suspend fun setFiltersExpanded(expanded: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.FILTERS_EXPANDED] = expanded
         }
     }
 

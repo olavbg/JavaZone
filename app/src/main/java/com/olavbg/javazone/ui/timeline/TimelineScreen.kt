@@ -88,6 +88,7 @@ fun TimelineScreen(
     val availableDays by viewModel.availableDays.collectAsState()
     val showLiveIndicators by viewModel.showLiveIndicators.collectAsState()
     val currentConferenceDay by viewModel.currentConferenceDay.collectAsState()
+    val filtersExpanded by viewModel.filtersExpanded.collectAsState()
 
     var isSearchVisible by remember { mutableStateOf(value = false) }
     var isYearPickerVisible by remember { mutableStateOf(value = false) }
@@ -204,6 +205,8 @@ fun TimelineScreen(
                     selectedYear = selectedYear,
                     onYearClick = { isYearPickerVisible = true },
                     availableDays = availableDays,
+                    isFiltersExpanded = filtersExpanded,
+                    onFiltersExpandedChange = viewModel::setFiltersExpanded,
                 )
             },
             contentWindowInsets = WindowInsets(0, 0, 0, 0),

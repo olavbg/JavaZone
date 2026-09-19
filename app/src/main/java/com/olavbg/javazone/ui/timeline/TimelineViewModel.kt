@@ -63,6 +63,9 @@ class TimelineViewModel(
     val availableYears: StateFlow<List<Int>> = repository.availableYears
     val sessionCountsByYear: Map<Int, Int> = SessionRepository.sessionCountsByYear
 
+    val filtersExpanded: StateFlow<Boolean> = settingsRepository.filtersExpanded
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     private val _selectedYear = MutableStateFlow(SessionRepository.CURRENT_YEAR)
     val selectedYear = _selectedYear.asStateFlow()
 
@@ -313,6 +316,12 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    fun setFiltersExpanded(expanded: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setFiltersExpanded(expanded)
+        }
     }
 
     fun toggleFavorite(session: Session) {

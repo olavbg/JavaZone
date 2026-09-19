@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -58,6 +59,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -124,6 +126,7 @@ fun SettingsScreen(
     contentPadding: PaddingValues = PaddingValues(),
 ) {
     val notificationLeadTime by viewModel.notificationLeadTime.collectAsState()
+    val notificationsEnabled by viewModel.notificationsEnabled.collectAsState()
     val simulatedTimeOffset by viewModel.simulatedTimeOffset.collectAsState()
     val backgroundMode by viewModel.backgroundMode.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
@@ -176,6 +179,7 @@ fun SettingsScreen(
 
     SettingsContent(
         notificationLeadTime = notificationLeadTime,
+        notificationsEnabled = notificationsEnabled,
         simulatedTimeOffset = simulatedTimeOffset,
         permissions = permissions,
         backgroundMode = backgroundMode,
@@ -184,6 +188,7 @@ fun SettingsScreen(
         appLanguage = appLanguage,
         missedReminderCount = missedReminderCount,
         onNotificationLeadTimeChange = viewModel::setNotificationLeadTime,
+        onNotificationsEnabledChange = viewModel::setNotificationsEnabled,
         onSimulatedTimeChange = viewModel::setSimulatedTime,
         onResetSimulation = viewModel::resetSimulation,
         onBackgroundModeChange = viewModel::setBackgroundMode,
@@ -202,6 +207,7 @@ fun SettingsScreen(
 @Composable
 fun SettingsContent(
     notificationLeadTime: Int,
+    notificationsEnabled: Boolean,
     simulatedTimeOffset: Long,
     permissions: AppPermissions,
     backgroundMode: BackgroundMode,
@@ -210,6 +216,7 @@ fun SettingsContent(
     appLanguage: AppLanguage,
     missedReminderCount: Int,
     onNotificationLeadTimeChange: (Int) -> Unit,
+    onNotificationsEnabledChange: (Boolean) -> Unit,
     onSimulatedTimeChange: (LocalDateTime) -> Unit,
     onResetSimulation: () -> Unit,
     onBackgroundModeChange: (BackgroundMode) -> Unit,
@@ -276,64 +283,74 @@ fun SettingsContent(
             Spacer(modifier = Modifier.height(4.dp))
 
             SettingsCard(title = stringResource(R.string.settings_section_notifications)) {
-                if (!permissions.allGranted) {
-                    PermissionsWarningCard(
-                        permissions = permissions,
-                        onPermissionsAction = onPermissionsAction,
-                        onOpenNotificationSettings = onOpenNotificationSettings
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-                SettingsRow(
-                    label = stringResource(R.string.setting_lead_time),
-                    value = stringResource(R.string.duration_minutes, notificationLeadTime),
-                    onClick = { dialogToShow = SettingsDialog.LeadTime }
+                SettingsSwitchRow(
+                    label = stringResource(R.string.setting_notifications_enabled),
+                    secondaryLabel = stringResource(R.string.setting_notifications_enabled_description),
+                    checked = notificationsEnabled,
+                    onCheckedChange = onNotificationsEnabledChange
                 )
-                if (permissions.canPostNotifications &&
-                    permissions.showBatteryHint &&
-                    missedReminderCount > 0 &&
-                    !batteryHintDismissed
-                ) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clickable { batteryHintExpanded = !batteryHintExpanded }
-                            .padding(start = 4.dp, top = 2.dp, bottom = 2.dp)
-                    ) {
-                        Icon(
-                            Icons.Rounded.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
+                if (notificationsEnabled) {
+                    if (permissions.allGranted) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 4.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = stringResource(R.string.battery_hint_title),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary
+                    } else {
+                        PermissionsWarningCard(
+                            permissions = permissions,
+                            onPermissionsAction = onPermissionsAction,
+                            onOpenNotificationSettings = onOpenNotificationSettings
                         )
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
-                    if (batteryHintExpanded) {
+                    SettingsRow(
+                        label = stringResource(R.string.setting_lead_time),
+                        value = stringResource(R.string.duration_minutes, notificationLeadTime),
+                        onClick = { dialogToShow = SettingsDialog.LeadTime }
+                    )
+                    if (permissions.canPostNotifications &&
+                        permissions.showBatteryHint &&
+                        missedReminderCount > 0 &&
+                        !batteryHintDismissed
+                    ) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        BatteryOptimizationHintCard(
-                            onOpenBatterySettings = { openBatteryOptimizationSettings(context) },
-                            onDismiss = onDismissBatteryHint
-                        )
-                    }
-                }
-                if (permissions.allGranted) {
-                    PermissionsGrantedCard(onOpenNotificationSettings = onOpenNotificationSettings)
-                }
-                if (isLocalBuild(context)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start
-                    ) {
-                        TextButton(
-                            onClick = { ConferenceDoneReceiver.showConferenceDoneNotification(context) }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clickable { batteryHintExpanded = !batteryHintExpanded }
+                                .padding(start = 4.dp, top = 2.dp, bottom = 2.dp)
                         ) {
-                            Text(stringResource(R.string.notification_test_button))
+                            Icon(
+                                Icons.Rounded.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = stringResource(R.string.battery_hint_title),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        if (batteryHintExpanded) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            BatteryOptimizationHintCard(
+                                onOpenBatterySettings = { openBatteryOptimizationSettings(context) },
+                                onDismiss = onDismissBatteryHint
+                            )
+                        }
+                    }
+                    if (isLocalBuild(context)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            TextButton(
+                                onClick = { ConferenceDoneReceiver.showConferenceDoneNotification(context) }
+                            ) {
+                                Text(stringResource(R.string.notification_test_button))
+                            }
                         }
                     }
                 }
@@ -346,14 +363,14 @@ fun SettingsContent(
                     secondaryValue = if (themeMode == ThemeMode.System) themeModeResolvedSystemLabel() else null,
                     onClick = { dialogToShow = SettingsDialog.Theme }
                 )
-                HorizontalDivider()
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 SettingsRow(
                     label = stringResource(R.string.setting_language),
                     value = languageOptionLabel(appLanguage),
                     secondaryValue = if (appLanguage == AppLanguage.System) languageResolvedSystemLabel() else null,
                     onClick = { dialogToShow = SettingsDialog.Language }
                 )
-                HorizontalDivider()
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 SettingsRow(
                     label = stringResource(R.string.setting_background),
                     value = backgroundModeLabel(backgroundMode),
@@ -609,6 +626,7 @@ fun SettingsScreenPreview() {
     JavaZoneTheme {
         SettingsContent(
             notificationLeadTime = 10,
+            notificationsEnabled = true,
             simulatedTimeOffset = 0,
             permissions = AppPermissions(canScheduleExact = true, canPostNotifications = true),
             backgroundMode = BackgroundMode.Animated,
@@ -617,6 +635,7 @@ fun SettingsScreenPreview() {
             appLanguage = AppLanguage.System,
             missedReminderCount = 0,
             onNotificationLeadTimeChange = {},
+            onNotificationsEnabledChange = {},
             onSimulatedTimeChange = {},
             onResetSimulation = {},
             onBackgroundModeChange = {},
@@ -643,18 +662,52 @@ private fun SettingsCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 4.dp, top = 4.dp)
             )
-            Spacer(modifier = Modifier.height(2.dp))
             content()
         }
+    }
+}
+
+@Composable
+private fun SettingsSwitchRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    secondaryLabel: String? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp)
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (!secondaryLabel.isNullOrEmpty()) {
+                Text(
+                    text = secondaryLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
     }
 }
 
@@ -668,8 +721,9 @@ private fun SettingsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 52.dp)
             .clickable(onClick = onClick)
-            .padding(vertical = 14.dp, horizontal = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -698,7 +752,8 @@ private fun SettingsRow(
         Icon(
             Icons.AutoMirrored.Rounded.KeyboardArrowRight,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
         )
     }
 }

@@ -108,22 +108,33 @@ class SessionRepository(
     suspend fun rescheduleAllFavorites() {
         val leadTime = settingsRepository?.notificationLeadTime?.first() ?: 10
         val timeOffset = settingsRepository?.simulatedTimeOffset?.first() ?: 0L
+        val notificationsEnabled = settingsRepository?.notificationsEnabled?.first() ?: true
         val sessions = dao.getAllSessions().first()
         val favoriteIds = dao.getFavoriteSessionIds().first()
 
         sessions.filter { favoriteIds.contains(it.id) }.forEach { entity ->
-            reminderManager?.scheduleReminder(entity.toDomainModel(true), leadTime, timeOffset)
+            val session = entity.toDomainModel(true)
+            if (notificationsEnabled) {
+                reminderManager?.scheduleReminder(session, leadTime, timeOffset)
+            } else {
+                reminderManager?.cancelReminder(session)
+            }
         }
-        rescheduleConferenceDoneReminder(timeOffset)
+        rescheduleConferenceDoneReminder(timeOffset, notificationsEnabled)
     }
 
     suspend fun rescheduleConferenceDoneReminder() {
         val timeOffset = settingsRepository?.simulatedTimeOffset?.first() ?: 0L
-        rescheduleConferenceDoneReminder(timeOffset)
+        val notificationsEnabled = settingsRepository?.notificationsEnabled?.first() ?: true
+        rescheduleConferenceDoneReminder(timeOffset, notificationsEnabled)
     }
 
-    suspend fun rescheduleConferenceDoneReminder(timeOffset: Long) {
+    suspend fun rescheduleConferenceDoneReminder(timeOffset: Long, notificationsEnabled: Boolean = true) {
         val reminderManager = reminderManager ?: return
+        if (!notificationsEnabled) {
+            reminderManager.cancelConferenceDoneReminder()
+            return
+        }
         val sessions = dao.getAllSessions().first()
         val maxEndMillis = sessions.mapNotNull {
             runCatching { Instant.parse(it.endTimeZulu).toEpochMilli() }.getOrNull()
@@ -142,11 +153,14 @@ class SessionRepository(
         if (isFavorite) {
             dao.addFavorite(FavoriteEntity(sessionId))
             // Schedule reminder
-            val sessions = dao.getAllSessions().first()
-            val leadTime = settingsRepository?.notificationLeadTime?.first() ?: 10
-            val timeOffset = settingsRepository?.simulatedTimeOffset?.first() ?: 0L
-            sessions.find { it.id == sessionId }?.let { entity ->
-                reminderManager?.scheduleReminder(entity.toDomainModel(true), leadTime, timeOffset)
+            val notificationsEnabled = settingsRepository?.notificationsEnabled?.first() ?: true
+            if (notificationsEnabled) {
+                val sessions = dao.getAllSessions().first()
+                val leadTime = settingsRepository?.notificationLeadTime?.first() ?: 10
+                val timeOffset = settingsRepository?.simulatedTimeOffset?.first() ?: 0L
+                sessions.find { it.id == sessionId }?.let { entity ->
+                    reminderManager?.scheduleReminder(entity.toDomainModel(true), leadTime, timeOffset)
+                }
             }
         } else {
             dao.removeFavorite(sessionId)

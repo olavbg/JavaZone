@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
@@ -41,7 +39,7 @@ internal fun PermissionsWarningCard(
     onPermissionsAction: () -> Unit,
     onOpenNotificationSettings: () -> Unit
 ) {
-    val message = when {
+    val title = when {
         !permissions.canPostNotifications && !permissions.canScheduleExact ->
             stringResource(R.string.permission_warning_both)
         !permissions.canPostNotifications ->
@@ -67,13 +65,13 @@ internal fun PermissionsWarningCard(
             )
             Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
                 Text(
-                    text = stringResource(R.string.permissions_needed),
+                    text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyLarge
+                    text = stringResource(R.string.permission_warning_action),
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
             TextButton(
@@ -82,43 +80,6 @@ internal fun PermissionsWarningCard(
             ) {
                 Text(stringResource(R.string.settings), style = MaterialTheme.typography.labelMedium)
             }
-        }
-    }
-}
-
-@Composable
-internal fun PermissionsGrantedCard(onOpenNotificationSettings: () -> Unit) {
-    Surface(
-        onClick = onOpenNotificationSettings,
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Rounded.CheckCircle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
-                Text(
-                    text = stringResource(R.string.notifications_enabled),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = stringResource(R.string.notifications_enabled_hint),
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

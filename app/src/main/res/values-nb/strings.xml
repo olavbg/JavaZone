@@ -23,6 +23,8 @@
     <string name="setting_lead_time">Varsel før start</string>
     <string name="battery_hint_title">Får du ikke varsler som forventet?</string>
     <string name="notification_test_button">Send testvarsel nå</string>
+    <string name="setting_notifications_enabled">Motta varsler</string>
+    <string name="setting_notifications_enabled_description">Få påminnelser før favorittmarkerte foredrag starter.</string>
 
     <!-- Appearance -->
     <string name="settings_section_appearance">Utseende</string>
@@ -131,12 +133,10 @@
     </plurals>
 
     <!-- Permissions -->
-    <string name="permissions_needed">Tillatelser kreves</string>
-    <string name="permission_warning_both">Varslinger og eksakte alarmer er deaktivert. Trykk for å be om tilgang.</string>
-    <string name="permission_warning_notifications">Varslinger er deaktivert. Trykk for å be om tilgang.</string>
-    <string name="permission_warning_alarms">Eksakte alarmer er deaktivert. Trykk for å be om tilgang.</string>
-    <string name="notifications_enabled">Varslinger aktivert</string>
-    <string name="notifications_enabled_hint">Trykk for å endre.</string>
+    <string name="permission_warning_both">Varslinger og eksakte alarmer er deaktivert</string>
+    <string name="permission_warning_notifications">Varslinger er deaktivert</string>
+    <string name="permission_warning_alarms">Eksakte alarmer er deaktivert</string>
+    <string name="permission_warning_action">Trykk for å be om tilgang.</string>
     <string name="battery_optimization_title">Batterioptimalisering</string>
     <string name="battery_optimization_body">Opplever du at varsler ikke kommer til forventet tid? Det kan skyldes batterioptimalisering. Prøv å ekskludere JavaZone i innstillingene for batterioptimalisering.</string>
     <string name="dont_show_again">Ikke vis igjen</string>

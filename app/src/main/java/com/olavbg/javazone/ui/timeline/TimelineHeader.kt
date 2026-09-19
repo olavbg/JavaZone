@@ -291,6 +291,8 @@ fun TimelineHeader(
     onSearchQueryChange: (String) -> Unit,
     isSearchVisible: Boolean,
     onToggleSearch: () -> Unit,
+    isFiltersExpanded: Boolean,
+    onFiltersExpandedChange: (Boolean) -> Unit,
     onSettingsClick: () -> Unit,
     selectedYear: Int,
     onYearClick: () -> Unit,
@@ -299,7 +301,6 @@ fun TimelineHeader(
     val searchFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     var isRoomPickerVisible by remember { mutableStateOf(false) }
-    var isFiltersExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(isSearchVisible) {
         if (isSearchVisible) {
@@ -458,7 +459,7 @@ fun TimelineHeader(
                                 .size(32.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-                                .clickable { isFiltersExpanded = !isFiltersExpanded },
+                                .clickable { onFiltersExpandedChange(!isFiltersExpanded) },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(

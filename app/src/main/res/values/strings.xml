@@ -23,6 +23,8 @@
     <string name="setting_lead_time">Notify before</string>
     <string name="battery_hint_title">Not getting reminders as expected?</string>
     <string name="notification_test_button">Send test notification now</string>
+    <string name="setting_notifications_enabled">Receive notifications</string>
+    <string name="setting_notifications_enabled_description">Get reminders before your favorited talks start.</string>
 
     <!-- Appearance -->
     <string name="settings_section_appearance">Appearance</string>
@@ -131,12 +133,10 @@
     </plurals>
 
     <!-- Permissions -->
-    <string name="permissions_needed">Permissions needed</string>
-    <string name="permission_warning_both">Notifications and exact alarms are disabled. Tap to request access.</string>
-    <string name="permission_warning_notifications">Notifications are disabled. Tap to request access.</string>
-    <string name="permission_warning_alarms">Exact alarms are disabled. Tap to request access.</string>
-    <string name="notifications_enabled">Notifications enabled</string>
-    <string name="notifications_enabled_hint">Tap to change.</string>
+    <string name="permission_warning_both">Notifications and exact alarms are disabled</string>
+    <string name="permission_warning_notifications">Notifications are disabled</string>
+    <string name="permission_warning_alarms">Exact alarms are disabled</string>
+    <string name="permission_warning_action">Tap to request access.</string>
     <string name="battery_optimization_title">Battery optimization</string>
     <string name="battery_optimization_body">Are your notifications not arriving at the expected time? This may be due to battery optimization. Try excluding JavaZone in the battery optimization settings.</string>
     <string name="dont_show_again">Don&#8217;t show again</string>
