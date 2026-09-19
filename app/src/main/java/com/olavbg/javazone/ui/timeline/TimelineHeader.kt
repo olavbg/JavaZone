@@ -1,15 +1,22 @@
 package com.olavbg.javazone.ui.timeline
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -20,7 +27,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,42 +36,53 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Construction
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.olavbg.javazone.R
 import com.olavbg.javazone.ui.theme.FavoriteRed
 import com.olavbg.javazone.ui.theme.LocalJavaZoneThemeTokens
-import com.olavbg.javazone.util.localizedDayName
+import com.olavbg.javazone.util.shortDayName
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -133,6 +150,129 @@ fun YearPickerSheet(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun RoomPickerSheet(
+    rooms: List<String>,
+    selectedRoom: String?,
+    onRoomSelected: (String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.filter_rooms),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            if (selectedRoom != null) {
+                TextButton(
+                    onClick = {
+                        onRoomSelected(null)
+                        onDismiss()
+                    }
+                ) {
+                    Text(stringResource(R.string.all_rooms))
+                }
+            }
+        }
+        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            items(rooms, key = { it }) { room ->
+                val isSelected = room == selectedRoom
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onRoomSelected(if (isSelected) null else room)
+                            onDismiss()
+                        }
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = room,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 24.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CompactFilterToggle(
+    modifier: Modifier = Modifier,
+    selected: Boolean,
+    onClick: () -> Unit,
+    shape: Shape = FilterChipDefaults.shape,
+    content: @Composable (selected: Boolean) -> Unit
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                content(selected)
+            }
+        },
+        shape = shape,
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = Color.Transparent,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
+        ),
+        border = FilterChipDefaults.filterChipBorder(
+            enabled = true,
+            selected = selected,
+            borderColor = MaterialTheme.colorScheme.outlineVariant,
+            selectedBorderColor = MaterialTheme.colorScheme.secondary,
+            borderWidth = 1.dp,
+            selectedBorderWidth = 1.dp
+        ),
+        modifier = modifier.height(32.dp)
+    )
+}
+
+@Composable
+private fun ExpandableChipLabel(
+    visible: Boolean,
+    content: @Composable () -> Unit
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = expandHorizontally(animationSpec = tween(160)) + fadeIn(animationSpec = tween(100)),
+        exit = shrinkHorizontally(animationSpec = tween(160)) + fadeOut(animationSpec = tween(100))
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Spacer(modifier = Modifier.width(6.dp))
+            content()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun TimelineHeader(
     selectedDay: String?,
     onDaySelected: (String?) -> Unit,
@@ -158,9 +298,9 @@ fun TimelineHeader(
 ) {
     val searchFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    var isRoomPickerVisible by remember { mutableStateOf(false) }
+    var isFiltersExpanded by remember { mutableStateOf(false) }
 
-    // Give the expand animation a moment to lay the field out before requesting
-    // focus, so the keyboard slides in together with the field.
     LaunchedEffect(isSearchVisible) {
         if (isSearchVisible) {
             delay(300.milliseconds)
@@ -219,13 +359,6 @@ fun TimelineHeader(
                             contentDescription = stringResource(R.string.search)
                         )
                     }
-                    IconButton(onClick = { onFavoritesToggled(!onlyFavorites) }) {
-                        Icon(
-                            imageVector = if (onlyFavorites) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = stringResource(R.string.favorites),
-                            tint = if (onlyFavorites) FavoriteRed else LocalContentColor.current
-                        )
-                    }
                     IconButton(onClick = onSettingsClick) {
                         Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.settings))
                     }
@@ -262,96 +395,186 @@ fun TimelineHeader(
                 )
             }
 
-            if (availableDays.isNotEmpty()) {
-                Row(
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+                FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)
                 ) {
-                    SingleChoiceSegmentedButtonRow(modifier = Modifier.weight(1f)) {
-                        val count = availableDays.size + 1
-                        SegmentedButton(
+                    if (availableDays.isNotEmpty()) {
+                        CompactFilterToggle(
                             selected = selectedDay == null,
-                            onClick = { onDaySelected(null) },
-                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = count)
+                            onClick = { onDaySelected(null) }
                         ) {
-                            Text(stringResource(R.string.all_days), fontSize = 11.sp)
+                            Text(
+                                text = stringResource(R.string.all_days),
+                                style = MaterialTheme.typography.labelLarge
+                            )
                         }
-                        availableDays.forEachIndexed { index, day ->
-                            SegmentedButton(
-                                selected = selectedDay == day,
-                                onClick = { onDaySelected(day) },
-                                shape = SegmentedButtonDefaults.itemShape(index = index + 1, count = count)
+                        availableDays.forEach { day ->
+                            val isSelected = selectedDay == day
+                            CompactFilterToggle(
+                                selected = isSelected,
+                                onClick = { onDaySelected(if (isSelected) null else day) }
                             ) {
-                                Text(localizedDayName(day), fontSize = 11.sp)
+                                Text(
+                                    text = shortDayName(day),
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                        }
+                    }
+
+                    CompactFilterToggle(
+                        selected = onlyFavorites,
+                        onClick = { onFavoritesToggled(!onlyFavorites) }
+                    ) { selected ->
+                        Icon(
+                            imageVector = if (selected) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = stringResource(R.string.favorites),
+                            tint = if (selected) FavoriteRed else LocalContentColor.current,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.favorites),
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1
+                        )
+                    }
+
+                    val hasExpandableFilters =
+                        availableFormats.isNotEmpty() ||
+                            availableLanguages.isNotEmpty() ||
+                            availableRooms.isNotEmpty()
+                    if (hasExpandableFilters) {
+                        val hasActiveFilters =
+                            selectedFormat != null || selectedLanguage != null || selectedRoom != null
+                        val isSelected = isFiltersExpanded || hasActiveFilters
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                                .clickable { isFiltersExpanded = !isFiltersExpanded },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isFiltersExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                contentDescription = stringResource(
+                                    if (isFiltersExpanded) R.string.hide_filters else R.string.show_filters
+                                ),
+                                tint = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            AnimatedVisibility(
+                visible = isFiltersExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+                    FlowRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)
+                    ) {
+
+                        availableFormats.forEach { format ->
+                            val isSelected = selectedFormat?.equals(format, ignoreCase = true) == true
+                            val label = when {
+                                format.contains("presentation", ignoreCase = true) -> stringResource(R.string.format_talk)
+                                format.contains("lightning", ignoreCase = true) -> stringResource(R.string.format_lightning_talk)
+                                format.contains("workshop", ignoreCase = true) -> stringResource(R.string.format_workshop)
+                                else -> format
+                            }
+                            val icon = when {
+                                format.contains("presentation", ignoreCase = true) -> Icons.Outlined.RecordVoiceOver
+                                format.contains("lightning", ignoreCase = true) -> Icons.Outlined.Bolt
+                                else -> Icons.Outlined.Construction
+                            }
+                            CompactFilterToggle(
+                                selected = isSelected,
+                                onClick = { onFormatSelected(if (isSelected) null else format) }
+                            ) { selected ->
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = label,
+                                    tint = LocalContentColor.current,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                ExpandableChipLabel(visible = selected) {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+
+                        availableLanguages.forEach { lang ->
+                            val isSelected = selectedLanguage == lang
+                            val isNorwegian = lang.contains("no", ignoreCase = true)
+                            CompactFilterToggle(
+                                selected = isSelected,
+                                onClick = { onLanguageSelected(if (isSelected) null else lang) }
+                            ) { selected ->
+                                Text(
+                                    text = if (isNorwegian) "🇳🇴" else "🇬🇧",
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                                ExpandableChipLabel(visible = selected) {
+                                    Text(
+                                        text = if (isNorwegian) "NO" else "EN",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+
+                        if (availableRooms.isNotEmpty()) {
+                            CompactFilterToggle(
+                                selected = selectedRoom != null,
+                                onClick = { isRoomPickerVisible = true }
+                            ) { selected ->
+                                Icon(
+                                    imageVector = Icons.Outlined.LocationOn,
+                                    contentDescription = stringResource(R.string.filter_rooms),
+                                    tint = LocalContentColor.current,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                ExpandableChipLabel(visible = selected) {
+                                    Text(
+                                        text = selectedRoom.orEmpty(),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 1
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
 
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (onlyFavorites) {
-                    item {
-                        FilterChip(
-                            selected = true,
-                            onClick = { onFavoritesToggled(false) },
-                            label = { Text(stringResource(R.string.favorites)) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Favorite,
-                                    contentDescription = null,
-                                    tint = FavoriteRed,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        )
-                    }
-                }
+            Spacer(modifier = Modifier.height(8.dp))
 
-                items(availableFormats) { format ->
-                    val isSelected = selectedFormat?.equals(format, ignoreCase = true) == true
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { onFormatSelected(if (isSelected) null else format) },
-                        label = {
-                            Text(
-                                when {
-                                    format.contains("presentation", ignoreCase = true) -> stringResource(R.string.format_talk)
-                                    format.contains("lightning", ignoreCase = true) -> stringResource(R.string.format_lightning_talk)
-                                    format.contains("workshop", ignoreCase = true) -> stringResource(R.string.format_workshop)
-                                    else -> format
-                                }
-                            )
-                        }
-                    )
-                }
-
-                items(availableLanguages) { lang ->
-                    val isSelected = selectedLanguage == lang
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { onLanguageSelected(if (isSelected) null else lang) },
-                        label = { Text(if (lang.contains("no", ignoreCase = true)) "🇳🇴 NO" else "🇬🇧 EN") }
-                    )
-                }
-
-                if (availableRooms.isNotEmpty()) {
-                    items(availableRooms) { room ->
-                        val isSelected = selectedRoom == room
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { onRoomSelected(if (isSelected) null else room) },
-                            label = { Text(room) }
-                        )
-                    }
-                }
+            if (isRoomPickerVisible) {
+                RoomPickerSheet(
+                    rooms = availableRooms,
+                    selectedRoom = selectedRoom,
+                    onRoomSelected = onRoomSelected,
+                    onDismiss = { isRoomPickerVisible = false }
+                )
             }
         }
     }
