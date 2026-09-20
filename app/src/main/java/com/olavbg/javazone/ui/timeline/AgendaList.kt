@@ -1,7 +1,13 @@
 package com.olavbg.javazone.ui.timeline
 
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -29,22 +35,44 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.olavbg.javazone.R
 import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.util.isSessionActive
 import java.time.Instant
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.time.ZoneId
 
 enum class FavoriteDisplay { Toggle, FavoriteOnly }
+
+private val FilterFadeIn = tween<Float>(durationMillis = 260, easing = FastOutSlowInEasing)
+private val FilterFadeOut = tween<Float>(durationMillis = 200, easing = LinearOutSlowInEasing)
+private val FilterPlacement = spring<IntOffset>(
+    stiffness = Spring.StiffnessMedium,
+    dampingRatio = Spring.DampingRatioNoBouncy,
+    visibilityThreshold = IntOffset.VisibilityThreshold
+)
+private val ScrollPlacement = spring<IntOffset>(
+    stiffness = Spring.StiffnessHigh * 1.5f,
+    dampingRatio = Spring.DampingRatioLowBouncy,
+    visibilityThreshold = IntOffset.VisibilityThreshold
+)
 
 @Composable
 fun AgendaListView(
@@ -58,6 +86,19 @@ fun AgendaListView(
     contentPadding: PaddingValues = PaddingValues(bottom = 32.dp),
     sharedScope: SharedTransitionScope? = null,
 ) {
+    // One-shot cold-start card entrance. The key ensures that switching years resets and re-triggers
+    // the entrance animation, behaving just like a fresh cold start for that timeline set.
+    val yearKey = groupedSessions.firstOrNull()?.sessions?.firstOrNull()?.start?.atZone(ZoneId.of("Europe/Oslo"))?.year ?: 0
+    val introEnabled = remember(yearKey) {
+        if (!ColdStartIntro.played || (ColdStartIntro.lastPlayedYear != yearKey)) {
+            ColdStartIntro.played = true
+            ColdStartIntro.lastPlayedYear = yearKey
+            true
+        } else {
+            false
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Vertical guide line.
         Box(
@@ -96,7 +137,14 @@ fun AgendaListView(
                         isLiveSlot = isLiveSlot,
                         sessionCount = group.sessions.size,
                         pinnedRange = (stickyIndex + 1) until nextStickyIndex,
-                        listState = listState
+                        listState = listState,
+                        modifier = Modifier
+                            .coldStartAppear(introEnabled && !listState.isScrollInProgress, (stickyIndex % 6) * 35)
+                            .animateItem(
+                                fadeInSpec = FilterFadeIn,
+                                placementSpec = if (listState.isScrollInProgress) ScrollPlacement else FilterPlacement,
+                                fadeOutSpec = FilterFadeOut
+                            )
                     )
                 }
 
@@ -104,7 +152,7 @@ fun AgendaListView(
                     items = group.sessions,
                     key = { _, session -> "agenda-item-${session.id}" },
                     contentType = { _, _ -> "session-row" }
-                ) { _, session ->
+                ) { index, session ->
                     TimelineSessionRow(
                         session = session,
                         isPast = liveIndicators && isSessionPast(session, currentTime),
@@ -113,11 +161,52 @@ fun AgendaListView(
                         onFavoriteClick = remember(session) { { onFavoriteClick(session) } },
                         onClick = remember(session) { { onSessionClick(session) } },
                         favoriteDisplay = favoriteDisplay,
-                        sharedScope = sharedScope
+                        sharedScope = sharedScope,
+                        modifier = Modifier
+                            .coldStartAppear(introEnabled && !listState.isScrollInProgress, ((stickyIndex + 1 + index) % 6) * 35)
+                            .animateItem(
+                                fadeInSpec = FilterFadeIn,
+                                placementSpec = if (listState.isScrollInProgress) ScrollPlacement else FilterPlacement,
+                                fadeOutSpec = FilterFadeOut
+                            )
                     )
                 }
             }
         }
+    }
+}
+
+// Process-lifetime flag so the cold-start intro plays exactly once per process start.
+private object ColdStartIntro {
+    var played = false
+    var lastPlayedYear = 0
+}
+
+// One-shot entrance for the first-laid-out cards: a quick rise + fade, slightly staggered so
+// the list "breathes" in instead of popping. Disabled items snap straight to the final state,
+// so cards composed later (scrolled in, filters changed) never replay the intro.
+private fun Modifier.coldStartAppear(enabled: Boolean, delayMillis: Int): Modifier = composed {
+    val density = LocalDensity.current
+    val slideUpPx = with(density) { 20.dp.toPx() }
+    val alpha = remember { Animatable(if (enabled) 0f else 1f) }
+    val rise = remember { Animatable(if (enabled) 1f else 0f) }
+
+    LaunchedEffect(enabled) {
+        if (enabled) {
+            delay(delayMillis.toLong())
+            coroutineScope {
+                launch { alpha.animateTo(1f, tween(durationMillis = 300, easing = FastOutSlowInEasing)) }
+                launch { rise.animateTo(0f, tween(durationMillis = 300, easing = FastOutSlowInEasing)) }
+            }
+        } else {
+            alpha.snapTo(1f)
+            rise.snapTo(0f)
+        }
+    }
+
+    graphicsLayer {
+        this.alpha = alpha.value
+        translationY = rise.value * slideUpPx
     }
 }
 
@@ -127,7 +216,8 @@ fun TimelineStickyTimeHeader(
     isLiveSlot: Boolean,
     sessionCount: Int,
     pinnedRange: IntRange,
-    listState: LazyListState
+    listState: LazyListState,
+    modifier: Modifier = Modifier
 ) {
     // Pinned while the first visible row is one of this group's sessions (the header then sticks
     // above the scrolling rows). Reading the scroll position via derivedStateOf keeps the churn
@@ -148,7 +238,7 @@ fun TimelineStickyTimeHeader(
     Surface(
         color = MaterialTheme.colorScheme.background.copy(alpha = bgAlpha),
         tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -219,11 +309,12 @@ fun TimelineSessionRow(
     onFavoriteClick: () -> Unit,
     onClick: () -> Unit,
     favoriteDisplay: FavoriteDisplay = FavoriteDisplay.Toggle,
-    sharedScope: SharedTransitionScope? = null
+    sharedScope: SharedTransitionScope? = null,
+    modifier: Modifier = Modifier
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
     ) {

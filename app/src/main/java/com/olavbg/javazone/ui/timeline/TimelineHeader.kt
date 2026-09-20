@@ -617,14 +617,25 @@ fun TimelineHeader(
                                 .clickable { onFiltersExpandedChange(!isFiltersExpanded) },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = if (isFiltersExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                                contentDescription = stringResource(
-                                    if (isFiltersExpanded) R.string.hide_filters else R.string.show_filters
-                                ),
-                                tint = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Box(modifier = Modifier.size(24.dp)) {
+                                Icon(
+                                    imageVector = if (isFiltersExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                    contentDescription = stringResource(
+                                        if (isFiltersExpanded) R.string.hide_filters else R.string.show_filters
+                                    ),
+                                    tint = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                if (!isFiltersExpanded && hasActiveFilters) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .size(7.dp)
+                                            .background(FavoriteRed, CircleShape)
+                                            .border(1.dp, MaterialTheme.colorScheme.secondaryContainer, CircleShape)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
