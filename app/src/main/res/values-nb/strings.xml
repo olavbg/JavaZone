@@ -99,7 +99,7 @@
     <string name="format_lightning_talk">Lynforedrag</string>
     <string name="format_workshop">Workshop</string>
     <string name="filter_rooms">Rom</string>
-    <string name="all_rooms">Alle rom</string>
+    <string name="reset_room">Nullstill rom</string>
     <string name="show_filters">Vis filtre</string>
     <string name="hide_filters">Skjul filtre</string>
 

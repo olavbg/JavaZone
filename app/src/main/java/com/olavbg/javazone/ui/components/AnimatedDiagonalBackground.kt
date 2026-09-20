@@ -64,6 +64,26 @@ private const val REANIMATE_DURATION_MILLIS =
 private const val ROTATION_AMPLITUDE_DEG = 4f
 
 /**
+ * Freezes the band drift while overlays (e.g. a modal bottom sheet partially covering
+ * the screen) are on top. The bands only move again when every paused overlay is gone,
+ * so the animated background stops competing for frame time during sheet drags.
+ */
+object BackgroundAnimationWatch {
+    private var pauseCount by mutableStateOf(0)
+
+    /** True while at least one overlay has requested a pause. */
+    val isPaused: Boolean get() = pauseCount > 0
+
+    fun pause() {
+        pauseCount++
+    }
+
+    fun resume() {
+        if (pauseCount > 0) pauseCount--
+    }
+}
+
+/**
  * Signal consumed by [AnimatedDiagonalBackground]. Bump the value (e.g. on navigation)
  * to smoothly morph the bands into a new random configuration.
  */
@@ -210,6 +230,10 @@ fun AnimatedDiagonalBackground(
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (true) {
                 delay(TICK_RATE_MILLIS.milliseconds)
+
+                // Keep active time frozen (and skip all layer updates) while an overlay
+                // has paused the background, so the bands resume seamlessly where they stopped.
+                if (BackgroundAnimationWatch.isPaused) continue
 
                 val elapsed = activeTime.tick()
 

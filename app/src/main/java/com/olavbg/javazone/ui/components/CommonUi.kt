@@ -52,13 +52,20 @@ fun FormatBadge(format: String, modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Stable accent color for a room, picked from the shared room palette. The same color is
+ * used by [RoomTag] on cards and in the detail screen, so the room picker can link up
+ * visually with the places the room name otherwise appears.
+ */
+fun roomAccentColor(room: String, fallback: Color): Color {
+    val index = room.lowercase().replace(ROOM_NUMBER_REGEX, "").toIntOrNull() ?: room.hashCode()
+    return RoomAccentColors.getOrElse(abs(index) % RoomAccentColors.size) { fallback }
+}
+
 @Composable
 fun RoomTag(room: String, modifier: Modifier = Modifier) {
     val fallbackColor = MaterialTheme.colorScheme.primary
-    val color = remember(room, fallbackColor) {
-        val index = room.lowercase().replace(ROOM_NUMBER_REGEX, "").toIntOrNull() ?: room.hashCode()
-        RoomAccentColors.getOrElse(abs(index) % RoomAccentColors.size) { fallbackColor }
-    }
+    val color = remember(room, fallbackColor) { roomAccentColor(room, fallbackColor) }
 
     Surface(
         shape = RoundedCornerShape(6.dp),

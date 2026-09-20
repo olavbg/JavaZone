@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -28,27 +29,29 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Construction
-import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -63,6 +66,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -75,12 +79,17 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.olavbg.javazone.R
+import com.olavbg.javazone.ui.components.BackgroundAnimationWatch
+import com.olavbg.javazone.ui.components.roomAccentColor
 import com.olavbg.javazone.ui.theme.FavoriteRed
 import com.olavbg.javazone.ui.theme.LocalJavaZoneThemeTokens
 import com.olavbg.javazone.util.shortDayName
@@ -97,51 +106,42 @@ fun YearPickerSheet(
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
-        onDismissRequest = onDismiss
-    ) {
-        Text(
-            text = stringResource(R.string.select_year),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(
+            alpha = LocalJavaZoneThemeTokens.current.bottomSheetSurfaceAlpha
         )
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+    ) {
+        PauseBackgroundWhileOpen()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 24.dp, top = 8.dp, bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            PickerHeaderIcon(imageVector = Icons.Rounded.CalendarMonth)
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(
+                text = stringResource(R.string.select_year),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             items(years, key = { it }) { year ->
                 val isSelected = year == selectedYear
                 val count = sessionCountsByYear[year]
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onYearSelected(year) }
-                        .padding(horizontal = 24.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = year.toString(),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        if (count != null) {
-                            Text(
-                                text = pluralStringResource(R.plurals.year_talk_count, count, count),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    if (isSelected) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = stringResource(R.string.select_year),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 24.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                SheetPickerRow(
+                    isSelected = isSelected,
+                    onClick = { onYearSelected(year) },
+                    title = year.toString(),
+                    titleStyle = MaterialTheme.typography.titleLarge,
+                    support = count?.let { pluralStringResource(R.plurals.year_talk_count, it, it) }
                 )
             }
         }
@@ -157,65 +157,204 @@ fun RoomPickerSheet(
     onRoomSelected: (String?) -> Unit,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(
+            alpha = LocalJavaZoneThemeTokens.current.bottomSheetSurfaceAlpha
+        )
+    ) {
+        PauseBackgroundWhileOpen()
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 8.dp),
+                .padding(start = 16.dp, end = 24.dp, top = 8.dp, bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            PickerHeaderIcon(imageVector = Icons.Default.LocationOn)
+            Spacer(modifier = Modifier.width(14.dp))
             Text(
                 text = stringResource(R.string.filter_rooms),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
             if (selectedRoom != null) {
-                TextButton(
-                    onClick = {
-                        onRoomSelected(null)
-                        onDismiss()
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+                    TextButton(
+                        onClick = {
+                            onRoomSelected(null)
+                            onDismiss()
+                        },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Replay,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text(stringResource(R.string.reset_room))
                     }
-                ) {
-                    Text(stringResource(R.string.all_rooms))
                 }
             }
         }
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             items(rooms, key = { it }) { room ->
                 val isSelected = room == selectedRoom
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            onRoomSelected(if (isSelected) null else room)
-                            onDismiss()
-                        }
-                        .padding(horizontal = 24.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = room,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (isSelected) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                val accent = roomAccentColor(room, MaterialTheme.colorScheme.primary)
+                SheetPickerRow(
+                    isSelected = isSelected,
+                    onClick = {
+                        onRoomSelected(if (isSelected) null else room)
+                        onDismiss()
+                    },
+                    leading = {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isSelected) {
+                                        accent.copy(alpha = 1f)
+                                    } else {
+                                        accent.copy(alpha = 0.6f)
+                                    }
+                                )
                         )
-                    }
-                }
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 24.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                    },
+                    title = room
                 )
             }
         }
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun PauseBackgroundWhileOpen() {
+    DisposableEffect(Unit) {
+        BackgroundAnimationWatch.pause()
+        onDispose { BackgroundAnimationWatch.resume() }
+    }
+}
+
+@Composable
+private fun PickerHeaderIcon(
+    imageVector: ImageVector,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(38.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun SheetPickerRow(
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    leading: (@Composable () -> Unit)? = null,
+    title: String,
+    titleStyle: TextStyle = MaterialTheme.typography.bodyLarge,
+    support: String? = null
+) {
+    val backgroundColor = if (isSelected) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.35f)
+    }
+    val borderColor = if (isSelected) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
+    } else {
+        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+    }
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = backgroundColor,
+        border = BorderStroke(
+            width = if (isSelected) 1.5.dp else 1.dp,
+            color = borderColor
+        ),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .selectable(
+                    selected = isSelected,
+                    role = Role.RadioButton,
+                    onClick = onClick
+                )
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (leading != null) {
+                leading()
+                Spacer(modifier = Modifier.width(14.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = titleStyle,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (!support.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = support,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .border(
+                            width = 1.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
+                            shape = CircleShape
+                        )
+                )
+            }
+        }
     }
 }
 
@@ -565,7 +704,7 @@ fun TimelineHeader(
                                 onClick = { isRoomPickerVisible = true }
                             ) { selected ->
                                 Icon(
-                                    imageVector = Icons.Outlined.LocationOn,
+                                    imageVector = Icons.Default.LocationOn,
                                     contentDescription = stringResource(R.string.filter_rooms),
                                     tint = LocalContentColor.current,
                                     modifier = Modifier.size(18.dp)

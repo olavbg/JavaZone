@@ -99,7 +99,7 @@
     <string name="format_lightning_talk">Lightning talk</string>
     <string name="format_workshop">Workshop</string>
     <string name="filter_rooms">Rooms</string>
-    <string name="all_rooms">All rooms</string>
+    <string name="reset_room">Clear room</string>
     <string name="show_filters">Show filters</string>
     <string name="hide_filters">Hide filters</string>
 

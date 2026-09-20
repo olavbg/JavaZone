@@ -13,6 +13,7 @@ val LightThemeTokens = JavaZoneThemeTokens(
     sessionCardBorder = LightOutlineVariant.copy(alpha = 0.9f),
     topBarSurfaceAlpha = 0.60f,
     settingsCardSurfaceAlpha = 0.72f,
+    bottomSheetSurfaceAlpha = 1f,
     diagonalTintPrimary = LightModeDiagonalMint,
     diagonalTintSecondary = LightModeDiagonalBlue,
     diagonalBandScale = 1.25f

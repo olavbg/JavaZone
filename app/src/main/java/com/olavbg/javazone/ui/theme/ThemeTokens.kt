@@ -12,6 +12,7 @@ data class JavaZoneThemeTokens(
     val sessionCardBorder: Color,
     val topBarSurfaceAlpha: Float,
     val settingsCardSurfaceAlpha: Float,
+    val bottomSheetSurfaceAlpha: Float,
     val diagonalTintPrimary: Color,
     val diagonalTintSecondary: Color,
     val diagonalBandScale: Float
