@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.Instant
 
 class SessionRepository(
@@ -27,6 +29,7 @@ class SessionRepository(
 ) {
     private val archiveSessions = MutableStateFlow<Map<Int, List<Session>>>(emptyMap())
     private val archiveLoading = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
+    private val archiveLoadMutex = Mutex()
 
     private val _availableYears = MutableStateFlow(
         // Fallback until the conference list is fetched (offline/first launch)
@@ -99,10 +102,16 @@ class SessionRepository(
 
     suspend fun loadArchiveSessions(year: Int) {
         if (archiveSessions.value.containsKey(year)) return
-        archiveLoading.value = archiveLoading.value + (year to true)
-        val sessions = fetchArchiveSessions(year)
-        archiveSessions.value = archiveSessions.value + (year to sessions)
-        archiveLoading.value = archiveLoading.value + (year to false)
+        archiveLoadMutex.withLock {
+            if (archiveSessions.value.containsKey(year)) return
+            archiveLoading.value = archiveLoading.value + (year to true)
+            try {
+                val sessions = fetchArchiveSessions(year) ?: return
+                archiveSessions.value = archiveSessions.value + (year to sessions)
+            } finally {
+                archiveLoading.value = archiveLoading.value + (year to false)
+            }
+        }
     }
 
     suspend fun rescheduleAllFavorites() {
@@ -172,7 +181,7 @@ class SessionRepository(
         }
     }
 
-    private suspend fun fetchArchiveSessions(year: Int): List<Session> {
+    private suspend fun fetchArchiveSessions(year: Int): List<Session>? {
         return try {
             val response = api.getSessions("javazone_$year")
             response.sessions.map { dto ->
@@ -194,7 +203,7 @@ class SessionRepository(
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            emptyList()
+            null
         }
     }
 

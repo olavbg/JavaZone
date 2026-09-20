@@ -105,6 +105,12 @@ fun SessionDetailScreen(
     }
     val session by sessionFlow.collectAsState(initial = null)
 
+    LaunchedEffect(effectiveYear) {
+        if (effectiveYear != SessionRepository.CURRENT_YEAR) {
+            repository.loadArchiveSessions(effectiveYear)
+        }
+    }
+
     val offset by settingsRepository.simulatedTimeOffset.collectAsState(initial = 0L)
     var simulatedTime by remember { mutableStateOf(Instant.now().plusMillis(offset)) }
 

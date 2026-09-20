@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.SystemClock
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -30,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -97,6 +99,10 @@ fun JavaZoneApp(
 
     var showDonationDialog by rememberSaveable { mutableStateOf(showDonationOnLaunch) }
 
+    // Guards against double-fire/double-tap pushing duplicate destinations onto the back
+    // stack (which would otherwise require extra back presses to unwind).
+    var lastPushAt by remember { mutableLongStateOf(0L) }
+
     val backStack = if (initialSessionId != null) {
         rememberNavBackStack(
             NavDestination.Timeline, NavDestination.SessionDetail(initialSessionId)
@@ -148,9 +154,19 @@ fun JavaZoneApp(
                         TimelineScreen(
                             viewModel = timelineViewModel,
                             onSessionClick = { id, year ->
-                                backStack.add(NavDestination.SessionDetail(id, year))
+                                val now = SystemClock.uptimeMillis()
+                                val debounced = now - lastPushAt >= 350L
+                                lastPushAt = now
+                                if (debounced && backStack.lastOrNull() != NavDestination.SessionDetail(id, year)) {
+                                    backStack.add(NavDestination.SessionDetail(id, year))
+                                }
                             }, onSettingsClick = {
-                                backStack.add(NavDestination.Settings)
+                                val now = SystemClock.uptimeMillis()
+                                val debounced = now - lastPushAt >= 350L
+                                lastPushAt = now
+                                if (debounced && backStack.lastOrNull() != NavDestination.Settings) {
+                                    backStack.add(NavDestination.Settings)
+                                }
                             },
                             sharedScope = this@SharedTransitionLayout,
                         )

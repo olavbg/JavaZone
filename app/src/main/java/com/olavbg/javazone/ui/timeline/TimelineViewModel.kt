@@ -269,7 +269,14 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
     }
 
     fun setYear(year: Int) {
-        if (year == _selectedYear.value) return
+        if (year == _selectedYear.value) {
+            if (year != SessionRepository.CURRENT_YEAR) {
+                viewModelScope.launch {
+                    repository.loadArchiveSessions(year)
+                }
+            }
+            return
+        }
         _selectedYear.value = year
         // Reset filters that don't make sense across years
         _selectedDay.value = null
