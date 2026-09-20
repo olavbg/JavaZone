@@ -11,6 +11,7 @@ val DarkThemeTokens = JavaZoneThemeTokens(
     activeSessionCardBorder = DarkSurfaceVariant.copy(alpha = 0.74f),
     sessionCardBorder = DarkSurface.copy(alpha = 0.74f),
     topBarSurfaceAlpha = 0.72f,
+    settingsCardSurfaceAlpha = 0.62f,
     diagonalTintPrimary = DiagonalMintLight,
     diagonalTintSecondary = DiagonalBlueLight,
     diagonalBandScale = 1f

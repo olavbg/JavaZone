@@ -45,6 +45,7 @@ import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -59,7 +60,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -283,19 +283,24 @@ fun SettingsContent(
             Spacer(modifier = Modifier.height(4.dp))
 
             SettingsCard(title = stringResource(R.string.settings_section_notifications)) {
-                SettingsSwitchRow(
-                    label = stringResource(R.string.setting_notifications_enabled),
-                    secondaryLabel = stringResource(R.string.setting_notifications_enabled_description),
-                    checked = notificationsEnabled,
-                    onCheckedChange = onNotificationsEnabledChange
+                SettingsRow(
+                    label = stringResource(R.string.setting_reminders),
+                    value = if (notificationsEnabled) {
+                        stringResource(R.string.duration_minutes, notificationLeadTime)
+                    } else {
+                        stringResource(R.string.notifications_off)
+                    },
+                    leading = {
+                        if (notificationsEnabled) {
+                            MinuteClockIcon(minutes = notificationLeadTime.coerceIn(1, 60), isSelected = true)
+                        } else {
+                            SelectionTileIcon(imageVector = Icons.Rounded.NotificationsOff, isSelected = true)
+                        }
+                    },
+                    onClick = { dialogToShow = SettingsDialog.LeadTime }
                 )
                 if (notificationsEnabled) {
-                    if (permissions.allGranted) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 4.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-                    } else {
+                    if (!permissions.allGranted) {
                         PermissionsWarningCard(
                             permissions = permissions,
                             onPermissionsAction = onPermissionsAction,
@@ -303,11 +308,6 @@ fun SettingsContent(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                     }
-                    SettingsRow(
-                        label = stringResource(R.string.setting_lead_time),
-                        value = stringResource(R.string.duration_minutes, notificationLeadTime),
-                        onClick = { dialogToShow = SettingsDialog.LeadTime }
-                    )
                     if (permissions.canPostNotifications &&
                         permissions.showBatteryHint &&
                         missedReminderCount > 0 &&
@@ -361,6 +361,14 @@ fun SettingsContent(
                     label = stringResource(R.string.setting_theme),
                     value = themeModeOptionLabel(themeMode),
                     secondaryValue = if (themeMode == ThemeMode.System) themeModeResolvedSystemLabel() else null,
+                    leading = {
+                        val icon = when (themeMode) {
+                            ThemeMode.Dark -> Icons.Rounded.DarkMode
+                            ThemeMode.Light -> Icons.Rounded.LightMode
+                            ThemeMode.System -> Icons.Rounded.Smartphone
+                        }
+                        SelectionTileIcon(imageVector = icon, isSelected = true)
+                    },
                     onClick = { dialogToShow = SettingsDialog.Theme }
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -368,12 +376,27 @@ fun SettingsContent(
                     label = stringResource(R.string.setting_language),
                     value = languageOptionLabel(appLanguage),
                     secondaryValue = if (appLanguage == AppLanguage.System) languageResolvedSystemLabel() else null,
+                    leading = {
+                        when (appLanguage) {
+                            AppLanguage.Norwegian -> FlagEmojiBadge(emoji = "🇳🇴", isSelected = true)
+                            AppLanguage.English -> FlagEmojiBadge(emoji = "🇬🇧", isSelected = true)
+                            AppLanguage.System -> SelectionTileIcon(imageVector = Icons.Rounded.Smartphone, isSelected = true)
+                        }
+                    },
                     onClick = { dialogToShow = SettingsDialog.Language }
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 SettingsRow(
                     label = stringResource(R.string.setting_background),
                     value = backgroundModeLabel(backgroundMode),
+                    leading = {
+                        val icon = when (backgroundMode) {
+                            BackgroundMode.Animated -> Icons.Rounded.AutoAwesome
+                            BackgroundMode.Static -> Icons.Rounded.Image
+                            BackgroundMode.None -> Icons.Rounded.Block
+                        }
+                        SelectionTileIcon(imageVector = icon, isSelected = true)
+                    },
                     onClick = { dialogToShow = SettingsDialog.Background }
                 )
             }
@@ -540,21 +563,42 @@ fun SettingsContent(
     }
 
     when (val dialog = dialogToShow) {
-        SettingsDialog.LeadTime -> SelectionDialog(
-            title = stringResource(R.string.setting_lead_time),
-            subtitle = stringResource(R.string.notification_lead_time_description),
-            options = listOf(5, 10, 15, 20, 25, 30),
-            selected = notificationLeadTime,
-            valueLabel = { minutes -> stringResource(R.string.duration_minutes, minutes) },
-            leadingContent = { minutes, isSelected ->
-                MinuteClockIcon(
-                    minutes = minutes,
-                    isSelected = isSelected
-                )
-            },
-            onSelect = onNotificationLeadTimeChange,
-            onDismiss = { dialogToShow = null }
-        )
+        SettingsDialog.LeadTime -> {
+            val selectedLeadTime = if (notificationsEnabled) notificationLeadTime else 0
+            val leadTimeOptions = remember(selectedLeadTime) {
+                val base = listOf(0, 5, 10, 15, 20, 30)
+                if (selectedLeadTime in base) base else (base + selectedLeadTime).sorted()
+            }
+            SelectionDialog(
+                title = stringResource(R.string.setting_reminders),
+                subtitle = stringResource(R.string.notification_lead_time_description),
+                options = leadTimeOptions,
+                selected = selectedLeadTime,
+                valueLabel = { minutes ->
+                    if (minutes == 0) stringResource(R.string.notifications_off)
+                    else stringResource(R.string.duration_minutes, minutes)
+                },
+                leadingContent = { minutes, isSelected ->
+                    if (minutes == 0) {
+                        SelectionTileIcon(imageVector = Icons.Rounded.NotificationsOff, isSelected = isSelected)
+                    } else {
+                        MinuteClockIcon(
+                            minutes = minutes,
+                            isSelected = isSelected
+                        )
+                    }
+                },
+                onSelect = { minutes ->
+                    if (minutes == 0) {
+                        onNotificationsEnabledChange(false)
+                    } else {
+                        onNotificationsEnabledChange(true)
+                        onNotificationLeadTimeChange(minutes)
+                    }
+                },
+                onDismiss = { dialogToShow = null }
+            )
+        }
         SettingsDialog.Theme -> SelectionDialog(
             title = stringResource(R.string.setting_theme),
             options = listOf(ThemeMode.Dark, ThemeMode.Light, ThemeMode.System),
@@ -656,7 +700,9 @@ private fun SettingsCard(
 ) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(
+                alpha = LocalJavaZoneThemeTokens.current.settingsCardSurfaceAlpha
+            )
         ),
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth()
@@ -677,45 +723,11 @@ private fun SettingsCard(
 }
 
 @Composable
-private fun SettingsSwitchRow(
-    label: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    secondaryLabel: String? = null
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 52.dp)
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            if (!secondaryLabel.isNullOrEmpty()) {
-                Text(
-                    text = secondaryLabel,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange
-        )
-    }
-}
-
-@Composable
 private fun SettingsRow(
     label: String,
     value: String,
     secondaryValue: String? = null,
+    leading: (@Composable () -> Unit)? = null,
     onClick: () -> Unit
 ) {
     Row(
@@ -747,6 +759,10 @@ private fun SettingsRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 )
             }
+        }
+        if (leading != null) {
+            Spacer(modifier = Modifier.width(12.dp))
+            leading()
         }
         Spacer(modifier = Modifier.width(4.dp))
         Icon(
@@ -1066,16 +1082,23 @@ private fun <T> SelectionDialog(
 fun SelectionDialogPreview() {
     JavaZoneTheme {
         SelectionDialog(
-            title = "Varsel før start",
-            subtitle = "Hvor mange minutter før et foredrag starter vil du varsles?",
-            options = listOf(5, 10, 15, 20, 25, 30),
+            title = "Påminnelser",
+            subtitle = "Hvor lenge før et foredrag starter, vil du bli varslet?",
+            options = listOf(0, 5, 10, 15, 20, 30),
             selected = 10,
-            valueLabel = { "$it min" },
+            valueLabel = { minutes -> if (minutes == 0) "Av" else "$minutes min" },
             leadingContent = { minutes, isSelected ->
-                MinuteClockIcon(
-                    minutes = minutes,
-                    isSelected = isSelected
-                )
+                if (minutes == 0) {
+                    SelectionTileIcon(
+                        imageVector = Icons.Rounded.NotificationsOff,
+                        isSelected = isSelected
+                    )
+                } else {
+                    MinuteClockIcon(
+                        minutes = minutes,
+                        isSelected = isSelected
+                    )
+                }
             },
             onSelect = {},
             onDismiss = {}

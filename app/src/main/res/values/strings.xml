@@ -19,12 +19,11 @@
 
     <!-- Notifications -->
     <string name="settings_section_notifications">Notifications</string>
-    <string name="notification_lead_time_description">How many minutes before a talk starts should you be notified?</string>
-    <string name="setting_lead_time">Notify before</string>
+    <string name="notification_lead_time_description">How long before a talk starts, should you be notified?</string>
+    <string name="setting_reminders">Reminders</string>
+    <string name="notifications_off">Off</string>
     <string name="battery_hint_title">Not getting reminders as expected?</string>
     <string name="notification_test_button">Send test notification now</string>
-    <string name="setting_notifications_enabled">Receive notifications</string>
-    <string name="setting_notifications_enabled_description">Get reminders before your favorited talks start.</string>
 
     <!-- Appearance -->
     <string name="settings_section_appearance">Appearance</string>
@@ -61,7 +60,7 @@
     <string name="about_paragraph_2">Yes, the app is mostly vibe-coded: the AI assistants have done the typing while I stood behind them saying &#8220;Looks good!&#8221;. Most of the time it works surprisingly well. The rest of the time I&#8217;m glad this is only a hobby project.</string>
     <string name="about_paragraph_3">Without JavaZone and JavaBin&#8217;s open APIs, this would just have been a good idea with no content. Thanks for sharing!</string>
     <string name="about_paragraph_4">Enjoying the app and want to support its development? I&#8217;d appreciate a small contribution &#8211; either via Vipps or &#8220;Buy Me a Coffee&#8221;:</string>
-    <string name="about_open_source_body">The code is open, and suggestions, bug reports and pull requests are welcome.</string>
+    <string name="about_open_source_body">The code is open! Suggestions, bug reports and pull requests are welcome.</string>
     <string name="about_open_source_link">github.com/olavbg/JavaZone</string>
     <string name="about_privacy_paragraph">Your favorites and settings are stored only on your device, and no analytics or tracking are used. The app fetches the conference schedule from the public JavaZone API.</string>
 
@@ -91,7 +90,7 @@
         <item quantity="one">%d talk</item>
         <item quantity="other">%d talks</item>
     </plurals>
-    <string name="search_placeholder">Search title, speaker, room&#8230;</string>
+    <string name="search_placeholder">Search title, speaker, description…</string>
     <string name="search">Search</string>
     <string name="clear">Clear</string>
     <string name="all_days">All days</string>

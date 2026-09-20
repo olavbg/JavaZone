@@ -90,7 +90,9 @@ fun TimelineScreen(
     val currentConferenceDay by viewModel.currentConferenceDay.collectAsState()
     val filtersExpanded by viewModel.filtersExpanded.collectAsState()
 
-    var isSearchVisible by remember { mutableStateOf(value = false) }
+    // Start with search open if a query is already active, so a recreated timeline scene
+    // never silently filters the list behind a hidden field (e.g. after returning from a talk).
+    var isSearchVisible by remember { mutableStateOf(value = searchQuery.isNotBlank()) }
     var isYearPickerVisible by remember { mutableStateOf(value = false) }
 
     val roomsList = remember(groupedSessions, availableRooms) {
@@ -199,7 +201,6 @@ fun TimelineScreen(
                     isSearchVisible = isSearchVisible,
                     onToggleSearch = {
                         isSearchVisible = !isSearchVisible
-                        if (!isSearchVisible) viewModel.setSearchQuery("")
                     },
                     onSettingsClick = onSettingsClick,
                     selectedYear = selectedYear,

@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -302,12 +303,16 @@ fun TimelineHeader(
     val keyboardController = LocalSoftwareKeyboardController.current
     var isRoomPickerVisible by remember { mutableStateOf(false) }
 
+    // Only grab focus when the user explicitly opens search, not when the field is
+    // restored because a query is still active (e.g. after the scene is recreated).
+    var wasSearchVisible by remember { mutableStateOf(isSearchVisible) }
     LaunchedEffect(isSearchVisible) {
-        if (isSearchVisible) {
+        if (isSearchVisible && !wasSearchVisible) {
             delay(300.milliseconds)
             runCatching { searchFocusRequester.requestFocus() }
             keyboardController?.show()
         }
+        wasSearchVisible = isSearchVisible
     }
 
     Surface(
@@ -355,10 +360,21 @@ fun TimelineHeader(
                 },
                 actions = {
                     IconButton(onClick = onToggleSearch) {
-                        Icon(
-                            imageVector = if (isSearchVisible) Icons.Default.Close else Icons.Outlined.Search,
-                            contentDescription = stringResource(R.string.search)
-                        )
+                        Box(modifier = Modifier.size(24.dp)) {
+                            Icon(
+                                imageVector = if (isSearchVisible) Icons.Default.Close else Icons.Outlined.Search,
+                                contentDescription = stringResource(R.string.search)
+                            )
+                            if (!isSearchVisible && searchQuery.isNotBlank()) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(8.dp)
+                                        .background(FavoriteRed, CircleShape)
+                                        .border(1.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                                )
+                            }
+                        }
                     }
                     IconButton(onClick = onSettingsClick) {
                         Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.settings))
@@ -391,7 +407,7 @@ fun TimelineHeader(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 10.dp)
                         .focusRequester(searchFocusRequester)
                 )
             }

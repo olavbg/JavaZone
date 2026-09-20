@@ -45,8 +45,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -81,6 +79,7 @@ import com.olavbg.javazone.util.calculateSessionDurationMinutes
 import com.olavbg.javazone.util.formatDay
 import com.olavbg.javazone.util.formatFullDay
 import com.olavbg.javazone.util.formatTime
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.Duration
@@ -127,8 +126,6 @@ fun SessionDetailScreen(
         simulatedTime = Instant.now().plusMillis(offset)
     }
 
-    var isRefreshing by remember { mutableStateOf(false) }
-    val pullToRefreshState = rememberPullToRefreshState()
     // Navigation bar inset applied to the scroll content instead of the Scaffold, so the
     // screen can draw all the way down behind the system bar.
     val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -194,20 +191,20 @@ fun SessionDetailScreen(
             val minutesUntilStart = if (startTime != null) Duration.between(simulatedTime, startTime).toMinutes() else 0
             val startsSoon = startTime != null && endTime != null && !isFinished && (minutesUntilStart in 0..60)
 
-            PullToRefreshBox(
-                state = pullToRefreshState,
-                isRefreshing = isRefreshing,
-                onRefresh = {
-                    scope.launch {
-                        isRefreshing = true
-                        if (effectiveYear == SessionRepository.CURRENT_YEAR) {
-                            repository.refreshSessions()
-                        } else {
-                            repository.loadArchiveSessions(effectiveYear)
-                        }
-                        isRefreshing = false
+            // Keep the "starts soon / live / finished" banners fresh by ticking the simulated
+            // clock once per whole minute, the same way the timeline does. Not needed once the
+            // talk has ended, and archive years only show finished talks anyway.
+            LaunchedEffect(s.id, effectiveYear, offset, endTime) {
+                if (effectiveYear == SessionRepository.CURRENT_YEAR && endTime != null) {
+                    while (endTime.isAfter(simulatedTime)) {
+                        simulatedTime = Instant.now().plusMillis(offset)
+                        val millisUntilNextMinute = 60_000L - (System.currentTimeMillis() % 60_000L)
+                        delay(millisUntilNextMinute)
                     }
-                },
+                }
+            }
+
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = padding.calculateTopPadding())

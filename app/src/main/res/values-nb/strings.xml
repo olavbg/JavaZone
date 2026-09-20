@@ -19,12 +19,11 @@
 
     <!-- Notifications -->
     <string name="settings_section_notifications">Varsler</string>
-    <string name="notification_lead_time_description">Hvor mange minutter før et foredrag starter vil du varsles?</string>
-    <string name="setting_lead_time">Varsel før start</string>
+    <string name="notification_lead_time_description">Hvor lenge før et foredrag starter, vil du bli varslet?</string>
+    <string name="setting_reminders">Påminnelser</string>
+    <string name="notifications_off">Av</string>
     <string name="battery_hint_title">Får du ikke varsler som forventet?</string>
     <string name="notification_test_button">Send testvarsel nå</string>
-    <string name="setting_notifications_enabled">Motta varsler</string>
-    <string name="setting_notifications_enabled_description">Få påminnelser før favorittmarkerte foredrag starter.</string>
 
     <!-- Appearance -->
     <string name="settings_section_appearance">Utseende</string>
@@ -61,7 +60,7 @@
     <string name="about_paragraph_2">Ja, appen er hovedsakelig vibe-kodet: AI-assistentene har banket på tastaturet mens jeg har stått bak og sagt «Det ser bra ut!». Mesteparten av tiden fungerer det overraskende bra. Resten av tiden er jeg glad for at dette kun er et hobbyprosjekt.</string>
     <string name="about_paragraph_3">Uten JavaZone og JavaBin sine åpne API-er ville dette bare vært en god idé uten innhold. Takk for at dere deler!</string>
     <string name="about_paragraph_4">Liker du appen og har du lyst til å støtte videreutviklingen? Da setter jeg pris på et lite bidrag – enten via Vipps eller «Buy Me a Coffee»:</string>
-    <string name="about_open_source_body">Koden er åpen, og forslag, feilrapporter og pull requests er velkomne.</string>
+    <string name="about_open_source_body">Koden er åpen! Forslag, feilrapporter og pull requests er velkomne.</string>
     <string name="about_open_source_link">github.com/olavbg/JavaZone</string>
     <string name="about_privacy_paragraph">Favoritter og innstillinger lagres kun på enheten din, og det brukes ingen analyse- eller sporingsverktøy. Appen henter foredragsprogrammet fra det offentlige JavaZone-API-et.</string>
 
@@ -91,7 +90,7 @@
         <item quantity="one">%d foredrag</item>
         <item quantity="other">%d foredrag</item>
     </plurals>
-    <string name="search_placeholder">Søk tittel, foredragsholder, rom…</string>
+    <string name="search_placeholder">Søk tittel, foredragsholder, beskrivelse…</string>
     <string name="search">Søk</string>
     <string name="clear">Nullstill</string>
     <string name="all_days">Alle dager</string>
