@@ -5,6 +5,15 @@ import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.random.Random
 
+/**
+ * Vertical drift window (fraction of screen height) the band centers are confined to.
+ * Keeping them here holds the bands mostly toward the middle of the screen; with the
+ * band's own thickness the edges may still dip slightly past the top/bottom, but never
+ * slide far off.
+ */
+internal const val BAND_CENTER_Y_MIN = 0.15f
+internal const val BAND_CENTER_Y_MAX = 0.85f
+
 internal class BandSpec(
     val angleDeg: Float,
     val posX: Float,
@@ -25,7 +34,7 @@ internal class DiagonalVariation(val band1: BandSpec, val band2: BandSpec) {
                 band1 = BandSpec(
                     angleDeg = -40f + r.nextFloat() * 80f,
                     posX = 0.05f + r.nextFloat() * 0.90f,
-                    posY = 0.05f + r.nextFloat() * 0.90f,
+                    posY = BAND_CENTER_Y_MIN + r.nextFloat() * (BAND_CENTER_Y_MAX - BAND_CENTER_Y_MIN),
                     heightFactor = 0.10f + r.nextFloat() * 0.08f,
                     driftX = 0.15f + r.nextFloat() * 0.18f,
                     driftY = 0.08f + r.nextFloat() * 0.14f,
@@ -36,7 +45,7 @@ internal class DiagonalVariation(val band1: BandSpec, val band2: BandSpec) {
                 band2 = BandSpec(
                     angleDeg = -40f + r.nextFloat() * 80f,
                     posX = 0.05f + r.nextFloat() * 0.90f,
-                    posY = 0.05f + r.nextFloat() * 0.90f,
+                    posY = BAND_CENTER_Y_MIN + r.nextFloat() * (BAND_CENTER_Y_MAX - BAND_CENTER_Y_MIN),
                     heightFactor = 0.10f + r.nextFloat() * 0.08f,
                     driftX = 0.15f + r.nextFloat() * 0.18f,
                     driftY = 0.10f + r.nextFloat() * 0.12f,

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
+import com.olavbg.javazone.data.repository.TimelineFilters
 import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.util.extractRoomNumber
 import com.olavbg.javazone.util.shortDayName
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -249,6 +251,11 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
                 _isLoading.value = false
             }
         }
+        // Restore persisted filters (for the current year only) so a cold start resumes where
+        // the user left off, then validate them against the reloaded schedule.
+        viewModelScope.launch {
+            restoreAndValidateTimelineFilters()
+        }
         // Auto-select current day matching effective currentTime (including simulated time settings)
         viewModelScope.launch {
             currentConferenceDay.collect { matchingDay ->
@@ -285,6 +292,10 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
         _selectedRoom.value = null
         _searchQuery.value = ""
         _onlyFavorites.value = false
+        // Filters are per-year: wipe the persisted ones so a stale set never resurfaces.
+        viewModelScope.launch {
+            settingsRepository.clearTimelineFilters()
+        }
         if (year == SessionRepository.CURRENT_YEAR) {
             hasAutoSelectedDay = false
         } else {
@@ -303,22 +314,27 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
         if (_selectedRoom.value != null && !availableRooms.value.contains(_selectedRoom.value)) {
             _selectedRoom.value = null
         }
+        persistTimelineFilters()
     }
 
     fun setOnlyFavorites(only: Boolean) {
         _onlyFavorites.value = only
+        persistTimelineFilters()
     }
 
     fun setFormat(format: String?) {
         _selectedFormat.value = format
+        persistTimelineFilters()
     }
 
     fun setLanguage(language: String?) {
         _selectedLanguage.value = language
+        persistTimelineFilters()
     }
 
     fun setRoom(room: String?) {
         _selectedRoom.value = room
+        persistTimelineFilters()
     }
 
     fun setSearchQuery(query: String) {
@@ -335,6 +351,80 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
         viewModelScope.launch {
             repository.toggleFavorite(session.id, !session.isFavorite)
         }
+    }
+
+    private fun persistTimelineFilters() {
+        viewModelScope.launch {
+            settingsRepository.saveTimelineFilters(
+                TimelineFilters(
+                    savedForYear = _selectedYear.value,
+                    selectedDay = _selectedDay.value,
+                    selectedRoom = _selectedRoom.value,
+                    selectedFormat = _selectedFormat.value,
+                    selectedLanguage = _selectedLanguage.value,
+                    onlyFavorites = _onlyFavorites.value,
+                )
+            )
+        }
+    }
+
+    private suspend fun restoreAndValidateTimelineFilters() {
+        val saved = settingsRepository.timelineFilters.first() ?: return
+        if (saved.savedForYear != SessionRepository.CURRENT_YEAR) {
+            // Filters were saved during a previous conference year; never re-apply them.
+            settingsRepository.clearTimelineFilters()
+            return
+        }
+
+        _onlyFavorites.value = saved.onlyFavorites
+        _selectedLanguage.value = saved.selectedLanguage
+        _selectedFormat.value = saved.selectedFormat
+        _selectedRoom.value = saved.selectedRoom
+
+        val savedDay = saved.selectedDay ?: return
+        _selectedDay.value = savedDay
+        hasAutoSelectedDay = true
+
+        // Wait until the current year's days are known before deciding whether the saved day
+        // still exists (an updated schedule may have renamed/removed a day). The day is set
+        // before this wait so the loaded lists are derived from the restored day.
+        val validDays = availableDays.first { it.isNotEmpty() }
+        val restoredDay = _selectedDay.value ?: return
+        if (restoredDay !in validDays) {
+            // Saved day is gone: fall back to today when there is one, else no day filter.
+            _selectedDay.value = null
+            hasAutoSelectedDay = false
+            _selectedFormat.value = null
+            _selectedRoom.value = null
+            _selectedLanguage.value = null
+            currentConferenceDay.value?.let { matchingDay ->
+                _selectedDay.value = matchingDay
+                hasAutoSelectedDay = true
+            }
+            persistTimelineFilters()
+            return
+        }
+
+        // Day is valid; drop any saved room/format/language that vanished for that day, and
+        // persist the (possibly reduced) selection so it doesn't reappear next launch.
+        daySessions.first { it.isNotEmpty() }
+        var changed = false
+        val formats = availableFormats.value
+        if (_selectedFormat.value != null && _selectedFormat.value !in formats) {
+            _selectedFormat.value = null
+            changed = true
+        }
+        val rooms = availableRooms.value
+        if (_selectedRoom.value != null && _selectedRoom.value !in rooms) {
+            _selectedRoom.value = null
+            changed = true
+        }
+        val languages = availableLanguages.value
+        if (_selectedLanguage.value != null && _selectedLanguage.value !in languages) {
+            _selectedLanguage.value = null
+            changed = true
+        }
+        if (changed) persistTimelineFilters()
     }
 
     private fun formatTime(instant: Instant?): String {

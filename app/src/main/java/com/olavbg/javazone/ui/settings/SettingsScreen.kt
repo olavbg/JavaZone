@@ -362,7 +362,14 @@ fun SettingsContent(
                     value = themeModeOptionLabel(themeMode),
                     secondaryValue = if (themeMode == ThemeMode.System) themeModeResolvedSystemLabel() else null,
                     leading = {
-                        val icon = when (themeMode) {
+                        // When set to "system", show the icon of the mode actually in effect
+                        // rather than the generic system icon. The dialog keeps the system icon.
+                        val effectiveMode = if (themeMode == ThemeMode.System) {
+                            if (isSystemInDarkTheme()) ThemeMode.Dark else ThemeMode.Light
+                        } else {
+                            themeMode
+                        }
+                        val icon = when (effectiveMode) {
                             ThemeMode.Dark -> Icons.Rounded.DarkMode
                             ThemeMode.Light -> Icons.Rounded.LightMode
                             ThemeMode.System -> Icons.Rounded.Smartphone
@@ -377,7 +384,9 @@ fun SettingsContent(
                     value = languageOptionLabel(appLanguage),
                     secondaryValue = if (appLanguage == AppLanguage.System) languageResolvedSystemLabel() else null,
                     leading = {
-                        when (appLanguage) {
+                        // When set to "system", show the flag of the language actually in
+                        // effect rather than the system icon. The dialog keeps the system icon.
+                        when (resolvedSystemLanguage()) {
                             AppLanguage.Norwegian -> FlagEmojiBadge(emoji = "🇳🇴", isSelected = true)
                             AppLanguage.English -> FlagEmojiBadge(emoji = "🇬🇧", isSelected = true)
                             AppLanguage.System -> SelectionTileIcon(imageVector = Icons.Rounded.Smartphone, isSelected = true)
@@ -1000,7 +1009,7 @@ private fun <T> SelectionDialog(
                                         onDismiss()
                                     }
                                 )
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                .padding(horizontal = 8.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             if (leadingContent != null) {
@@ -1161,16 +1170,19 @@ private fun languageOptionLabel(language: AppLanguage): String = when (language)
 }
 
 @Composable
-private fun languageResolvedSystemLabel(): String {
+private fun resolvedSystemLanguage(): AppLanguage {
     val systemLocale = AppLocale.systemLocale()
     val isNorwegian = systemLocale.language.startsWith("no", ignoreCase = true) ||
             systemLocale.language.startsWith("nb", ignoreCase = true) ||
             systemLocale.language.startsWith("nn", ignoreCase = true)
-    return if (isNorwegian) {
-        stringResource(R.string.language_norwegian)
-    } else {
-        stringResource(R.string.language_english)
-    }
+    return if (isNorwegian) AppLanguage.Norwegian else AppLanguage.English
+}
+
+@Composable
+private fun languageResolvedSystemLabel(): String = when (resolvedSystemLanguage()) {
+    AppLanguage.Norwegian -> stringResource(R.string.language_norwegian)
+    AppLanguage.English -> stringResource(R.string.language_english)
+    AppLanguage.System -> stringResource(R.string.language_system)
 }
 
 @Composable

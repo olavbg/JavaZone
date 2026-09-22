@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,13 +17,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -128,12 +130,21 @@ fun DetailedSessionCard(
                 if (favoriteDisplay == FavoriteDisplay.Toggle || session.isFavorite) {
                     Spacer(modifier = Modifier.weight(1f))
                     if (favoriteDisplay == FavoriteDisplay.Toggle) {
-                        IconButton(onClick = onFavoriteClick, modifier = Modifier.size(28.dp)) {
+                        // Plain clickable box pinned to the row height (28 dp): the heart can be
+                        // bigger without ballooning the top row. The icon overflows nothing and
+                        // the tap target stays the same size as before.
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .clickable(role = Role.Button, onClick = onFavoriteClick),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Icon(
                                 imageVector = if (session.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                 contentDescription = null,
                                 tint = if (session.isFavorite) FavoriteRed else LocalContentColor.current,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(26.dp)
                             )
                         }
                     } else {
@@ -141,7 +152,7 @@ fun DetailedSessionCard(
                             imageVector = Icons.Default.Favorite,
                             contentDescription = null,
                             tint = FavoriteRed,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
@@ -217,12 +228,21 @@ fun DetailedSessionCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "${formatTime(session.start)} – ${formatTime(session.end)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 11.sp
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${formatTime(session.start)} – ${formatTime(session.end)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 11.sp
+                        )
+                    }
                     if (minsUntil <= 60 && !isSessionPast(session, currentTime)) {
                         Surface(
                             shape = RoundedCornerShape(4.dp),

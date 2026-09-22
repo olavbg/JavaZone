@@ -54,10 +54,11 @@ import com.olavbg.javazone.R
 import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.util.isSessionActive
 import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.time.ZoneId
 
 enum class FavoriteDisplay { Toggle, FavoriteOnly }
 
@@ -86,17 +87,16 @@ fun AgendaListView(
     contentPadding: PaddingValues = PaddingValues(bottom = 32.dp),
     sharedScope: SharedTransitionScope? = null,
 ) {
-    // One-shot cold-start card entrance. The key ensures that switching years resets and re-triggers
-    // the entrance animation, behaving just like a fresh cold start for that timeline set.
-    val yearKey = groupedSessions.firstOrNull()?.sessions?.firstOrNull()?.start?.atZone(ZoneId.of("Europe/Oslo"))?.year ?: 0
-    val introEnabled = remember(yearKey) {
-        if (!ColdStartIntro.played || (ColdStartIntro.lastPlayedYear != yearKey)) {
-            ColdStartIntro.played = true
-            ColdStartIntro.lastPlayedYear = yearKey
-            true
-        } else {
-            false
-        }
+    // One-shot card entrance. The key is the events date of the first (active/upcoming) session,
+    // so the entrance replays on every day switch (and year switch), just like a fresh cold start,
+    // while filter changes on the same day do not re-trigger it.
+    val contentKey = groupedSessions.firstOrNull()?.sessions?.firstOrNull()?.start
+        ?.atZone(ZoneId.of("Europe/Oslo"))
+        ?.format(DateTimeFormatter.ISO_LOCAL_DATE) ?: ""
+    val introEnabled = remember(contentKey) {
+        val shouldPlay = ColdStartIntro.lastPlayedContentKey != contentKey
+        ColdStartIntro.lastPlayedContentKey = contentKey
+        shouldPlay
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -176,10 +176,10 @@ fun AgendaListView(
     }
 }
 
-// Process-lifetime flag so the cold-start intro plays exactly once per process start.
+// Process-lifetime marker of which events date last received the entrance animation, so the
+// intro plays once per content set (cold start, or each new day/year selected).
 private object ColdStartIntro {
-    var played = false
-    var lastPlayedYear = 0
+    var lastPlayedContentKey = ""
 }
 
 // One-shot entrance for the first-laid-out cards: a quick rise + fade, slightly staggered so

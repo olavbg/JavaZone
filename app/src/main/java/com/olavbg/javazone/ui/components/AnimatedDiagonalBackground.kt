@@ -267,9 +267,9 @@ fun AnimatedDiagonalBackground(
                 val f1 = fromVariation.band1
                 val t1 = toVariation.band1
                 val a1x = (f1.posX + f1.driftX * driftMotion(f1, fromTime)).coerceIn(0f, 1f)
-                val a1y = (f1.posY + f1.driftY * driftMotion(f1, fromTime)).coerceIn(0f, 1f)
+                val a1y = (f1.posY + f1.driftY * driftMotion(f1, fromTime)).coerceIn(BAND_CENTER_Y_MIN, BAND_CENTER_Y_MAX)
                 val b1x = (t1.posX + t1.driftX * driftMotion(t1, elapsed)).coerceIn(0f, 1f)
-                val b1y = (t1.posY + t1.driftY * driftMotion(t1, elapsed)).coerceIn(0f, 1f)
+                val b1y = (t1.posY + t1.driftY * driftMotion(t1, elapsed)).coerceIn(BAND_CENTER_Y_MIN, BAND_CENTER_Y_MAX)
                 val c1x = lerp(a1x, b1x, mix)
                 val c1y = lerp(a1y, b1y, mix)
                 val d1x = lerp(f1.posX, t1.posX, mix)
@@ -283,9 +283,9 @@ fun AnimatedDiagonalBackground(
                 val f2 = fromVariation.band2
                 val t2 = toVariation.band2
                 val a2x = (f2.posX + f2.driftX * driftMotion(f2, fromTime)).coerceIn(0f, 1f)
-                val a2y = (f2.posY + f2.driftY * driftMotion(f2, fromTime)).coerceIn(0f, 1f)
+                val a2y = (f2.posY + f2.driftY * driftMotion(f2, fromTime)).coerceIn(BAND_CENTER_Y_MIN, BAND_CENTER_Y_MAX)
                 val b2x = (t2.posX + t2.driftX * driftMotion(t2, elapsed)).coerceIn(0f, 1f)
-                val b2y = (t2.posY + t2.driftY * driftMotion(t2, elapsed)).coerceIn(0f, 1f)
+                val b2y = (t2.posY + t2.driftY * driftMotion(t2, elapsed)).coerceIn(BAND_CENTER_Y_MIN, BAND_CENTER_Y_MAX)
                 val c2x = lerp(a2x, b2x, mix)
                 val c2y = lerp(a2y, b2y, mix)
                 val d2x = lerp(f2.posX, t2.posX, mix)

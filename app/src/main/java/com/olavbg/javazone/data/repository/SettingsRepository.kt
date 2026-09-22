@@ -20,6 +20,17 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 
+// Persisted timeline filters, tagged with the conference year they were saved for so a cold
+// start never silently re-applies filters meant for a previous year.
+data class TimelineFilters(
+    val savedForYear: Int,
+    val selectedDay: String?,
+    val selectedRoom: String?,
+    val selectedFormat: String?,
+    val selectedLanguage: String?,
+    val onlyFavorites: Boolean,
+)
+
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 class SettingsRepository(private val context: Context) {
@@ -37,6 +48,12 @@ class SettingsRepository(private val context: Context) {
         val NOTIFICATION_PROMPT_SHOWN = booleanPreferencesKey("notification_prompt_shown")
         val BATTERY_HINT_DISMISSED = booleanPreferencesKey("battery_hint_dismissed")
         val FILTERS_EXPANDED = booleanPreferencesKey("filters_expanded")
+        val TIMELINE_FILTER_YEAR = intPreferencesKey("timeline_filter_year")
+        val TIMELINE_FILTER_DAY = stringPreferencesKey("timeline_filter_day")
+        val TIMELINE_FILTER_ROOM = stringPreferencesKey("timeline_filter_room")
+        val TIMELINE_FILTER_FORMAT = stringPreferencesKey("timeline_filter_format")
+        val TIMELINE_FILTER_LANGUAGE = stringPreferencesKey("timeline_filter_language")
+        val TIMELINE_FILTER_ONLY_FAVORITES = booleanPreferencesKey("timeline_filter_only_favorites")
         val FIRED_REMINDER_IDS =
             stringSetPreferencesKey("fired_reminder_session_ids_${SessionRepository.CURRENT_YEAR}")
     }
@@ -139,6 +156,26 @@ class SettingsRepository(private val context: Context) {
             preferences[PreferencesKeys.FILTERS_EXPANDED] ?: false
         }
 
+    val timelineFilters: Flow<TimelineFilters?> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            val year = preferences[PreferencesKeys.TIMELINE_FILTER_YEAR] ?: return@map null
+            TimelineFilters(
+                savedForYear = year,
+                selectedDay = preferences[PreferencesKeys.TIMELINE_FILTER_DAY],
+                selectedRoom = preferences[PreferencesKeys.TIMELINE_FILTER_ROOM],
+                selectedFormat = preferences[PreferencesKeys.TIMELINE_FILTER_FORMAT],
+                selectedLanguage = preferences[PreferencesKeys.TIMELINE_FILTER_LANGUAGE],
+                onlyFavorites = preferences[PreferencesKeys.TIMELINE_FILTER_ONLY_FAVORITES] ?: false,
+            )
+        }
+
     val appLanguage: Flow<AppLanguage> = context.dataStore.data
         .catch { exception ->
             if (exception is IOException) {
@@ -226,6 +263,44 @@ class SettingsRepository(private val context: Context) {
     suspend fun setFiltersExpanded(expanded: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.FILTERS_EXPANDED] = expanded
+        }
+    }
+
+    suspend fun saveTimelineFilters(filters: TimelineFilters) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.TIMELINE_FILTER_YEAR] = filters.savedForYear
+            if (filters.selectedDay != null) {
+                preferences[PreferencesKeys.TIMELINE_FILTER_DAY] = filters.selectedDay
+            } else {
+                preferences.remove(PreferencesKeys.TIMELINE_FILTER_DAY)
+            }
+            if (filters.selectedRoom != null) {
+                preferences[PreferencesKeys.TIMELINE_FILTER_ROOM] = filters.selectedRoom
+            } else {
+                preferences.remove(PreferencesKeys.TIMELINE_FILTER_ROOM)
+            }
+            if (filters.selectedFormat != null) {
+                preferences[PreferencesKeys.TIMELINE_FILTER_FORMAT] = filters.selectedFormat
+            } else {
+                preferences.remove(PreferencesKeys.TIMELINE_FILTER_FORMAT)
+            }
+            if (filters.selectedLanguage != null) {
+                preferences[PreferencesKeys.TIMELINE_FILTER_LANGUAGE] = filters.selectedLanguage
+            } else {
+                preferences.remove(PreferencesKeys.TIMELINE_FILTER_LANGUAGE)
+            }
+            preferences[PreferencesKeys.TIMELINE_FILTER_ONLY_FAVORITES] = filters.onlyFavorites
+        }
+    }
+
+    suspend fun clearTimelineFilters() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(PreferencesKeys.TIMELINE_FILTER_YEAR)
+            preferences.remove(PreferencesKeys.TIMELINE_FILTER_DAY)
+            preferences.remove(PreferencesKeys.TIMELINE_FILTER_ROOM)
+            preferences.remove(PreferencesKeys.TIMELINE_FILTER_FORMAT)
+            preferences.remove(PreferencesKeys.TIMELINE_FILTER_LANGUAGE)
+            preferences.remove(PreferencesKeys.TIMELINE_FILTER_ONLY_FAVORITES)
         }
     }
 

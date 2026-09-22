@@ -40,6 +40,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.olavbg.javazone.R
+import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.util.extractRoomNumber
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -101,7 +103,10 @@ fun TimelineScreen(
         }
     }
 
-    val listState = rememberLazyListState()
+    // Recreate the list state when the selected day changes so the new day's list starts at
+    // the very top instead of resuming the previous day's scroll offset (which would flash a
+    // mid-list viewport before the auto-scroll settles it).
+    val listState = key(selectedDay) { rememberLazyListState() }
     // Bottom inset of the navigation bar; the Scaffold uses zero insets so list content
     // can scroll behind it, and this is added to the content padding instead.
     val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -116,10 +121,15 @@ fun TimelineScreen(
     var previousDay by remember { mutableStateOf(selectedDay) }
     var hasAutoScrolledColdStart by rememberSaveable { mutableStateOf(false) }
 
-    // Scroll back to the very top when the selected year changes
+    // Scroll back to the very top when the selected year changes. Returning to the current
+    // year behaves like a fresh cold start: today's day is re-auto-selected and, once today's
+    // content is loaded, the list glides down to the live slot instead of staying at the top.
     LaunchedEffect(selectedYear) {
         if (selectedYear != previousYear) {
             listState.scrollToItem(0)
+            if (selectedYear == SessionRepository.CURRENT_YEAR) {
+                hasAutoScrolledColdStart = false
+            }
             previousYear = selectedYear
         }
     }
@@ -246,21 +256,27 @@ fun TimelineScreen(
                             )
                         }
                     } else {
-                        AgendaListView(
-                            groupedSessions = groupedSessions,
-                            currentTime = currentTime,
-                            listState = listState,
-                            onSessionClick = { session ->
-                                onSessionClick(session.id, yearState.value)
-                            },
-                            onFavoriteClick = viewModel::toggleFavorite,
-                            favoriteDisplay = if (isCurrentYear) FavoriteDisplay.Toggle else FavoriteDisplay.FavoriteOnly,
-                            liveIndicators = showLiveIndicators,
-                            sharedScope = sharedScope,
-                            contentPadding = PaddingValues(
-                                bottom = 32.dp + navBarBottom + contentPadding.calculateBottomPadding()
+                        // Rebuild the list with a fresh identity every time the selected day
+                        // changes. The day swap coincides with an immediate scroll jump, which
+                        // can otherwise cut the item exit animations short and leave the previous
+                        // day's cards stuck rendered underneath the new ones.
+                        key(selectedDay) {
+                            AgendaListView(
+                                groupedSessions = groupedSessions,
+                                currentTime = currentTime,
+                                listState = listState,
+                                onSessionClick = { session ->
+                                    onSessionClick(session.id, yearState.value)
+                                },
+                                onFavoriteClick = viewModel::toggleFavorite,
+                                favoriteDisplay = if (isCurrentYear) FavoriteDisplay.Toggle else FavoriteDisplay.FavoriteOnly,
+                                liveIndicators = showLiveIndicators,
+                                sharedScope = sharedScope,
+                                contentPadding = PaddingValues(
+                                    bottom = 32.dp + navBarBottom + contentPadding.calculateBottomPadding()
+                                )
                             )
-                        )
+                        }
                     }
                 }
             }
