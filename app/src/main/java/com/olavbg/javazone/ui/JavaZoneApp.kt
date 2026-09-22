@@ -14,11 +14,16 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -38,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -208,7 +214,18 @@ fun JavaZoneApp(
         AlertDialog(
             onDismissRequest = { showDonationDialog = false },
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 1f),
-            title = { Text(stringResource(R.string.donation_dialog_title)) },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.donation_dialog_title))
+                    Spacer(Modifier.width(12.dp))
+                    // Logo after the title, same treatment as before (no tile, no transparency).
+                    Image(
+                        painter = painterResource(R.drawable.ic_logo_dialog),
+                        contentDescription = null,
+                        modifier = Modifier.size(44.dp)
+                    )
+                }
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
                     Text(

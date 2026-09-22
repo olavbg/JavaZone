@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1080"
+    android:viewportHeight="1080">
+
+    <!-- Sama komposisjon som launcher-foreground (scale 0.80), med dampen
+         delt i navngitte grupper så AVD-en kan animere hver strek for seg. -->
+
+    <group
+        android:name="artwork"
+        android:scaleX="0.80"
+        android:scaleY="0.80"
+        android:pivotX="540"
+        android:pivotY="540">
+
+        <path
+            android:fillColor="#4E6E78"
+            android:fillType="evenOdd"
+            android:pathData="M770 534 C852 499 896 545 896 624 C896 710 833 752 680 742 Z M792 594 C832 574 858 593 858 624 C858 662 832 684 779 675 Z" />
+
+        <path android:pathData="M240 500 C248 638 276 715 354 758 C433 801 635 801 714 758 C792 715 820 638 828 500 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:startX="240"
+                    android:startY="500"
+                    android:endX="828"
+                    android:endY="801"
+                    android:type="linear">
+                    <item android:color="#A5E8CD" android:offset="0" />
+                    <item android:color="#61CDB5" android:offset="1" />
+                </gradient>
+            </aapt:attr>
+        </path>
+
+        <path
+            android:fillColor="#4E6E78"
+            android:pathData="M286 660 C359 696 452 709 535 709 C630 709 720 693 780 657 C759 711 734 741 697 762 C614 806 443 804 365 764 C324 742 300 708 286 660 Z" />
+
+        <path
+            android:fillColor="#A5E8CD"
+            android:pathData="M534,418a294,82 0 1,0 0,164a294,82 0 1,0 0,-164z" />
+
+        <path
+            android:fillColor="#0D2028"
+            android:pathData="M534,456a251,49 0 1,0 0,98a251,49 0 1,0 0,-98z" />
+
+    </group>
+
+    <group
+        android:name="steam"
+        android:scaleX="0.80"
+        android:scaleY="0.80"
+        android:pivotX="540"
+        android:pivotY="540"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round">
+
+        <group android:name="steam1">
+            <path
+                android:strokeWidth="60"
+                android:pathData="M430 476 L408 379 L459 312 L448 206">
+                <aapt:attr name="android:strokeColor">
+                    <gradient
+                        android:startX="0"
+                        android:startY="190"
+                        android:endX="0"
+                        android:endY="500"
+                        android:type="linear">
+                        <item android:color="#A5E8CD" android:offset="0" />
+                        <item android:color="#58C9B5" android:offset="1" />
+                    </gradient>
+                </aapt:attr>
+            </path>
+        </group>
+
+        <group android:name="steam2">
+            <path
+                android:strokeWidth="62"
+                android:pathData="M553 479 L526 390 L579 328 L566 250">
+                <aapt:attr name="android:strokeColor">
+                    <gradient
+                        android:startX="0"
+                        android:startY="190"
+                        android:endX="0"
+                        android:endY="500"
+                        android:type="linear">
+                        <item android:color="#9FC2F0" android:offset="0" />
+                        <item android:color="#4D9FD5" android:offset="1" />
+                    </gradient>
+                </aapt:attr>
+            </path>
+        </group>
+
+        <group android:name="steam3">
+            <path
+                android:strokeWidth="56"
+                android:pathData="M654 470 L638 402 L690 353 L678 296">
+                <aapt:attr name="android:strokeColor">
+                    <gradient
+                        android:startX="0"
+                        android:startY="190"
+                        android:endX="0"
+                        android:endY="500"
+                        android:type="linear">
+                        <item android:color="#E2AFBB" android:offset="0" />
+                        <item android:color="#A97AC3" android:offset="1" />
+                    </gradient>
+                </aapt:attr>
+            </path>
+        </group>
+
+    </group>
+
+</vector>

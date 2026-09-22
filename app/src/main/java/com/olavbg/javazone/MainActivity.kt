@@ -3,18 +3,21 @@ package com.olavbg.javazone
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModelProvider
 import androidx.room.Room
 import androidx.activity.SystemBarStyle
 import com.olavbg.javazone.data.local.AppDatabase
@@ -28,6 +31,8 @@ import com.olavbg.javazone.notifications.ReminderManager
 import com.olavbg.javazone.ui.JavaZoneApp
 import com.olavbg.javazone.ui.components.LocalBackgroundReanimate
 import com.olavbg.javazone.ui.theme.JavaZoneTheme
+import com.olavbg.javazone.ui.timeline.TimelineViewModel
+import com.olavbg.javazone.ui.timeline.TimelineViewModelFactory
 import com.olavbg.javazone.util.AppLocale
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
@@ -47,6 +52,10 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Tie the system splash to the real boot path: it must be installed before
+        // super.onCreate() so the starting theme (with the animated icon) is applied,
+        // then kept on screen only while data is actually loading.
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
         val db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "javazone.db")
@@ -62,6 +71,20 @@ class MainActivity : ComponentActivity() {
         val settingsRepository = SettingsRepository(this)
         val reminderManager = ReminderManager(this)
         val repository = SessionRepository(api, db.sessionDao(), reminderManager, settingsRepository)
+
+        // Create the shared TimelineViewModel here (same store/key as JavaZoneApp uses), so
+        // its isLoading flag can drive the splash and the initial load starts early.
+        val timelineViewModel: TimelineViewModel = ViewModelProvider(
+            this,
+            TimelineViewModelFactory(repository, settingsRepository)
+        )[TimelineViewModel::class.java]
+
+        // Hold the system splash while data is actually loading, with a hard 3 s cap
+        // so a broken network never blocks the app from starting.
+        val startedAt = SystemClock.uptimeMillis()
+        splashScreen.setKeepOnScreenCondition {
+            timelineViewModel.isLoading.value && SystemClock.uptimeMillis() - startedAt < 3000L
+        }
 
         val initialSessionId = intent.getStringExtra("session_id")
         val initialShowDonation = intent.getBooleanExtra(

@@ -1,17 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    The JavaZone cup logo cropped to its artwork bounds (no adaptive-icon safe-zone
+    padding), so it can be drawn large and clear in contexts like the donation dialog.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
-    android:width="108dp"
-    android:height="108dp"
+    android:width="48dp"
+    android:height="48dp"
     android:viewportWidth="1080"
     android:viewportHeight="1080">
 
-    <!-- Essential artwork scaled into the adaptive icon safe zone -->
     <group
-        android:scaleX="0.80"
-        android:scaleY="0.80"
-        android:pivotX="540"
-        android:pivotY="540">
+        android:scaleX="1.317"
+        android:scaleY="1.317"
+        android:pivotX="568"
+        android:pivotY="506"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round">
 
         <!-- Handle -->
         <path
@@ -49,16 +54,7 @@
             android:fillColor="#0D2028"
             android:pathData="M534,456a251,49 0 1,0 0,98a251,49 0 1,0 0,-98z" />
 
-    </group>
-
-    <!-- Colored steam -->
-    <group
-        android:scaleX="0.80"
-        android:scaleY="0.80"
-        android:pivotX="540"
-        android:pivotY="540"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round">
+        <!-- Colored steam -->
         <path
             android:strokeWidth="47"
             android:pathData="M430 476 L408 379 L459 312 L448 206">
@@ -104,17 +100,12 @@
                 </gradient>
             </aapt:attr>
         </path>
-    </group>
 
-    <!-- Accent dot -->
-    <group
-        android:scaleX="0.80"
-        android:scaleY="0.80"
-        android:pivotX="540"
-        android:pivotY="540">
+        <!-- Accent dot -->
         <path
             android:fillColor="#8FDFBA"
             android:pathData="M357,277a20,20 0 1,0 0,40a20,20 0 1,0 0,-40z" />
+
     </group>
 
 </vector>
