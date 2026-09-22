@@ -1,0 +1,22 @@
+# Line-ending policy.
+#
+# Text files are stored as LF in the repository and checked out as CRLF
+# (native Windows line endings) in working copies, since this project is
+# developed on Windows. This makes line endings deterministic for everyone
+# and silences Git's "LF will be replaced by CRLF" hints.
+
+* text=auto eol=crlf
+
+# Keep binary assets out of text normalization entirely.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.jar binary
+*.zip binary
+*.apk binary
+*.keystore binary
