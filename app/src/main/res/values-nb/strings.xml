@@ -8,6 +8,7 @@
     <string name="next">Neste</string>
     <string name="settings">Innstillinger</string>
     <string name="now">Nå</string>
+    <string name="retry">Prøv igjen</string>
     <string name="duration_minutes">%d min</string>
 
     <!-- Language -->
@@ -75,9 +76,12 @@
     <string name="notification_prompt_dismiss">Ikke nå</string>
 
     <!-- Timeline -->
+    <string name="offline_banner">Frakoblet – viser lagret program</string>
     <string name="timeline_loading">Laster inn foredrag…</string>
     <string name="empty_archive_title">Fant ingen foredrag for JavaZone %1$d</string>
     <string name="empty_archive_subtitle">Det var ingen registrerte foredrag for dette året.</string>
+    <string name="archive_load_error_title">Kunne ikke laste JavaZone %1$d</string>
+    <string name="archive_load_error_subtitle">Sjekk internett-tilkoblingen din og prøv igjen.</string>
     <string name="empty_filtered_title">Ingen foredrag passer søket eller filteret</string>
     <string name="empty_filtered_subtitle">Prøv å endre på søkeordene eller tilbakestill filtrene.</string>
     <string name="empty_title">Ingen foredrag funnet</string>
@@ -115,6 +119,8 @@
     <string name="watch_recording">Se videoopptak</string>
     <string name="close_video">Lukk video</string>
     <string name="open_external_video">Åpne i nettleser</string>
+    <string name="video_offline_title">Ingen internettforbindelse</string>
+    <string name="video_offline_subtitle">Videoopptak kan ikke spilles av uten internett.</string>
     <string name="live_banner">Går nå i %1$s – %2$d min igjen</string>
     <string name="starts_banner">Starter om %1$d minutter i %2$s</string>
     <string name="recording_from_year">Opptak fra JavaZone %1$d</string>

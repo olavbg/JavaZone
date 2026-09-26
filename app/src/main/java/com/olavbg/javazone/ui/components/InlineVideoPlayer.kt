@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
@@ -17,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,6 +27,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +45,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -54,6 +61,30 @@ private class CustomViewInfo(
     val callback: WebChromeClient.CustomViewCallback
 )
 
+private fun buildVideoHtml(embedUrl: String): String = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            html, body { width: 100%; height: 100%; background: #000000; overflow: hidden; }
+            iframe { width: 100%; height: 100%; border: 0; }
+        </style>
+    </head>
+    <body>
+        <iframe
+            src="$embedUrl"
+            width="100%"
+            height="100%"
+            frameborder="0"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowfullscreen>
+        </iframe>
+    </body>
+    </html>
+""".trimIndent()
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun InlineVideoPlayer(
@@ -64,6 +95,7 @@ fun InlineVideoPlayer(
 ) {
     val embedUrl = remember(videoUrl) { resolveVideoEmbedUrl(videoUrl) }
     var isLoading by remember { mutableStateOf(true) }
+    var hasError by remember { mutableStateOf(false) }
     var customViewInfo by remember { mutableStateOf<CustomViewInfo?>(null) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
 
@@ -149,7 +181,20 @@ fun InlineVideoPlayer(
                         }
                         webViewClient = object : WebViewClient() {
                             override fun onPageFinished(view: WebView?, url: String?) {
-                                isLoading = false
+                                if (!hasError) {
+                                    isLoading = false
+                                }
+                            }
+
+                            override fun onReceivedError(
+                                view: WebView?,
+                                request: WebResourceRequest?,
+                                error: WebResourceError?
+                            ) {
+                                if (request?.isForMainFrame == true || request?.url?.toString()?.contains("vimeo") == true) {
+                                    hasError = true
+                                    isLoading = false
+                                }
                             }
                         }
                         webChromeClient = object : WebChromeClient() {
@@ -162,42 +207,62 @@ fun InlineVideoPlayer(
                                 customViewInfo = null
                             }
                         }
-                        val html = """
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-                                <style>
-                                    * { margin: 0; padding: 0; box-sizing: border-box; }
-                                    html, body { width: 100%; height: 100%; background: #000000; overflow: hidden; }
-                                    iframe { width: 100%; height: 100%; border: 0; }
-                                </style>
-                            </head>
-                            <body>
-                                <iframe
-                                    src="$embedUrl"
-                                    width="100%"
-                                    height="100%"
-                                    frameborder="0"
-                                    allow="autoplay; fullscreen; picture-in-picture"
-                                    allowfullscreen>
-                                </iframe>
-                            </body>
-                            </html>
-                        """.trimIndent()
-                        loadDataWithBaseURL("https://javazone.no", html, "text/html", "UTF-8", null)
+                        loadDataWithBaseURL("https://javazone.no", buildVideoHtml(embedUrl), "text/html", "UTF-8", null)
                         webViewRef = this
                     }
                 },
                 modifier = Modifier.fillMaxSize()
             )
 
-            if (isLoading) {
+            if (isLoading && !hasError) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(36.dp),
                     color = MaterialTheme.colorScheme.primary,
                     strokeWidth = 3.dp
                 )
+            }
+
+            if (hasError) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF1E1E1E))
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.WifiOff,
+                        contentDescription = null,
+                        modifier = Modifier.size(36.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.video_offline_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.video_offline_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = {
+                            hasError = false
+                            isLoading = true
+                            webViewRef?.loadDataWithBaseURL("https://javazone.no", buildVideoHtml(embedUrl), "text/html", "UTF-8", null)
+                        },
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(stringResource(R.string.retry), style = MaterialTheme.typography.labelMedium)
+                    }
+                }
             }
         }
 

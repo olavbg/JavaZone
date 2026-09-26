@@ -1,6 +1,8 @@
 package com.olavbg.javazone.data.repository
 
+import android.app.ActivityManager
 import android.content.Context
+import androidx.core.content.getSystemService
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -33,7 +35,13 @@ data class TimelineFilters(
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
-class SettingsRepository(private val context: Context) {
+class SettingsRepository(
+    private val dataStore: DataStore<Preferences>,
+    private val context: Context? = null
+) {
+
+    // Convenience constructor used by the app; tests can inject a JVM DataStore instead.
+    constructor(context: Context) : this(context.dataStore, context)
 
     companion object {
         val APP_LANGUAGE_KEY = stringPreferencesKey("app_language")
@@ -58,7 +66,7 @@ class SettingsRepository(private val context: Context) {
             stringSetPreferencesKey("fired_reminder_session_ids_${SessionRepository.CURRENT_YEAR}")
     }
 
-    val notificationLeadTime: Flow<Int> = context.dataStore.data
+    val notificationLeadTime: Flow<Int> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -70,7 +78,7 @@ class SettingsRepository(private val context: Context) {
             preferences[PreferencesKeys.NOTIFICATION_LEAD_TIME] ?: 10
         }
 
-    val notificationsEnabled: Flow<Boolean> = context.dataStore.data
+    val notificationsEnabled: Flow<Boolean> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -82,7 +90,7 @@ class SettingsRepository(private val context: Context) {
             preferences[PreferencesKeys.NOTIFICATIONS_ENABLED] ?: true
         }
 
-    val simulatedTimeOffset: Flow<Long> = context.dataStore.data
+    val simulatedTimeOffset: Flow<Long> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -94,7 +102,16 @@ class SettingsRepository(private val context: Context) {
             preferences[PreferencesKeys.SIMULATED_TIME_OFFSET] ?: 0L
         }
 
-    val backgroundMode: Flow<BackgroundMode> = context.dataStore.data
+    fun defaultBackgroundMode(): BackgroundMode {
+        val activityManager = context?.getSystemService<ActivityManager>()
+        return if (activityManager?.isLowRamDevice == true) {
+            BackgroundMode.Static
+        } else {
+            BackgroundMode.Animated
+        }
+    }
+
+    val backgroundMode: Flow<BackgroundMode> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -105,10 +122,10 @@ class SettingsRepository(private val context: Context) {
         .map { preferences ->
             preferences[PreferencesKeys.BACKGROUND_MODE]
                 ?.let { raw -> BackgroundMode.entries.firstOrNull { it.name == raw } }
-                ?: BackgroundMode.Animated
+                ?: defaultBackgroundMode()
         }
 
-    val themeMode: Flow<ThemeMode> = context.dataStore.data
+    val themeMode: Flow<ThemeMode> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -120,7 +137,7 @@ class SettingsRepository(private val context: Context) {
             ThemeMode.fromStorage(preferences[PreferencesKeys.THEME_MODE]) ?: ThemeMode.Dark
         }
 
-    val notificationPromptShown: Flow<Boolean> = context.dataStore.data
+    val notificationPromptShown: Flow<Boolean> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -132,7 +149,7 @@ class SettingsRepository(private val context: Context) {
             preferences[PreferencesKeys.NOTIFICATION_PROMPT_SHOWN] ?: false
         }
 
-    val batteryHintDismissed: Flow<Boolean> = context.dataStore.data
+    val batteryHintDismissed: Flow<Boolean> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -144,7 +161,7 @@ class SettingsRepository(private val context: Context) {
             preferences[PreferencesKeys.BATTERY_HINT_DISMISSED] ?: false
         }
 
-    val filtersExpanded: Flow<Boolean> = context.dataStore.data
+    val filtersExpanded: Flow<Boolean> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -156,7 +173,7 @@ class SettingsRepository(private val context: Context) {
             preferences[PreferencesKeys.FILTERS_EXPANDED] ?: false
         }
 
-    val timelineFilters: Flow<TimelineFilters?> = context.dataStore.data
+    val timelineFilters: Flow<TimelineFilters?> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -176,7 +193,7 @@ class SettingsRepository(private val context: Context) {
             )
         }
 
-    val appLanguage: Flow<AppLanguage> = context.dataStore.data
+    val appLanguage: Flow<AppLanguage> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -188,7 +205,7 @@ class SettingsRepository(private val context: Context) {
             AppLanguage.fromStorage(preferences[APP_LANGUAGE_KEY]) ?: AppLanguage.System
         }
 
-    val firedReminderSessionIds: Flow<Set<String>> = context.dataStore.data
+    val firedReminderSessionIds: Flow<Set<String>> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -201,73 +218,73 @@ class SettingsRepository(private val context: Context) {
         }
 
     suspend fun updateNotificationLeadTime(minutes: Int) {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[PreferencesKeys.NOTIFICATION_LEAD_TIME] = minutes
         }
     }
 
     suspend fun updateNotificationsEnabled(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[PreferencesKeys.NOTIFICATIONS_ENABLED] = enabled
         }
     }
 
     suspend fun updateAppLanguage(language: AppLanguage) {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[APP_LANGUAGE_KEY] = language.storageValue
         }
     }
 
     suspend fun updateSimulatedTimeOffset(offsetMillis: Long) {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[PreferencesKeys.SIMULATED_TIME_OFFSET] = offsetMillis
         }
     }
 
     suspend fun updateBackgroundMode(mode: BackgroundMode) {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[PreferencesKeys.BACKGROUND_MODE] = mode.name
         }
     }
 
     suspend fun updateThemeMode(mode: ThemeMode) {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[PreferencesKeys.THEME_MODE] = mode.storageValue
         }
     }
 
     suspend fun isConferenceDoneNotified(year: Int): Boolean {
         val key = booleanPreferencesKey("conference_done_notified_$year")
-        return context.dataStore.data.first()[key] ?: false
+        return dataStore.data.first()[key] ?: false
     }
 
     suspend fun markConferenceDoneNotified(year: Int) {
         val key = booleanPreferencesKey("conference_done_notified_$year")
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[key] = true
         }
     }
 
     suspend fun markNotificationPromptShown() {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[PreferencesKeys.NOTIFICATION_PROMPT_SHOWN] = true
         }
     }
 
     suspend fun dismissBatteryHint() {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[PreferencesKeys.BATTERY_HINT_DISMISSED] = true
         }
     }
 
     suspend fun setFiltersExpanded(expanded: Boolean) {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[PreferencesKeys.FILTERS_EXPANDED] = expanded
         }
     }
 
     suspend fun saveTimelineFilters(filters: TimelineFilters) {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[PreferencesKeys.TIMELINE_FILTER_YEAR] = filters.savedForYear
             if (filters.selectedDay != null) {
                 preferences[PreferencesKeys.TIMELINE_FILTER_DAY] = filters.selectedDay
@@ -294,7 +311,7 @@ class SettingsRepository(private val context: Context) {
     }
 
     suspend fun clearTimelineFilters() {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences.remove(PreferencesKeys.TIMELINE_FILTER_YEAR)
             preferences.remove(PreferencesKeys.TIMELINE_FILTER_DAY)
             preferences.remove(PreferencesKeys.TIMELINE_FILTER_ROOM)
@@ -305,7 +322,7 @@ class SettingsRepository(private val context: Context) {
     }
 
     suspend fun markSessionReminderFired(sessionId: String) {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             val fired = preferences[PreferencesKeys.FIRED_REMINDER_IDS].orEmpty().toMutableSet()
             fired.add(sessionId)
             preferences[PreferencesKeys.FIRED_REMINDER_IDS] = fired

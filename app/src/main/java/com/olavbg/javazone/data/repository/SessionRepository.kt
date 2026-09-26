@@ -29,6 +29,7 @@ class SessionRepository(
 ) {
     private val archiveSessions = MutableStateFlow<Map<Int, List<Session>>>(emptyMap())
     private val archiveLoading = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
+    private val archiveErrors = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
     private val archiveLoadMutex = Mutex()
 
     private val _availableYears = MutableStateFlow(
@@ -63,6 +64,7 @@ class SessionRepository(
     }
 
     fun archiveLoadingFlow(): Flow<Map<Int, Boolean>> = archiveLoading
+    fun archiveErrorFlow(): Flow<Map<Int, Boolean>> = archiveErrors
 
     suspend fun loadAvailableYears() {
         try {
@@ -101,13 +103,24 @@ class SessionRepository(
     }
 
     suspend fun loadArchiveSessions(year: Int) {
-        if (archiveSessions.value.containsKey(year)) return
+        if (archiveSessions.value[year]?.isNotEmpty() == true) return
         archiveLoadMutex.withLock {
-            if (archiveSessions.value.containsKey(year)) return
+            if (archiveSessions.value[year]?.isNotEmpty() == true) return
             archiveLoading.value = archiveLoading.value + (year to true)
+            archiveErrors.value = archiveErrors.value + (year to false)
             try {
-                val sessions = fetchArchiveSessions(year) ?: return
-                archiveSessions.value = archiveSessions.value + (year to sessions)
+                val sessions = fetchArchiveSessions(year)
+                if (sessions != null && sessions.isNotEmpty()) {
+                    archiveSessions.value = archiveSessions.value + (year to sessions)
+                    archiveErrors.value = archiveErrors.value + (year to false)
+                } else if (sessions != null) {
+                    archiveSessions.value = archiveSessions.value + (year to emptyList())
+                    archiveErrors.value = archiveErrors.value + (year to false)
+                } else {
+                    archiveErrors.value = archiveErrors.value + (year to true)
+                }
+            } catch (e: Exception) {
+                archiveErrors.value = archiveErrors.value + (year to true)
             } finally {
                 archiveLoading.value = archiveLoading.value + (year to false)
             }

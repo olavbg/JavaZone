@@ -77,13 +77,14 @@ fun JavaZoneApp(
     showDonationOnLaunch: Boolean = false,
     onNavigation: () -> Unit = {},
 ) {
+    val context = LocalContext.current
+    val networkMonitor = remember(context) { com.olavbg.javazone.util.NetworkMonitor(context) }
     val timelineViewModel: TimelineViewModel = viewModel(
-        factory = TimelineViewModelFactory(repository, settingsRepository)
+        factory = TimelineViewModelFactory(repository, settingsRepository, networkMonitor)
     )
 
     val showLiveBanners by timelineViewModel.showLiveIndicators.collectAsState()
 
-    val context = LocalContext.current
     var showNotificationPrompt by remember { mutableStateOf(false) }
     val promptShown by settingsRepository.notificationPromptShown.collectAsState(initial = true)
     val favoriteCount by repository.favoriteCount.collectAsState(initial = null)

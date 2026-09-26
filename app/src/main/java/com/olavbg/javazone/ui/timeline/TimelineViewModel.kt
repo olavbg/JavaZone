@@ -7,6 +7,7 @@ import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.data.repository.TimelineFilters
 import com.olavbg.javazone.model.Session
+import com.olavbg.javazone.util.NetworkMonitor
 import com.olavbg.javazone.util.extractRoomNumber
 import com.olavbg.javazone.util.shortDayName
 import kotlinx.coroutines.Dispatchers
@@ -60,6 +61,7 @@ data class AgendaGroup(
 class TimelineViewModel(
     private val repository: SessionRepository,
     private val settingsRepository: SettingsRepository,
+    private val networkMonitor: NetworkMonitor? = null,
 ) : ViewModel() {
 
     val availableYears: StateFlow<List<Int>> = repository.availableYears
@@ -238,6 +240,21 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
         else loadingMap[year] ?: false
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    val isOnline: StateFlow<Boolean> = (networkMonitor?.isOnline ?: MutableStateFlow(true))
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            networkMonitor?.isCurrentlyConnected() ?: true
+        )
+
+    val archiveError: StateFlow<Boolean> = combine(
+        _selectedYear,
+        repository.archiveErrorFlow()
+    ) { year, errorMap ->
+        if (year == SessionRepository.CURRENT_YEAR) false
+        else errorMap[year] ?: false
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     private var hasAutoSelectedDay = false
 
     init {
@@ -249,6 +266,18 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
                 repository.refreshSessions()
             } finally {
                 _isLoading.value = false
+            }
+        }
+        // Auto-refresh when internet returns after being offline
+        if (networkMonitor != null) {
+            viewModelScope.launch {
+                var wasOffline = false
+                networkMonitor.isOnline.collect { online ->
+                    if (online && wasOffline) {
+                        refresh()
+                    }
+                    wasOffline = !online
+                }
             }
         }
         // Restore persisted filters (for the current year only) so a cold start resumes where
@@ -271,6 +300,23 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
                 _currentTime.value = Instant.now()
                 val millisUntilNextMinute = 60_000L - (System.currentTimeMillis() % 60_000L)
                 delay(millisUntilNextMinute)
+            }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                repository.loadAvailableYears()
+                val year = _selectedYear.value
+                if (year == SessionRepository.CURRENT_YEAR) {
+                    repository.refreshSessions()
+                } else {
+                    repository.loadArchiveSessions(year)
+                }
+            } finally {
+                _isLoading.value = false
             }
         }
     }

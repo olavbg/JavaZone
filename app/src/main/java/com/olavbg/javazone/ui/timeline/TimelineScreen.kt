@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -91,6 +92,8 @@ fun TimelineScreen(
     val showLiveIndicators by viewModel.showLiveIndicators.collectAsState()
     val currentConferenceDay by viewModel.currentConferenceDay.collectAsState()
     val filtersExpanded by viewModel.filtersExpanded.collectAsState()
+    val isOnline by viewModel.isOnline.collectAsState()
+    val archiveError by viewModel.archiveError.collectAsState()
 
     // Start with search open if a query is already active, so a recreated timeline scene
     // never silently filters the list behind a hidden field (e.g. after returning from a talk).
@@ -232,16 +235,57 @@ fun TimelineScreen(
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    AnimatedVisibility(visible = !isOnline) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.CloudOff,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(R.string.offline_banner),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
                     if (sessions.isEmpty()) {
                         if (isLoading) {
                             // Mirrors the empty-state layout, clearly visible at startup (also for archive years).
                             TimelineLoadingState()
+                        } else if (allSessions.isEmpty() && !isCurrentYear && archiveError) {
+                            // The selected archive year failed to load over network
+                            EmptyStateView(
+                                isSearchActive = false,
+                                title = stringResource(R.string.archive_load_error_title, selectedYear),
+                                subtitle = stringResource(R.string.archive_load_error_subtitle),
+                                onRetry = { viewModel.refresh() }
+                            )
                         } else if (allSessions.isEmpty() && !isCurrentYear) {
                             // The selected archive year has no sessions registered at all
                             EmptyStateView(
                                 isSearchActive = false,
                                 title = stringResource(R.string.empty_archive_title, selectedYear),
                                 subtitle = stringResource(R.string.empty_archive_subtitle)
+                            )
+                        } else if (allSessions.isEmpty() && isCurrentYear) {
+                            // First launch offline
+                            EmptyStateView(
+                                isSearchActive = false,
+                                title = stringResource(R.string.empty_title),
+                                subtitle = stringResource(R.string.empty_subtitle),
+                                onRetry = { viewModel.refresh() }
                             )
                         } else {
                             EmptyStateView(
@@ -402,7 +446,8 @@ fun EmptyStateView(
     isSearchActive: Boolean,
     onClearFilters: () -> Unit = {},
     title: String? = null,
-    subtitle: String? = null
+    subtitle: String? = null,
+    onRetry: (() -> Unit)? = null,
 ) {
     Box(
         contentAlignment = Alignment.Center,
@@ -435,6 +480,11 @@ fun EmptyStateView(
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(onClick = onClearFilters) {
                     Text(stringResource(R.string.reset_filters))
+                }
+            } else if (onRetry != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = onRetry) {
+                    Text(stringResource(R.string.retry))
                 }
             }
         }

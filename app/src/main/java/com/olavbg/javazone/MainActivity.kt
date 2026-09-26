@@ -72,11 +72,12 @@ class MainActivity : ComponentActivity() {
         val reminderManager = ReminderManager(this)
         val repository = SessionRepository(api, db.sessionDao(), reminderManager, settingsRepository)
 
+        val networkMonitor = com.olavbg.javazone.util.NetworkMonitor(this)
         // Create the shared TimelineViewModel here (same store/key as JavaZoneApp uses), so
         // its isLoading flag can drive the splash and the initial load starts early.
         val timelineViewModel: TimelineViewModel = ViewModelProvider(
             this,
-            TimelineViewModelFactory(repository, settingsRepository)
+            TimelineViewModelFactory(repository, settingsRepository, networkMonitor)
         )[TimelineViewModel::class.java]
 
         // Hold the system splash while data is actually loading, with a hard 3 s cap
