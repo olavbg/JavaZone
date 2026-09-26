@@ -93,6 +93,24 @@ fun resolveVideoUrl(url: String): String {
     }
 }
 
+private val VIMEO_ID_REGEX = Regex("""(?:vimeo\.com/(?:video/|channels/[^/]+/)?|^)(\d+)""")
+private val YOUTUBE_ID_REGEX = Regex("""(?:youtube\.com/(?:watch\?v=|embed/)|youtu\.be/)([\w-]+)""")
+
+fun resolveVideoEmbedUrl(url: String): String {
+    val trimmed = url.trim()
+    val vimeoMatch = VIMEO_ID_REGEX.find(trimmed)
+    if (vimeoMatch != null) {
+        val id = vimeoMatch.groupValues[1]
+        return "https://player.vimeo.com/video/$id?autoplay=1"
+    }
+    val youtubeMatch = YOUTUBE_ID_REGEX.find(trimmed)
+    if (youtubeMatch != null) {
+        val id = youtubeMatch.groupValues[1]
+        return "https://www.youtube.com/embed/$id?autoplay=1"
+    }
+    return resolveVideoUrl(trimmed)
+}
+
 fun resolveSpeakerImageUrl(url: String): String {
     return when {
         url.startsWith("http://") || url.startsWith("https://") -> url

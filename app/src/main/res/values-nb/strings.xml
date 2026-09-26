@@ -113,6 +113,8 @@
     <string name="session_title">Foredrag</string>
     <string name="session_finished">Dette foredraget er allerede avsluttet</string>
     <string name="watch_recording">Se videoopptak</string>
+    <string name="close_video">Lukk video</string>
+    <string name="open_external_video">Åpne i nettleser</string>
     <string name="live_banner">Går nå i %1$s – %2$d min igjen</string>
     <string name="starts_banner">Starter om %1$d minutter i %2$s</string>
     <string name="recording_from_year">Opptak fra JavaZone %1$d</string>

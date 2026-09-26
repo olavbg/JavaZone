@@ -53,6 +53,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,6 +72,7 @@ import com.olavbg.javazone.R
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.ui.components.FormatBadge
+import com.olavbg.javazone.ui.components.InlineVideoPlayer
 import com.olavbg.javazone.ui.components.resolveVideoUrl
 import com.olavbg.javazone.ui.components.sharedElementModifier
 import com.olavbg.javazone.ui.theme.FavoriteRed
@@ -113,6 +115,7 @@ fun SessionDetailScreen(
 
     val offset by settingsRepository.simulatedTimeOffset.collectAsState(initial = 0L)
     var simulatedTime by remember { mutableStateOf(Instant.now().plusMillis(offset)) }
+    var isPlayingVideo by rememberSaveable(sessionId) { mutableStateOf(false) }
 
     // Update time when offset changes or when screen resumes
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -244,18 +247,9 @@ fun SessionDetailScreen(
                                         color = MaterialTheme.colorScheme.onErrorContainer
                                     )
                                     
-                                    if (s.videoUrl != null) {
-                                        val context = LocalContext.current
+                                    if (s.videoUrl != null && !isPlayingVideo) {
                                         Surface(
-                                            onClick = {
-                                                try {
-                                                    val videoUrl = resolveVideoUrl(s.videoUrl)
-                                                    val intent = Intent(Intent.ACTION_VIEW, videoUrl.toUri()).apply {
-                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                    }
-                                                    context.startActivity(intent)
-                                                } catch (_: Exception) {}
-                                            },
+                                            onClick = { isPlayingVideo = true },
                                             shape = RoundedCornerShape(8.dp),
                                             color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
                                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.2f)),
@@ -283,6 +277,25 @@ fun SessionDetailScreen(
                                     }
                                 }
                             }
+                        }
+                        if (isPlayingVideo && !s.videoUrl.isNullOrEmpty()) {
+                            val context = LocalContext.current
+                            InlineVideoPlayer(
+                                videoUrl = s.videoUrl,
+                                onClose = { isPlayingVideo = false },
+                                onOpenExternal = {
+                                    try {
+                                        val videoUrl = resolveVideoUrl(s.videoUrl)
+                                        val intent = Intent(Intent.ACTION_VIEW, videoUrl.toUri()).apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {}
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 16.dp, bottom = 8.dp, start = 20.dp, end = 20.dp)
+                            )
                         }
                     } else if (showLiveBanners && isLive) {
                         val minutesRemaining = Duration.between(simulatedTime, endTime).toMinutes().coerceAtLeast(0)
@@ -335,57 +348,68 @@ fun SessionDetailScreen(
                         }
                     } else if (!s.videoUrl.isNullOrEmpty()) {
                         val context = LocalContext.current
-                        Surface(
-                            onClick = {
-                                try {
-                                    val videoUrl = resolveVideoUrl(s.videoUrl)
-                                    val intent = Intent(Intent.ACTION_VIEW, videoUrl.toUri()).apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    context.startActivity(intent)
-                                } catch (_: Exception) {}
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 20.dp, bottom = 12.dp, start = 20.dp, end = 20.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                        if (isPlayingVideo) {
+                            InlineVideoPlayer(
+                                videoUrl = s.videoUrl,
+                                onClose = { isPlayingVideo = false },
+                                onOpenExternal = {
+                                    try {
+                                        val videoUrl = resolveVideoUrl(s.videoUrl)
+                                        val intent = Intent(Intent.ACTION_VIEW, videoUrl.toUri()).apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {}
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 20.dp, bottom = 12.dp, start = 20.dp, end = 20.dp)
+                            )
+                        } else {
+                            Surface(
+                                onClick = { isPlayingVideo = true },
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 20.dp, bottom = 12.dp, start = 20.dp, end = 20.dp)
                             ) {
-                                Icon(
-                                    Icons.Default.VideoLibrary,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(36.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.watch_recording),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.VideoLibrary,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(36.dp),
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
-                                    if (effectiveYear != SessionRepository.CURRENT_YEAR) {
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = stringResource(R.string.recording_from_year, effectiveYear),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                            text = stringResource(R.string.watch_recording),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
                                         )
+                                        if (effectiveYear != SessionRepository.CURRENT_YEAR) {
+                                            Text(
+                                                text = stringResource(R.string.recording_from_year, effectiveYear),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                            )
+                                        }
                                     }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Icon(
+                                        Icons.Default.PlayCircle,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(28.dp),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                    )
                                 }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Icon(
-                                    Icons.Default.ChevronRight,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
-                                )
                             }
                         }
                     }

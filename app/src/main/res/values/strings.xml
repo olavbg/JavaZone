@@ -113,6 +113,8 @@
     <string name="session_title">Talk</string>
     <string name="session_finished">This talk has already ended</string>
     <string name="watch_recording">Watch recording</string>
+    <string name="close_video">Close video</string>
+    <string name="open_external_video">Open in browser</string>
     <string name="live_banner">Happening now in %1$s &#8211; %2$d min left</string>
     <string name="starts_banner">Starts in %1$d minutes in %2$s</string>
     <string name="recording_from_year">Recording from JavaZone %1$d</string>
