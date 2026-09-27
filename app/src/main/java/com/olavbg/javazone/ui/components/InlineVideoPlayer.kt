@@ -62,7 +62,7 @@ private class CustomViewInfo(
     val callback: WebChromeClient.CustomViewCallback
 )
 
-private class PlaybackBridge(private val onUpdate: (Float) -> Unit) {
+class PlaybackBridge(private val onUpdate: (Float) -> Unit) {
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
     @android.webkit.JavascriptInterface

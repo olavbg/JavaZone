@@ -114,12 +114,13 @@ fun resolveVideoEmbedUrl(url: String, startSeconds: Int = 0): String {
 }
 
 fun resolveSpeakerImageUrl(url: String): String {
+    val secureUrl = if (url.startsWith("http://")) url.replaceFirst("http://", "https://") else url
     return when {
-        url.startsWith("http://") || url.startsWith("https://") -> url
-        url.startsWith("//") -> "https:$url"
-        url.startsWith("/") -> "https://javazone.no$url"
-        url.contains(".") -> "https://$url"
-        else -> url
+        secureUrl.startsWith("https://") -> secureUrl
+        secureUrl.startsWith("//") -> "https:$secureUrl"
+        secureUrl.startsWith("/") -> "https://javazone.no$secureUrl"
+        secureUrl.contains(".") -> "https://$secureUrl"
+        else -> secureUrl
     }
 }
 

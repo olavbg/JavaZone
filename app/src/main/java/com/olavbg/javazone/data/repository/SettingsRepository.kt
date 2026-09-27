@@ -41,7 +41,7 @@ class SettingsRepository(
 ) {
 
     // Convenience constructor used by the app; tests can inject a JVM DataStore instead.
-    constructor(context: Context) : this(context.dataStore, context)
+    constructor(context: Context) : this(context.applicationContext.dataStore, context.applicationContext)
 
     companion object {
         val APP_LANGUAGE_KEY = stringPreferencesKey("app_language")

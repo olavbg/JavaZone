@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -429,7 +430,9 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
         // Wait until the current year's days are known before deciding whether the saved day
         // still exists (an updated schedule may have renamed/removed a day). The day is set
         // before this wait so the loaded lists are derived from the restored day.
-        val validDays = availableDays.first { it.isNotEmpty() }
+        val validDays = withTimeoutOrNull(4000L) {
+            availableDays.first { it.isNotEmpty() }
+        } ?: return
         val restoredDay = _selectedDay.value ?: return
         if (restoredDay !in validDays) {
             // Saved day is gone: fall back to today when there is one, else no day filter.
@@ -448,7 +451,9 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
 
         // Day is valid; drop any saved room/format/language that vanished for that day, and
         // persist the (possibly reduced) selection so it doesn't reappear next launch.
-        daySessions.first { it.isNotEmpty() }
+        withTimeoutOrNull(2000L) {
+            daySessions.first { it.isNotEmpty() }
+        } ?: return
         var changed = false
         val formats = availableFormats.value
         if (_selectedFormat.value != null && _selectedFormat.value !in formats) {

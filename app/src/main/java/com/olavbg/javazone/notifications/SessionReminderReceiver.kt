@@ -40,9 +40,14 @@ class SessionReminderReceiver : BroadcastReceiver() {
 
         showNotification(localizedContext, sessionId, title, room, startTimeFormatted)
 
+        val pendingResult = goAsync()
+        val appContext = context.applicationContext
         CoroutineScope(Dispatchers.IO).launch {
-            runCatching {
-                SettingsRepository(context).markSessionReminderFired(sessionId)
+            try {
+                SettingsRepository(appContext).markSessionReminderFired(sessionId)
+            } catch (_: Exception) {
+            } finally {
+                pendingResult.finish()
             }
         }
     }

@@ -3,7 +3,6 @@ package com.olavbg.javazone.notifications
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import androidx.room.Room
 import com.olavbg.javazone.data.local.AppDatabase
 import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.data.repository.SessionRepository
@@ -25,13 +24,7 @@ class BootReceiver : BroadcastReceiver() {
     }
 
     private fun rescheduleAlarms(context: Context, pendingResult: PendingResult) {
-        val database = Room.databaseBuilder(
-            context.applicationContext,
-            AppDatabase::class.java,
-            "javazone.db"
-        ).fallbackToDestructiveMigration(dropAllTables = true)
-            .build()
-        
+        val database = AppDatabase.getInstance(context)
         val reminderManager = ReminderManager(context)
         val settingsRepository = SettingsRepository(context)
         

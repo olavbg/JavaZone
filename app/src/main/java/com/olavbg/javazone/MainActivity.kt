@@ -18,7 +18,6 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModelProvider
-import androidx.room.Room
 import androidx.activity.SystemBarStyle
 import com.olavbg.javazone.data.local.AppDatabase
 import com.olavbg.javazone.data.remote.SleepingPillApi
@@ -58,21 +57,18 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        val db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "javazone.db")
-            .addMigrations(AppDatabase.MIGRATION_3_4)
-            .fallbackToDestructiveMigration(dropAllTables = true)
-            .build()
+        val db = AppDatabase.getInstance(applicationContext)
         val retrofit = Retrofit.Builder()
             .baseUrl(SleepingPillApi.BASE_URL)
             .addConverterFactory(MoshiConverterFactory.create())
             .build()
         val api = retrofit.create(SleepingPillApi::class.java)
         
-        val settingsRepository = SettingsRepository(this)
-        val reminderManager = ReminderManager(this)
+        val settingsRepository = SettingsRepository(applicationContext)
+        val reminderManager = ReminderManager(applicationContext)
         val repository = SessionRepository(api, db.sessionDao(), reminderManager, settingsRepository)
 
-        val networkMonitor = com.olavbg.javazone.util.NetworkMonitor(this)
+        val networkMonitor = com.olavbg.javazone.util.NetworkMonitor(applicationContext)
         // Create the shared TimelineViewModel here (same store/key as JavaZoneApp uses), so
         // its isLoading flag can drive the splash and the initial load starts early.
         val timelineViewModel: TimelineViewModel = ViewModelProvider(

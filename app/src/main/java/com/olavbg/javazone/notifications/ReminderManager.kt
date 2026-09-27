@@ -83,9 +83,10 @@ suspend fun handleConferenceDoneReminder(
     }
 }
 
-class ReminderManager(private val context: Context) : ReminderScheduler {
+class ReminderManager(context: Context) : ReminderScheduler {
 
-    private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+    private val context = context.applicationContext
+    private val alarmManager = this.context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     override fun scheduleReminder(session: Session, leadTimeMinutes: Int, timeOffsetMillis: Long) {
         val pendingIntent = buildPendingIntent(session)

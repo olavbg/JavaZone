@@ -40,3 +40,9 @@
 -keep class com.olavbg.javazone.model.** { *; }
 -keep class com.olavbg.javazone.data.remote.** { *; }
 -keep class com.olavbg.javazone.data.local.** { *; }
+
+# WebView JavascriptInterface
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+-keep class com.olavbg.javazone.ui.components.PlaybackBridge { *; }
