@@ -60,14 +60,14 @@
     <string name="about_paragraph_1">This is a completely unofficial app, made by a JavaZone fan whose hobby project has taken on a life of its own. The goal is to explore new technologies in my spare time, and to play around with AI.</string>
     <string name="about_paragraph_2">Yes, the app is mostly vibe-coded: the AI assistants have done the typing while I stood behind them saying &#8220;Looks good!&#8221;. Most of the time it works surprisingly well. The rest of the time I&#8217;m glad this is only a hobby project.</string>
     <string name="about_paragraph_3">Without JavaZone and JavaBin&#8217;s open APIs, this would just have been a good idea with no content. Thanks for sharing!</string>
-    <string name="about_paragraph_4">Enjoying the app and want to support its development? I&#8217;d appreciate a small contribution &#8211; either via Vipps or &#8220;Buy Me a Coffee&#8221;:</string>
+    <string name="about_paragraph_4">Enjoying the app and want to support its development? I&#8217;d appreciate a small, optional contribution:</string>
     <string name="about_open_source_body">The code is open! Suggestions, bug reports and pull requests are welcome.</string>
     <string name="about_open_source_link">github.com/olavbg/JavaZone</string>
     <string name="about_privacy_paragraph">Your favorites and settings are stored only on your device, and no analytics or tracking are used. The app fetches the conference schedule from the public JavaZone API.</string>
 
     <!-- Donation dialog -->
     <string name="donation_dialog_title">What a year!</string>
-    <string name="donation_dialog_text">JavaZone %1$d is over. Did you like the app and want to support further development? I&#8217;d appreciate a small contribution &#8211; either via Vipps or &#8220;Buy Me a Coffee&#8221;:</string>
+    <string name="donation_dialog_text">JavaZone %1$d is over. Did you like the app and want to support further development? I&#8217;d appreciate a small, optional contribution:</string>
 
     <!-- Notification permission prompt -->
     <string name="notification_prompt_title">Want reminders?</string>
@@ -106,6 +106,12 @@
     <string name="reset_room">Clear room</string>
     <string name="show_filters">Show filters</string>
     <string name="hide_filters">Hide filters</string>
+    <string name="filters">Filters</string>
+    <string name="favorite_reminder_hint">Added to favorites! You\'ll get a reminder %1$d min before it starts.</string>
+    <string name="change_lead_time">Settings</string>
+    <string name="archive_hint_title">Conference archive</string>
+    <string name="archive_hint_text">Tap here to explore talks and video recordings from previous years.</string>
+    <string name="got_it">Got it</string>
 
     <!-- Session card -->
     <string name="minutes_left">%d min left</string>

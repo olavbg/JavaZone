@@ -116,9 +116,13 @@ class SettingsRepositoryTest {
 
         repository.markNotificationPromptShown()
         repository.dismissBatteryHint()
+        repository.dismissFavoriteHint()
+        repository.dismissYearArchiveHint()
 
         assertTrue(repository.notificationPromptShown.first())
         assertTrue(repository.batteryHintDismissed.first())
+        assertTrue(repository.favoriteHintDismissed.first())
+        assertTrue(repository.yearArchiveHintDismissed.first())
     }
 
     @Test

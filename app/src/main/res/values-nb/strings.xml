@@ -60,14 +60,14 @@
     <string name="about_paragraph_1">Dette er en helt uoffisiell app, laget av en JavaZone-fan med et hobbyprosjekt som har fått eget liv. Målet er å utforske nye teknologier på fritiden, og å leke med AI.</string>
     <string name="about_paragraph_2">Ja, appen er hovedsakelig vibe-kodet: AI-assistentene har banket på tastaturet mens jeg har stått bak og sagt «Det ser bra ut!». Mesteparten av tiden fungerer det overraskende bra. Resten av tiden er jeg glad for at dette kun er et hobbyprosjekt.</string>
     <string name="about_paragraph_3">Uten JavaZone og JavaBin sine åpne API-er ville dette bare vært en god idé uten innhold. Takk for at dere deler!</string>
-    <string name="about_paragraph_4">Liker du appen og har du lyst til å støtte videreutviklingen? Da setter jeg pris på et lite bidrag – enten via Vipps eller «Buy Me a Coffee»:</string>
+    <string name="about_paragraph_4">Liker du appen og har du lyst til å støtte videreutviklingen? Da setter jeg pris på et lite, valgfritt bidrag:</string>
     <string name="about_open_source_body">Koden er åpen! Forslag, feilrapporter og pull requests er velkomne.</string>
     <string name="about_open_source_link">github.com/olavbg/JavaZone</string>
     <string name="about_privacy_paragraph">Favoritter og innstillinger lagres kun på enheten din, og det brukes ingen analyse- eller sporingsverktøy. Appen henter foredragsprogrammet fra det offentlige JavaZone-API-et.</string>
 
     <!-- Donation dialog -->
     <string name="donation_dialog_title">Takk for i år!</string>
-    <string name="donation_dialog_text">JavaZone %1$d er over. Likte du appen, og har du lyst til å støtte videreutviklingen? Da setter jeg pris på et lite bidrag – enten via Vipps eller «Buy Me a Coffee»:</string>
+    <string name="donation_dialog_text">JavaZone %1$d er over. Likte du appen, og har du lyst til å støtte videreutviklingen? Da setter jeg pris på et lite, valgfritt bidrag:</string>
 
     <!-- Notification permission prompt -->
     <string name="notification_prompt_title">Vil du ha påminnelser?</string>
@@ -106,6 +106,12 @@
     <string name="reset_room">Nullstill rom</string>
     <string name="show_filters">Vis filtre</string>
     <string name="hide_filters">Skjul filtre</string>
+    <string name="filters">Filtre</string>
+    <string name="favorite_reminder_hint">Lagt til i favoritter! Du får påminnelse %1$d min før start.</string>
+    <string name="change_lead_time">Innstillinger</string>
+    <string name="archive_hint_title">Historisk arkiv</string>
+    <string name="archive_hint_text">Trykk her for å se programmer og videoopptak fra tidligere år.</string>
+    <string name="got_it">Skjønner</string>
 
     <!-- Session card -->
     <string name="minutes_left">%d min igjen</string>

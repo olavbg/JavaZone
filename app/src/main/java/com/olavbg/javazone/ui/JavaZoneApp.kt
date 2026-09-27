@@ -21,13 +21,24 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -38,9 +49,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -87,24 +100,11 @@ fun JavaZoneApp(
 
     var showNotificationPrompt by remember { mutableStateOf(false) }
     val promptShown by settingsRepository.notificationPromptShown.collectAsState(initial = true)
-    val favoriteCount by repository.favoriteCount.collectAsState(initial = null)
-    var previousFavoriteCount by remember { mutableStateOf<Int?>(null) }
-
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { }
-
-    LaunchedEffect(favoriteCount, promptShown) {
-        val current = favoriteCount ?: return@LaunchedEffect
-        val previous = previousFavoriteCount
-        previousFavoriteCount = current
-        if (previous == null || current <= previous) return@LaunchedEffect
-        if (promptShown || !needsNotificationPermission(context)) return@LaunchedEffect
-        showNotificationPrompt = true
-        settingsRepository.markNotificationPromptShown()
-    }
-
-    var showDonationDialog by rememberSaveable { mutableStateOf(showDonationOnLaunch) }
+    val favoriteHintDismissed by settingsRepository.favoriteHintDismissed.collectAsState(initial = true)
+    val notificationsEnabled by settingsRepository.notificationsEnabled.collectAsState(initial = true)
+    val leadTime by settingsRepository.notificationLeadTime.collectAsState(initial = 10)
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     // Guards against double-fire/double-tap pushing duplicate destinations onto the back
     // stack (which would otherwise require extra back presses to unwind).
@@ -118,6 +118,60 @@ fun JavaZoneApp(
         rememberNavBackStack(NavDestination.Timeline)
     }
 
+    val favoriteCount by repository.favoriteCount.collectAsState(initial = null)
+    var previousFavoriteCount by remember { mutableStateOf<Int?>(null) }
+
+    fun showFavoriteHintSnackbar() {
+        scope.launch {
+            settingsRepository.dismissFavoriteHint()
+            val result = snackbarHostState.showSnackbar(
+                message = context.getString(R.string.favorite_reminder_hint, leadTime),
+                actionLabel = context.getString(R.string.change_lead_time),
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                val now = SystemClock.uptimeMillis()
+                if (now - lastPushAt >= 350L && backStack.lastOrNull() != NavDestination.Settings) {
+                    lastPushAt = now
+                    backStack.add(NavDestination.Settings)
+                }
+            }
+        }
+    }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            if (!favoriteHintDismissed && notificationsEnabled) {
+                showFavoriteHintSnackbar()
+            }
+        } else {
+            scope.launch {
+                settingsRepository.dismissFavoriteHint()
+            }
+        }
+    }
+
+    LaunchedEffect(favoriteCount, promptShown, favoriteHintDismissed, notificationsEnabled) {
+        val current = favoriteCount ?: return@LaunchedEffect
+        val previous = previousFavoriteCount
+        previousFavoriteCount = current
+        if (previous == null || current <= previous) return@LaunchedEffect
+
+        if (!promptShown && needsNotificationPermission(context)) {
+            showNotificationPrompt = true
+            settingsRepository.markNotificationPromptShown()
+            return@LaunchedEffect
+        }
+
+        if (!favoriteHintDismissed && !needsNotificationPermission(context) && notificationsEnabled) {
+            showFavoriteHintSnackbar()
+        }
+    }
+
+    var showDonationDialog by rememberSaveable { mutableStateOf(showDonationOnLaunch) }
+
     // Reanimate the background on every screen change; the background ignores calls
     // made while a reanimate is still playing.
     var isFirstNav by remember { mutableStateOf(true) }
@@ -130,10 +184,11 @@ fun JavaZoneApp(
     }
 
     SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {
-        NavDisplay(
-            backStack = backStack,
-            sceneStrategies = listOf(SinglePaneSceneStrategy()),
-            sharedTransitionScope = this,
+        Box(modifier = Modifier.fillMaxSize()) {
+            NavDisplay(
+                backStack = backStack,
+                sceneStrategies = listOf(SinglePaneSceneStrategy()),
+                sharedTransitionScope = this@SharedTransitionLayout,
             // A fade-through (out-then-in) gives the shared element hero the full ~700 ms it
             // needs to interpolate bounds, while avoiding the classic crossfade problem where
             // both screens are visible simultaneously and the shared title ghosts on top of
@@ -209,6 +264,31 @@ fun JavaZoneApp(
                     else -> NavEntry(key) { }
                 }
             })
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(
+                        bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 8.dp,
+                        start = 16.dp,
+                        end = 16.dp
+                    )
+            ) { snackbarData ->
+                Snackbar(
+                    snackbarData = snackbarData,
+                    shape = RoundedCornerShape(12.dp),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    actionColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                )
+            }
+        }
     }
 
     if (showDonationDialog) {
@@ -260,7 +340,10 @@ fun JavaZoneApp(
 
     if (showNotificationPrompt) {
         AlertDialog(
-            onDismissRequest = { showNotificationPrompt = false },
+            onDismissRequest = {
+                showNotificationPrompt = false
+                scope.launch { settingsRepository.dismissFavoriteHint() }
+            },
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 1f),
             title = { Text(stringResource(R.string.notification_prompt_title)) },
             text = {
@@ -279,7 +362,12 @@ fun JavaZoneApp(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showNotificationPrompt = false }) {
+                TextButton(
+                    onClick = {
+                        showNotificationPrompt = false
+                        scope.launch { settingsRepository.dismissFavoriteHint() }
+                    }
+                ) {
                     Text(stringResource(R.string.notification_prompt_dismiss))
                 }
             }

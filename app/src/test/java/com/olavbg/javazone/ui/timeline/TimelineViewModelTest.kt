@@ -15,6 +15,8 @@ import com.olavbg.javazone.support.testSpeaker
 import com.olavbg.javazone.support.zulu
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -95,6 +97,17 @@ class TimelineViewModelTest {
         return viewModel to settingsRepository
     }
 
+    /**
+     * Tears the ViewModel down deterministically. We cancel and join the job so all
+     * coroutines and completion handlers finish before the test scope and Main dispatcher
+     * are dismantled.
+     */
+    private suspend fun dispose(viewModel: TimelineViewModel) {
+        val job = viewModel.viewModelScope.coroutineContext[kotlinx.coroutines.Job]
+        job?.cancel()
+        job?.join()
+    }
+
     @Test
     fun timeline_isLoadedAtStartup() = runTest(mainDispatcherRule.testDispatcher) {
         val (viewModel, _) = buildViewModel()
@@ -109,7 +122,7 @@ class TimelineViewModelTest {
             setOf("cur-1", "cur-2", "cur-3"),
             viewModel.allSessions.first { it.isNotEmpty() }.map { it.id }.toSet()
         )
-        viewModel.viewModelScope.cancel()
+        dispose(viewModel)
     }
 
     @Test
@@ -123,7 +136,7 @@ class TimelineViewModelTest {
         assertEquals("Alt om Kotlin i produksjon", kotlinTalk.abstract)
         assertEquals("Room 1", kotlinTalk.room)
         assertTrue(kotlinTalk.speakers.any { it.name == "Ola Nordmann" })
-        viewModel.viewModelScope.cancel()
+        dispose(viewModel)
     }
 
     @Test
@@ -145,7 +158,7 @@ class TimelineViewModelTest {
             assertEquals("Et foredrag fra 2025 med fullstendige detaljer", session.abstract)
             assertEquals("https://vimeo.com/123456", session.videoUrl)
             assertTrue(session.speakers.any { it.name == "Ada Lovelace" })
-            viewModel.viewModelScope.cancel()
+            dispose(viewModel)
         }
 
     @Test
@@ -156,7 +169,7 @@ class TimelineViewModelTest {
             listOf(SessionRepository.CURRENT_YEAR),
             viewModel.availableYears.first { it.isNotEmpty() }
         )
-        viewModel.viewModelScope.cancel()
+        dispose(viewModel)
     }
 
     @Test
@@ -169,7 +182,7 @@ class TimelineViewModelTest {
 
         val ids = viewModel.sessions.first { it.map { s -> s.id } == listOf("cur-3") }.map { it.id }
         assertEquals(listOf("cur-3"), ids)
-        viewModel.viewModelScope.cancel()
+        dispose(viewModel)
     }
 
     @Test
@@ -182,7 +195,7 @@ class TimelineViewModelTest {
 
         val ids = viewModel.sessions.first { it.map { s -> s.id } == listOf("cur-2") }.map { it.id }
         assertEquals(listOf("cur-2"), ids)
-        viewModel.viewModelScope.cancel()
+        dispose(viewModel)
     }
 
     @Test
@@ -195,7 +208,7 @@ class TimelineViewModelTest {
 
         val ids = viewModel.sessions.first { it.map { s -> s.id } == listOf("cur-2") }.map { it.id }
         assertEquals(listOf("cur-2"), ids)
-        viewModel.viewModelScope.cancel()
+        dispose(viewModel)
     }
 
     @Test
@@ -208,7 +221,7 @@ class TimelineViewModelTest {
 
         val ids = viewModel.sessions.first { it.map { s -> s.id } == listOf("cur-1") }.map { it.id }
         assertEquals(listOf("cur-1"), ids)
-        viewModel.viewModelScope.cancel()
+        dispose(viewModel)
     }
 
     @Test
@@ -221,7 +234,7 @@ class TimelineViewModelTest {
 
         val ids = viewModel.sessions.first { it.map { s -> s.id } == listOf("cur-3") }.map { it.id }
         assertEquals(listOf("cur-3"), ids)
-        viewModel.viewModelScope.cancel()
+        dispose(viewModel)
     }
 
     @Test
@@ -238,7 +251,7 @@ class TimelineViewModelTest {
 
         val ids = viewModel.sessions.first { it.map { s -> s.id } == listOf("cur-1") }.map { it.id }
         assertEquals(listOf("cur-1"), ids)
-        viewModel.viewModelScope.cancel()
+        dispose(viewModel)
     }
 
     @Test
@@ -252,6 +265,6 @@ class TimelineViewModelTest {
 
         val ids = viewModel.sessions.first { it.map { s -> s.id } == listOf("cur-2") }.map { it.id }
         assertEquals(listOf("cur-2"), ids)
-        viewModel.viewModelScope.cancel()
+        dispose(viewModel)
     }
 }

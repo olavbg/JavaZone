@@ -55,6 +55,8 @@ class SettingsRepository(
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val NOTIFICATION_PROMPT_SHOWN = booleanPreferencesKey("notification_prompt_shown")
         val BATTERY_HINT_DISMISSED = booleanPreferencesKey("battery_hint_dismissed")
+        val FAVORITE_HINT_DISMISSED = booleanPreferencesKey("favorite_hint_dismissed")
+        val YEAR_ARCHIVE_HINT_DISMISSED = booleanPreferencesKey("year_archive_hint_dismissed")
         val FILTERS_EXPANDED = booleanPreferencesKey("filters_expanded")
         val TIMELINE_FILTER_YEAR = intPreferencesKey("timeline_filter_year")
         val TIMELINE_FILTER_DAY = stringPreferencesKey("timeline_filter_day")
@@ -159,6 +161,30 @@ class SettingsRepository(
         }
         .map { preferences ->
             preferences[PreferencesKeys.BATTERY_HINT_DISMISSED] ?: false
+        }
+
+    val favoriteHintDismissed: Flow<Boolean> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[PreferencesKeys.FAVORITE_HINT_DISMISSED] ?: false
+        }
+
+    val yearArchiveHintDismissed: Flow<Boolean> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[PreferencesKeys.YEAR_ARCHIVE_HINT_DISMISSED] ?: false
         }
 
     val filtersExpanded: Flow<Boolean> = dataStore.data
@@ -274,6 +300,18 @@ class SettingsRepository(
     suspend fun dismissBatteryHint() {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.BATTERY_HINT_DISMISSED] = true
+        }
+    }
+
+    suspend fun dismissFavoriteHint() {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.FAVORITE_HINT_DISMISSED] = true
+        }
+    }
+
+    suspend fun dismissYearArchiveHint() {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.YEAR_ARCHIVE_HINT_DISMISSED] = true
         }
     }
 

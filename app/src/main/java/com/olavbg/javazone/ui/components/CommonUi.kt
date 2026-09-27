@@ -96,17 +96,19 @@ fun resolveVideoUrl(url: String): String {
 private val VIMEO_ID_REGEX = Regex("""(?:vimeo\.com/(?:video/|channels/[^/]+/)?|^)(\d+)""")
 private val YOUTUBE_ID_REGEX = Regex("""(?:youtube\.com/(?:watch\?v=|embed/)|youtu\.be/)([\w-]+)""")
 
-fun resolveVideoEmbedUrl(url: String): String {
+fun resolveVideoEmbedUrl(url: String, startSeconds: Int = 0): String {
     val trimmed = url.trim()
     val vimeoMatch = VIMEO_ID_REGEX.find(trimmed)
     if (vimeoMatch != null) {
         val id = vimeoMatch.groupValues[1]
-        return "https://player.vimeo.com/video/$id?autoplay=1"
+        val timeParam = if (startSeconds > 0) "#t=${startSeconds}s" else ""
+        return "https://player.vimeo.com/video/$id?autoplay=1$timeParam"
     }
     val youtubeMatch = YOUTUBE_ID_REGEX.find(trimmed)
     if (youtubeMatch != null) {
         val id = youtubeMatch.groupValues[1]
-        return "https://www.youtube.com/embed/$id?autoplay=1"
+        val timeParam = if (startSeconds > 0) "&start=$startSeconds" else ""
+        return "https://www.youtube.com/embed/$id?autoplay=1$timeParam"
     }
     return resolveVideoUrl(trimmed)
 }

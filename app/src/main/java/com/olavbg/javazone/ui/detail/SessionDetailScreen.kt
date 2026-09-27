@@ -1,7 +1,19 @@
 package com.olavbg.javazone.ui.detail
 
 import android.content.Intent
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +25,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.ui.draw.clipToBounds
+import com.olavbg.javazone.model.BackgroundMode
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -50,6 +64,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -117,6 +132,9 @@ fun SessionDetailScreen(
     val offset by settingsRepository.simulatedTimeOffset.collectAsState(initial = 0L)
     var simulatedTime by remember { mutableStateOf(Instant.now().plusMillis(offset)) }
     var isPlayingVideo by rememberSaveable(sessionId) { mutableStateOf(false) }
+    var lastPlaybackPosition by remember(sessionId) { mutableFloatStateOf(0f) }
+    val backgroundMode by settingsRepository.backgroundMode.collectAsState(initial = BackgroundMode.Animated)
+    val animationsEnabled = backgroundMode == BackgroundMode.Animated
 
     // Update time when offset changes or when screen resumes
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -223,6 +241,63 @@ fun SessionDetailScreen(
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
                 ) {
+                    // Header Area
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                            .padding(vertical = 24.dp, horizontal = 20.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = s.title,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Black,
+                                lineHeight = 32.sp,
+                                modifier = Modifier.sharedElementModifier(sharedScope, "session-title-${s.id}")
+                            )
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                if (sharedScope != null) {
+                                    FormatBadge(
+                                        format = s.format,
+                                        modifier = Modifier.sharedElementModifier(sharedScope, "session-format-${s.id}")
+                                    )
+                                } else {
+                                    FormatBadge(format = s.format)
+                                }
+                                if (s.language != null) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            val isNorwegian = s.language.contains("no", ignoreCase = true)
+                                            Text(
+                                                text = if (isNorwegian) "🇳🇴" else "🇬🇧",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                modifier = Modifier.padding(start = 10.dp)
+                                            )
+                                            Text(
+                                                text = if (isNorwegian) stringResource(R.string.language_norwegian) else stringResource(R.string.language_english),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Medium,
+                                                modifier = Modifier.padding(start = 4.dp, end = 10.dp, top = 6.dp, bottom = 6.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     if (showLiveBanners && isFinished) {
                         Surface(
                             color = MaterialTheme.colorScheme.errorContainer,
@@ -247,7 +322,22 @@ fun SessionDetailScreen(
                                         color = MaterialTheme.colorScheme.onErrorContainer
                                     )
                                     
-                                    if (s.videoUrl != null && !isPlayingVideo) {
+                                    AnimatedVisibility(
+                                        visible = s.videoUrl != null && !isPlayingVideo,
+                                        modifier = Modifier.clipToBounds(),
+                                        enter = if (animationsEnabled) {
+                                            fadeIn(animationSpec = tween(180)) + expandVertically(
+                                                animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                                expandFrom = Alignment.Top
+                                            )
+                                        } else EnterTransition.None,
+                                        exit = if (animationsEnabled) {
+                                            fadeOut(animationSpec = tween(140)) + shrinkVertically(
+                                                animationSpec = tween(180, easing = FastOutLinearInEasing),
+                                                shrinkTowards = Alignment.Top
+                                            )
+                                        } else ExitTransition.None
+                                    ) {
                                         Surface(
                                             onClick = { isPlayingVideo = true },
                                             shape = RoundedCornerShape(8.dp),
@@ -278,15 +368,33 @@ fun SessionDetailScreen(
                                 }
                             }
                         }
-                        if (isPlayingVideo && !s.videoUrl.isNullOrEmpty()) {
+                        AnimatedVisibility(
+                            visible = isPlayingVideo && !s.videoUrl.isNullOrEmpty(),
+                            modifier = Modifier.clipToBounds(),
+                            enter = if (animationsEnabled) {
+                                fadeIn(animationSpec = tween(200, delayMillis = 40)) + expandVertically(
+                                    animationSpec = tween(260, easing = FastOutSlowInEasing),
+                                    expandFrom = Alignment.Top
+                                )
+                            } else EnterTransition.None,
+                            exit = if (animationsEnabled) {
+                                fadeOut(animationSpec = tween(150)) + shrinkVertically(
+                                    animationSpec = tween(220, easing = FastOutLinearInEasing),
+                                    shrinkTowards = Alignment.Top
+                                )
+                            } else ExitTransition.None
+                        ) {
+                            val videoUrl = s.videoUrl.orEmpty()
                             val context = LocalContext.current
                             InlineVideoPlayer(
-                                videoUrl = s.videoUrl,
+                                videoUrl = videoUrl,
+                                initialPlaybackSeconds = lastPlaybackPosition,
+                                onTimeUpdate = { lastPlaybackPosition = it },
                                 onClose = { isPlayingVideo = false },
                                 onOpenExternal = {
                                     try {
-                                        val videoUrl = resolveVideoUrl(s.videoUrl)
-                                        val intent = Intent(Intent.ACTION_VIEW, videoUrl.toUri()).apply {
+                                        val resolved = resolveVideoUrl(videoUrl)
+                                        val intent = Intent(Intent.ACTION_VIEW, resolved.toUri()).apply {
                                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                         }
                                         context.startActivity(intent)
@@ -348,123 +456,106 @@ fun SessionDetailScreen(
                         }
                     } else if (!s.videoUrl.isNullOrEmpty()) {
                         val context = LocalContext.current
-                        if (isPlayingVideo) {
-                            InlineVideoPlayer(
-                                videoUrl = s.videoUrl,
-                                onClose = { isPlayingVideo = false },
-                                onOpenExternal = {
-                                    try {
-                                        val videoUrl = resolveVideoUrl(s.videoUrl)
-                                        val intent = Intent(Intent.ACTION_VIEW, videoUrl.toUri()).apply {
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
-                                        context.startActivity(intent)
-                                    } catch (_: Exception) {}
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 20.dp, bottom = 12.dp, start = 20.dp, end = 20.dp)
-                            )
-                        } else {
-                            Surface(
-                                onClick = { isPlayingVideo = true },
-                                shape = RoundedCornerShape(10.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 20.dp, bottom = 12.dp, start = 20.dp, end = 20.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        Icons.Default.VideoLibrary,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(36.dp),
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = stringResource(R.string.watch_recording),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        AnimatedContent(
+                            targetState = isPlayingVideo,
+                            modifier = Modifier.fillMaxWidth().clipToBounds(),
+                            transitionSpec = {
+                                if (!animationsEnabled) {
+                                    EnterTransition.None togetherWith ExitTransition.None
+                                } else if (targetState) {
+                                    (fadeIn(animationSpec = tween(200, delayMillis = 50)) +
+                                        expandVertically(
+                                            animationSpec = tween(260, easing = FastOutSlowInEasing),
+                                            expandFrom = Alignment.Top
+                                        ))
+                                        .togetherWith(
+                                            fadeOut(animationSpec = tween(120)) +
+                                                shrinkVertically(
+                                                    animationSpec = tween(160, easing = FastOutLinearInEasing),
+                                                    shrinkTowards = Alignment.Top
+                                                )
                                         )
-                                        if (effectiveYear != SessionRepository.CURRENT_YEAR) {
-                                            Text(
-                                                text = stringResource(R.string.recording_from_year, effectiveYear),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                                            )
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Icon(
-                                        Icons.Default.PlayCircle,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Header Area
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                            .padding(vertical = 24.dp, horizontal = 20.dp)
-                    ) {
-                        Column {
-                            Text(
-                                text = s.title,
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Black,
-                                lineHeight = 32.sp,
-                                modifier = Modifier.sharedElementModifier(sharedScope, "session-title-${s.id}")
-                            )
-                            
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                if (sharedScope != null) {
-                                    FormatBadge(
-                                        format = s.format,
-                                        modifier = Modifier.sharedElementModifier(sharedScope, "session-format-${s.id}")
-                                    )
                                 } else {
-                                    FormatBadge(format = s.format)
+                                    (fadeIn(animationSpec = tween(180, delayMillis = 50)) +
+                                        expandVertically(
+                                            animationSpec = tween(200, easing = FastOutSlowInEasing),
+                                            expandFrom = Alignment.Top
+                                        ))
+                                        .togetherWith(
+                                            fadeOut(animationSpec = tween(140)) +
+                                                shrinkVertically(
+                                                    animationSpec = tween(220, easing = FastOutLinearInEasing),
+                                                    shrinkTowards = Alignment.Top
+                                                )
+                                        )
                                 }
-                                if (s.language != null) {
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                            },
+                            label = "SessionVideoPlayerTransition"
+                        ) { playing ->
+                            val videoUrl = s.videoUrl.orEmpty()
+                            if (playing) {
+                                InlineVideoPlayer(
+                                    videoUrl = videoUrl,
+                                    initialPlaybackSeconds = lastPlaybackPosition,
+                                    onTimeUpdate = { lastPlaybackPosition = it },
+                                    onClose = { isPlayingVideo = false },
+                                    onOpenExternal = {
+                                        try {
+                                            val resolved = resolveVideoUrl(videoUrl)
+                                            val intent = Intent(Intent.ACTION_VIEW, resolved.toUri()).apply {
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
+                                            context.startActivity(intent)
+                                        } catch (_: Exception) {}
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 16.dp, bottom = 4.dp, start = 20.dp, end = 20.dp)
+                                )
+                            } else {
+                                Surface(
+                                    onClick = { isPlayingVideo = true },
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 16.dp, bottom = 4.dp, start = 20.dp, end = 20.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            val isNorwegian = s.language.contains("no", ignoreCase = true)
+                                        Icon(
+                                            Icons.Default.VideoLibrary,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(36.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = if (isNorwegian) "🇳🇴" else "🇬🇧",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                modifier = Modifier.padding(start = 10.dp)
+                                                text = stringResource(R.string.watch_recording),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer
                                             )
-                                            Text(
-                                                text = if (isNorwegian) stringResource(R.string.language_norwegian) else stringResource(R.string.language_english),
-                                                style = MaterialTheme.typography.labelMedium,
-                                                fontWeight = FontWeight.Medium,
-                                                modifier = Modifier.padding(start = 4.dp, end = 10.dp, top = 6.dp, bottom = 6.dp)
-                                            )
+                                            if (effectiveYear != SessionRepository.CURRENT_YEAR) {
+                                                Text(
+                                                    text = stringResource(R.string.recording_from_year, effectiveYear),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                                )
+                                            }
                                         }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Icon(
+                                            Icons.Default.PlayCircle,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(28.dp),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                        )
                                     }
                                 }
                             }

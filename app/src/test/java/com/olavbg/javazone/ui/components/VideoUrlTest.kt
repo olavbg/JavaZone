@@ -46,4 +46,16 @@ class VideoUrlTest {
         val result = resolveVideoUrl("1008064975")
         assertEquals("https://vimeo.com/1008064975", result)
     }
+
+    @Test
+    fun resolvesVimeoWithStartSeconds() {
+        val result = resolveVideoEmbedUrl("https://vimeo.com/1008064975", startSeconds = 95)
+        assertEquals("https://player.vimeo.com/video/1008064975?autoplay=1#t=95s", result)
+    }
+
+    @Test
+    fun resolvesYouTubeWithStartSeconds() {
+        val result = resolveVideoEmbedUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ", startSeconds = 120)
+        assertEquals("https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&start=120", result)
+    }
 }

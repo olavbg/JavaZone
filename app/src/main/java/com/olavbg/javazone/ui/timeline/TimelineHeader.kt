@@ -45,6 +45,7 @@ import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Construction
 import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Replay
@@ -606,31 +607,33 @@ fun TimelineHeader(
                             availableLanguages.isNotEmpty() ||
                             availableRooms.isNotEmpty()
                     if (hasExpandableFilters) {
-                        val hasActiveFilters =
-                            selectedFormat != null || selectedLanguage != null || selectedRoom != null
-                        val isSelected = isFiltersExpanded || hasActiveFilters
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-                                .clickable { onFiltersExpandedChange(!isFiltersExpanded) },
-                            contentAlignment = Alignment.Center
+                        val activeFilterCount = listOfNotNull(selectedFormat, selectedLanguage, selectedRoom).size
+                        val isSelected = isFiltersExpanded || activeFilterCount > 0
+                        Surface(
+                            onClick = { onFiltersExpandedChange(!isFiltersExpanded) },
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant
+                            ),
+                            modifier = Modifier.size(32.dp)
                         ) {
-                            Box(modifier = Modifier.size(24.dp)) {
+                            Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    imageVector = if (isFiltersExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                    imageVector = Icons.Outlined.Tune,
                                     contentDescription = stringResource(
                                         if (isFiltersExpanded) R.string.hide_filters else R.string.show_filters
                                     ),
                                     tint = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
-                                if (!isFiltersExpanded && hasActiveFilters) {
+                                if (!isFiltersExpanded && activeFilterCount > 0) {
                                     Box(
                                         modifier = Modifier
                                             .align(Alignment.TopEnd)
-                                            .size(7.dp)
+                                            .padding(top = 4.dp, end = 4.dp)
+                                            .size(6.dp)
                                             .background(FavoriteRed, CircleShape)
                                             .border(1.dp, MaterialTheme.colorScheme.secondaryContainer, CircleShape)
                                     )

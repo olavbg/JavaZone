@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -61,7 +62,16 @@ private class CustomViewInfo(
     val callback: WebChromeClient.CustomViewCallback
 )
 
-private fun buildVideoHtml(embedUrl: String): String = """
+private class PlaybackBridge(private val onUpdate: (Float) -> Unit) {
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    @android.webkit.JavascriptInterface
+    fun onTimeUpdate(seconds: Float) {
+        mainHandler.post { onUpdate(seconds) }
+    }
+}
+
+private fun buildVideoHtml(embedUrl: String, initialSeconds: Float = 0f): String = """
     <!DOCTYPE html>
     <html>
     <head>
@@ -74,6 +84,7 @@ private fun buildVideoHtml(embedUrl: String): String = """
     </head>
     <body>
         <iframe
+            id="player"
             src="$embedUrl"
             width="100%"
             height="100%"
@@ -81,6 +92,63 @@ private fun buildVideoHtml(embedUrl: String): String = """
             allow="autoplay; fullscreen; picture-in-picture"
             allowfullscreen>
         </iframe>
+        <script>
+            var iframe = document.getElementById('player');
+            var initialSeconds = $initialSeconds;
+            var hasSeeked = false;
+
+            function postToPlayer(msg) {
+                try {
+                    if (iframe && iframe.contentWindow) {
+                        iframe.contentWindow.postMessage(JSON.stringify(msg), '*');
+                    }
+                } catch(e) {}
+            }
+
+            function setupPlayer() {
+                postToPlayer({ method: 'addEventListener', value: 'timeupdate' });
+                postToPlayer({ method: 'addEventListener', value: 'pause' });
+                postToPlayer({ method: 'addEventListener', value: 'finish' });
+                postToPlayer({ event: 'listening' });
+                if (initialSeconds > 0 && !hasSeeked) {
+                    postToPlayer({ method: 'setCurrentTime', value: initialSeconds });
+                    postToPlayer({ event: 'command', func: 'seekTo', args: [initialSeconds, true] });
+                }
+            }
+
+            window.addEventListener('message', function(event) {
+                try {
+                    var data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+                    if (!data) return;
+
+                    if (data.event === 'ready') {
+                        setupPlayer();
+                        if (initialSeconds > 0 && !hasSeeked) {
+                            hasSeeked = true;
+                            postToPlayer({ method: 'setCurrentTime', value: initialSeconds });
+                        }
+                    }
+
+                    if ((data.event === 'timeupdate' || data.event === 'playProgress') && data.data && typeof data.data.seconds === 'number') {
+                        if (window.AndroidPlayback) {
+                            window.AndroidPlayback.onTimeUpdate(data.data.seconds);
+                        }
+                    }
+
+                    if (data.event === 'infoDelivery' && data.info && typeof data.info.currentTime === 'number') {
+                        if (window.AndroidPlayback) {
+                            window.AndroidPlayback.onTimeUpdate(data.info.currentTime);
+                        }
+                    }
+                } catch(e) {}
+            });
+
+            iframe.addEventListener('load', function() {
+                setupPlayer();
+                setTimeout(setupPlayer, 1000);
+                setTimeout(setupPlayer, 2500);
+            });
+        </script>
     </body>
     </html>
 """.trimIndent()
@@ -91,9 +159,13 @@ fun InlineVideoPlayer(
     videoUrl: String,
     onClose: () -> Unit,
     onOpenExternal: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    initialPlaybackSeconds: Float = 0f,
+    onTimeUpdate: ((Float) -> Unit)? = null
 ) {
-    val embedUrl = remember(videoUrl) { resolveVideoEmbedUrl(videoUrl) }
+    val embedUrl = remember(videoUrl, initialPlaybackSeconds) {
+        resolveVideoEmbedUrl(videoUrl, initialPlaybackSeconds.toInt())
+    }
     var isLoading by remember { mutableStateOf(true) }
     var hasError by remember { mutableStateOf(false) }
     var customViewInfo by remember { mutableStateOf<CustomViewInfo?>(null) }
@@ -112,6 +184,7 @@ fun InlineVideoPlayer(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             webViewRef?.let { wv ->
+                wv.removeJavascriptInterface("AndroidPlayback")
                 wv.loadUrl("about:blank")
                 wv.stopLoading()
                 wv.destroy()
@@ -153,7 +226,7 @@ fun InlineVideoPlayer(
         }
     }
 
-    Column(modifier = modifier) {
+    Column(modifier = modifier.clipToBounds()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -179,6 +252,9 @@ fun InlineVideoPlayer(
                             allowFileAccess = false
                             allowContentAccess = false
                         }
+                        if (onTimeUpdate != null) {
+                            addJavascriptInterface(PlaybackBridge(onTimeUpdate), "AndroidPlayback")
+                        }
                         webViewClient = object : WebViewClient() {
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 if (!hasError) {
@@ -191,7 +267,12 @@ fun InlineVideoPlayer(
                                 request: WebResourceRequest?,
                                 error: WebResourceError?
                             ) {
-                                if (request?.isForMainFrame == true || request?.url?.toString()?.contains("vimeo") == true) {
+                                val reqUrl = request?.url?.toString().orEmpty()
+                                val isMainOrEmbed = request?.isForMainFrame == true ||
+                                    reqUrl.startsWith("https://player.vimeo.com/video/") ||
+                                    reqUrl.startsWith("https://www.youtube.com/embed/")
+
+                                if (isLoading && isMainOrEmbed) {
                                     hasError = true
                                     isLoading = false
                                 }
@@ -207,7 +288,7 @@ fun InlineVideoPlayer(
                                 customViewInfo = null
                             }
                         }
-                        loadDataWithBaseURL("https://javazone.no", buildVideoHtml(embedUrl), "text/html", "UTF-8", null)
+                        loadDataWithBaseURL("https://javazone.no", buildVideoHtml(embedUrl, initialPlaybackSeconds), "text/html", "UTF-8", null)
                         webViewRef = this
                     }
                 },
@@ -256,7 +337,7 @@ fun InlineVideoPlayer(
                         onClick = {
                             hasError = false
                             isLoading = true
-                            webViewRef?.loadDataWithBaseURL("https://javazone.no", buildVideoHtml(embedUrl), "text/html", "UTF-8", null)
+                            webViewRef?.loadDataWithBaseURL("https://javazone.no", buildVideoHtml(embedUrl, initialPlaybackSeconds), "text/html", "UTF-8", null)
                         },
                         shape = RoundedCornerShape(8.dp)
                     ) {
@@ -274,7 +355,10 @@ fun InlineVideoPlayer(
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(
-                onClick = onClose,
+                onClick = {
+                    webViewRef?.onPause()
+                    onClose()
+                },
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Icon(
