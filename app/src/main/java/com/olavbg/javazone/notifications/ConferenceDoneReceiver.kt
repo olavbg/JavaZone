@@ -11,13 +11,37 @@ import androidx.core.app.NotificationCompat
 import com.olavbg.javazone.MainActivity
 import com.olavbg.javazone.R
 import com.olavbg.javazone.data.repository.SessionRepository
+import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.util.AppLocale
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class ConferenceDoneReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         Log.d("JavaZoneNotifications", "ConferenceDoneReceiver fired")
         showConferenceDoneNotification(context)
+        claimYear(context)
+    }
+
+    /**
+     * The notification is up, so claim the year to keep later checks from posting a duplicate.
+     * The alarm already fired, so claiming must not gate the notification itself.
+     */
+    private fun claimYear(context: Context) {
+        val pendingResult = goAsync()
+        val appContext = context.applicationContext
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                SettingsRepository(appContext)
+                    .markConferenceDoneNotified(SessionRepository.CURRENT_YEAR)
+            } catch (e: Exception) {
+                Log.w("JavaZoneNotifications", "Could not claim the conference-done year", e)
+            } finally {
+                pendingResult.finish()
+            }
+        }
     }
 
     companion object {

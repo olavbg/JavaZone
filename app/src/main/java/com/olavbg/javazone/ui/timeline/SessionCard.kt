@@ -268,7 +268,7 @@ internal fun isSessionPast(session: Session, currentTime: Instant): Boolean {
     return currentTime.isAfter(end)
 }
 
-private fun calculateSessionProgress(session: Session, currentTime: Instant): Float {
+internal fun calculateSessionProgress(session: Session, currentTime: Instant): Float {
     val start = session.start ?: return 0f
     val end = session.end ?: return 0f
     val total = Duration.between(start, end).toMillis()
@@ -276,13 +276,13 @@ private fun calculateSessionProgress(session: Session, currentTime: Instant): Fl
     return if (total <= 0) 0f else (elapsed.toFloat() / total.toFloat()).coerceIn(0f, 1f)
 }
 
-private fun calculateRemainingMinutes(session: Session, currentTime: Instant): Long {
+internal fun calculateRemainingMinutes(session: Session, currentTime: Instant): Long {
     val end = session.end ?: return 0
     val remaining = Duration.between(currentTime, end).toMinutes()
     return if (remaining < 0) 0 else remaining
 }
 
-private fun calculateMinutesUntilStart(session: Session, currentTime: Instant): Long {
+internal fun calculateMinutesUntilStart(session: Session, currentTime: Instant): Long {
     val start = session.start ?: return 0
     val minutes = Duration.between(currentTime, start).toMinutes()
     return if (minutes < 0) 0 else minutes

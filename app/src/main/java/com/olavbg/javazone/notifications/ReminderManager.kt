@@ -12,63 +12,94 @@ import com.olavbg.javazone.model.Session
 import java.time.Instant
 
 /**
+ * The alarm-scheduling surface of [ReminderManager], separated so the scheduling decisions
+ * can be exercised without a real [AlarmManager].
+ */
+interface ReminderScheduler {
+    fun scheduleReminder(session: Session, leadTimeMinutes: Int, timeOffsetMillis: Long)
+    fun cancelReminder(session: Session)
+    fun scheduleConferenceDoneReminder(conferenceEndMillis: Long, timeOffsetMillis: Long)
+    fun cancelConferenceDoneReminder()
+    fun showConferenceDoneNow()
+}
+
+/**
+ * When a session reminder should fire in real wall-clock time, or null when it must not:
+ * an unparseable start time, or a moment that has already passed. A simulated clock ahead of
+ * real time shifts the alarm earlier so it still lands at the intended simulated moment.
+ */
+internal fun sessionReminderFireTimeMillis(
+    startTimeZulu: String,
+    leadTimeMinutes: Int,
+    timeOffsetMillis: Long,
+    nowMillis: Long
+): Long? {
+    val start = runCatching { Instant.parse(startTimeZulu).toEpochMilli() }.getOrNull() ?: return null
+    val fireTime = start - leadTimeMinutes * 60_000L - timeOffsetMillis
+    return if (fireTime <= nowMillis) null else fireTime
+}
+
+/** Same rule as [sessionReminderFireTimeMillis] for the "conference is over" notification. */
+internal fun conferenceDoneFireTimeMillis(
+    conferenceEndMillis: Long,
+    timeOffsetMillis: Long,
+    nowMillis: Long
+): Long? {
+    val fireTime = conferenceEndMillis - timeOffsetMillis
+    return if (fireTime <= nowMillis) null else fireTime
+}
+
+/**
  * Decides what to do about the "current conference is over" notification for a given
  * conference end time and simulated-time offset:
- * - end time still in the (simulated) future  -> schedule the alarm.
- * - end time already passed (real or simulated) -> post the notification right away,
- *   but only once per year.
+ * - end time still in the (simulated) future -> arm the alarm. The year is deliberately left
+ *   unclaimed, so that an alarm lost to a force stop or a missing exact-alarm permission is
+ *   still recovered by the next check.
+ * - end time already passed (real or simulated) -> post the notification right away, but only
+ *   once per year. [ConferenceDoneReceiver] claims the year when the armed alarm fires.
  */
 suspend fun handleConferenceDoneReminder(
-    reminderManager: ReminderManager,
+    reminderScheduler: ReminderScheduler,
     settingsRepository: SettingsRepository?,
     conferenceEndMillis: Long?,
     timeOffsetMillis: Long,
     year: Int,
+    nowMillis: Long = System.currentTimeMillis(),
 ) {
     if (conferenceEndMillis == null) {
-        reminderManager.cancelConferenceDoneReminder()
+        reminderScheduler.cancelConferenceDoneReminder()
         return
     }
 
-    val fireTime = conferenceEndMillis - timeOffsetMillis
-
-    if (fireTime > System.currentTimeMillis()) {
-        reminderManager.scheduleConferenceDoneReminder(conferenceEndMillis, timeOffsetMillis)
-        settingsRepository?.markConferenceDoneNotified(year)
+    if (conferenceDoneFireTimeMillis(conferenceEndMillis, timeOffsetMillis, nowMillis) != null) {
+        reminderScheduler.scheduleConferenceDoneReminder(conferenceEndMillis, timeOffsetMillis)
     } else {
-        reminderManager.cancelConferenceDoneReminder()
-        val notified = settingsRepository?.isConferenceDoneNotified(year) ?: true
-        if (!notified) {
-            settingsRepository?.markConferenceDoneNotified(year)
-            reminderManager.showConferenceDoneNow()
+        reminderScheduler.cancelConferenceDoneReminder()
+        val settings = settingsRepository ?: return
+        if (!settings.isConferenceDoneNotified(year)) {
+            settings.markConferenceDoneNotified(year)
+            reminderScheduler.showConferenceDoneNow()
         }
     }
 }
 
-class ReminderManager(private val context: Context) {
+class ReminderManager(private val context: Context) : ReminderScheduler {
 
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    fun scheduleReminder(session: Session, leadTimeMinutes: Int = 10, timeOffsetMillis: Long = 0L) {
-        val startTime = try {
-            Instant.parse(session.startTimeZulu).toEpochMilli()
-        } catch (e: Exception) {
-            return
-        }
-
+    override fun scheduleReminder(session: Session, leadTimeMinutes: Int, timeOffsetMillis: Long) {
         val pendingIntent = buildPendingIntent(session)
 
         // Always cancel first so that re-scheduling replaces the old alarm even when the new
         // reminder time is in the real-time past (otherwise a stale alarm would keep firing).
         alarmManager.cancel(pendingIntent)
 
-        // Adjust the reminder time by the simulated offset.
-        // If simulated time is 1 hour ahead, the alarm should fire 1 hour earlier in real time.
-        val reminderTime = startTime - (leadTimeMinutes * 60 * 1000) - timeOffsetMillis
-
-        if (reminderTime <= System.currentTimeMillis()) {
-            return // Already past in real time (or in simulated time); no new alarm to schedule
-        }
+        val reminderTime = sessionReminderFireTimeMillis(
+            startTimeZulu = session.startTimeZulu,
+            leadTimeMinutes = leadTimeMinutes,
+            timeOffsetMillis = timeOffsetMillis,
+            nowMillis = System.currentTimeMillis()
+        ) ?: return
 
         scheduleAlarm(reminderTime, pendingIntent)
     }
@@ -110,35 +141,36 @@ class ReminderManager(private val context: Context) {
         }
     }
 
-    fun scheduleConferenceDoneReminder(conferenceEndMillis: Long, timeOffsetMillis: Long = 0L) {
+    override fun scheduleConferenceDoneReminder(conferenceEndMillis: Long, timeOffsetMillis: Long) {
         val pendingIntent = buildConferenceDonePendingIntent()
 
         alarmManager.cancel(pendingIntent)
 
-        // Same simulated-time adjustment as session reminders: a future-simulated clock
-        // shifts the alarm earlier in real time so it fires at the right simulated moment.
-        val fireTime = conferenceEndMillis - timeOffsetMillis
-
-        if (fireTime <= System.currentTimeMillis()) {
+        val fireTime = conferenceDoneFireTimeMillis(
+            conferenceEndMillis = conferenceEndMillis,
+            timeOffsetMillis = timeOffsetMillis,
+            nowMillis = System.currentTimeMillis()
+        )
+        if (fireTime == null) {
             Log.d(
                 "JavaZoneNotifications",
-                "ConferenceDone: skip (fireTime ${Instant.ofEpochMilli(fireTime)} already passed)"
+                "ConferenceDone: skip (end=$conferenceEndMillis offset=$timeOffsetMillis already passed)"
             )
-            return // Conference already over (in real or simulated time); no notification
+            return
         }
 
         Log.d(
             "JavaZoneNotifications",
-            "ConferenceDone: end=${Instant.ofEpochMilli(conferenceEndMillis)} offset=$timeOffsetMillis -> fire $fireTime (${Instant.ofEpochMilli(fireTime)})"
+            "ConferenceDone: end=$conferenceEndMillis offset=$timeOffsetMillis -> fire $fireTime (${Instant.ofEpochMilli(fireTime)})"
         )
         scheduleAlarm(fireTime, pendingIntent)
     }
 
-    fun cancelConferenceDoneReminder() {
+    override fun cancelConferenceDoneReminder() {
         alarmManager.cancel(buildConferenceDonePendingIntent())
     }
 
-    fun showConferenceDoneNow() {
+    override fun showConferenceDoneNow() {
         ConferenceDoneReceiver.showConferenceDoneNotification(context)
     }
 
@@ -152,7 +184,7 @@ class ReminderManager(private val context: Context) {
         )
     }
 
-    fun cancelReminder(session: Session) {
+    override fun cancelReminder(session: Session) {
         alarmManager.cancel(buildPendingIntent(session))
     }
 

@@ -9,10 +9,11 @@ import com.olavbg.javazone.data.repository.TimelineFilters
 import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.util.NetworkMonitor
 import com.olavbg.javazone.util.extractRoomNumber
+import com.olavbg.javazone.util.minuteTicks
 import com.olavbg.javazone.util.shortDayName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -62,6 +63,7 @@ class TimelineViewModel(
     private val repository: SessionRepository,
     private val settingsRepository: SettingsRepository,
     private val networkMonitor: NetworkMonitor? = null,
+    currentTimeTicks: Flow<Instant> = minuteTicks(),
 ) : ViewModel() {
 
     val availableYears: StateFlow<List<Int>> = repository.availableYears
@@ -95,7 +97,8 @@ class TimelineViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
 
-    private val _currentTime = MutableStateFlow(Instant.now())
+    private val _currentTime = currentTimeTicks
+        .stateIn(viewModelScope, SharingStarted.Eagerly, Instant.now())
     val currentTime: StateFlow<Instant> = _currentTime
         .combine(settingsRepository.simulatedTimeOffset) { time, offset ->
             time.plusMillis(offset)
@@ -292,14 +295,6 @@ val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList -
                     _selectedDay.value = matchingDay
                     hasAutoSelectedDay = true
                 }
-            }
-        }
-        // Update current time at each whole clock minute (second = 0)
-        viewModelScope.launch {
-            while (true) {
-                _currentTime.value = Instant.now()
-                val millisUntilNextMinute = 60_000L - (System.currentTimeMillis() % 60_000L)
-                delay(millisUntilNextMinute)
             }
         }
     }

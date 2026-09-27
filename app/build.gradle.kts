@@ -66,6 +66,13 @@ android {
         compose = true
         buildConfig = true
     }
+    testOptions {
+        unitTests {
+            all {
+                it.systemProperty("kotlinx.coroutines.test.default_timeout", "3s")
+            }
+        }
+    }
 }
 
 dependencies {

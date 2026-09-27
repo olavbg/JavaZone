@@ -1,6 +1,9 @@
 package com.olavbg.javazone.util
 
 import com.olavbg.javazone.model.Session
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
@@ -129,4 +132,19 @@ fun isSessionActive(session: Session, currentTime: Instant): Boolean {
 fun extractRoomNumber(room: String): Int {
     val digits = room.filter { it.isDigit() }
     return digits.toIntOrNull() ?: Int.MAX_VALUE
+}
+
+/** Milliseconds remaining until the wall clock reaches the next whole minute. */
+fun millisUntilNextMinute(): Long = 60_000L - (System.currentTimeMillis() % 60_000L)
+
+/**
+ * Emits the current instant, then again on every whole clock minute. Never completes, so
+ * tests must inject a finite flow: an endless repetition keeps `runTest`'s untimed
+ * `advanceUntilIdle()` spinning forever.
+ */
+fun minuteTicks(): Flow<Instant> = flow {
+    while (true) {
+        emit(Instant.now())
+        delay(millisUntilNextMinute())
+    }
 }

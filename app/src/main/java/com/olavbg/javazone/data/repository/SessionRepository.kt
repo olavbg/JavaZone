@@ -8,7 +8,7 @@ import com.olavbg.javazone.data.remote.SpeakerDto
 import com.olavbg.javazone.data.remote.SleepingPillApi
 import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.model.Speaker
-import com.olavbg.javazone.notifications.ReminderManager
+import com.olavbg.javazone.notifications.ReminderScheduler
 import com.olavbg.javazone.notifications.handleConferenceDoneReminder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +24,7 @@ import java.time.Instant
 class SessionRepository(
     private val api: SleepingPillApi,
     private val dao: SessionDao,
-    private val reminderManager: ReminderManager? = null,
+    private val reminderManager: ReminderScheduler? = null,
     private val settingsRepository: SettingsRepository? = null
 ) {
     private val archiveSessions = MutableStateFlow<Map<Int, List<Session>>>(emptyMap())
@@ -103,9 +103,11 @@ class SessionRepository(
     }
 
     suspend fun loadArchiveSessions(year: Int) {
-        if (archiveSessions.value[year]?.isNotEmpty() == true) return
+        // containsKey, not isNotEmpty: a year with no sessions is a real answer worth
+        // remembering, so revisiting it must not re-download it.
+        if (archiveSessions.value.containsKey(year)) return
         archiveLoadMutex.withLock {
-            if (archiveSessions.value[year]?.isNotEmpty() == true) return
+            if (archiveSessions.value.containsKey(year)) return
             archiveLoading.value = archiveLoading.value + (year to true)
             archiveErrors.value = archiveErrors.value + (year to false)
             try {
@@ -163,7 +165,7 @@ class SessionRepository(
         }.maxOrNull()
 
         handleConferenceDoneReminder(
-            reminderManager = reminderManager,
+            reminderScheduler = reminderManager,
             settingsRepository = settingsRepository,
             conferenceEndMillis = maxEndMillis,
             timeOffsetMillis = timeOffset,

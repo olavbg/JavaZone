@@ -62,7 +62,7 @@ class BootReceiver : BroadcastReceiver() {
                 runCatching { Instant.parse(it.endTimeZulu).toEpochMilli() }.getOrNull()
             }.maxOrNull()
             handleConferenceDoneReminder(
-                reminderManager = reminderManager,
+                reminderScheduler = reminderManager,
                 settingsRepository = settingsRepository,
                 conferenceEndMillis = maxEndMillis,
                 timeOffsetMillis = timeOffset,

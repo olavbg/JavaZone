@@ -81,6 +81,7 @@ import com.olavbg.javazone.util.calculateSessionDurationMinutes
 import com.olavbg.javazone.util.formatDay
 import com.olavbg.javazone.util.formatFullDay
 import com.olavbg.javazone.util.formatTime
+import com.olavbg.javazone.util.millisUntilNextMinute
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -207,8 +208,7 @@ fun SessionDetailScreen(
                 if (effectiveYear == SessionRepository.CURRENT_YEAR && endTime != null) {
                     while (endTime.isAfter(simulatedTime)) {
                         simulatedTime = Instant.now().plusMillis(offset)
-                        val millisUntilNextMinute = 60_000L - (System.currentTimeMillis() % 60_000L)
-                        delay(millisUntilNextMinute)
+                        delay(millisUntilNextMinute())
                     }
                 }
             }
