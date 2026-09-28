@@ -131,7 +131,7 @@ fun JavaZoneApp(
             )
             if (result == SnackbarResult.ActionPerformed) {
                 val now = SystemClock.uptimeMillis()
-                if (now - lastPushAt >= 350L && backStack.lastOrNull() != NavDestination.Settings) {
+                if (now - lastPushAt >= 150L && backStack.lastOrNull() != NavDestination.Settings) {
                     lastPushAt = now
                     backStack.add(NavDestination.Settings)
                 }
@@ -189,23 +189,23 @@ fun JavaZoneApp(
                 backStack = backStack,
                 sceneStrategies = listOf(SinglePaneSceneStrategy()),
                 sharedTransitionScope = this@SharedTransitionLayout,
-            // A fade-through (out-then-in) gives the shared element hero the full ~700 ms it
+            // A fade-through (out-then-in) gives the shared element hero the full ~300 ms it
             // needs to interpolate bounds, while avoiding the classic crossfade problem where
             // both screens are visible simultaneously and the shared title ghosts on top of
-            // itself. Old scene fades out over 350 ms; new scene fades in over 350 ms.
+            // itself. Old scene fades out over 150 ms; new scene fades in over 150 ms.
             transitionSpec = {
-                fadeIn(animationSpec = tween(350, delayMillis = 350)) togetherWith
-                    fadeOut(animationSpec = tween(350))
+                fadeIn(animationSpec = tween(150, delayMillis = 150)) togetherWith
+                    fadeOut(animationSpec = tween(150))
             },
             popTransitionSpec = {
-                fadeIn(animationSpec = tween(350, delayMillis = 350)) togetherWith
-                    fadeOut(animationSpec = tween(350))
+                fadeIn(animationSpec = tween(150, delayMillis = 150)) togetherWith
+                    fadeOut(animationSpec = tween(150))
             },
             // Predictive back re-uses the same fade-through; the default spec scales and
             // crossfades, which clashes with the shared element transition.
             predictivePopTransitionSpec = { _ ->
-                fadeIn(animationSpec = tween(350, delayMillis = 350)) togetherWith
-                    fadeOut(animationSpec = tween(350))
+                fadeIn(animationSpec = tween(150, delayMillis = 150)) togetherWith
+                    fadeOut(animationSpec = tween(150))
             },
             modifier = Modifier.fillMaxSize(),
             entryProvider = { key ->
@@ -217,14 +217,14 @@ fun JavaZoneApp(
                             viewModel = timelineViewModel,
                             onSessionClick = { id, year ->
                                 val now = SystemClock.uptimeMillis()
-                                val debounced = now - lastPushAt >= 350L
+                                val debounced = now - lastPushAt >= 150L
                                 lastPushAt = now
                                 if (debounced && backStack.lastOrNull() != NavDestination.SessionDetail(id, year)) {
                                     backStack.add(NavDestination.SessionDetail(id, year))
                                 }
                             }, onSettingsClick = {
                                 val now = SystemClock.uptimeMillis()
-                                val debounced = now - lastPushAt >= 350L
+                                val debounced = now - lastPushAt >= 150L
                                 lastPushAt = now
                                 if (debounced && backStack.lastOrNull() != NavDestination.Settings) {
                                     backStack.add(NavDestination.Settings)
@@ -237,9 +237,13 @@ fun JavaZoneApp(
                     is NavDestination.SessionDetail -> NavEntry(
                         key = key
                     ) {
+                        val initialSession = remember(key.sessionId, key.year) {
+                            timelineViewModel.allSessions.value.find { it.id == key.sessionId }
+                        }
                         SessionDetailScreen(
                             sessionId = key.sessionId,
                             year = key.year,
+                            initialSession = initialSession,
                             repository = repository,
                             settingsRepository = settingsRepository,
                             showLiveBanners = showLiveBanners,

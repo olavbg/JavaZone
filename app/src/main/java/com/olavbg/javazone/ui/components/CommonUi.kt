@@ -1,7 +1,10 @@
 package com.olavbg.javazone.ui.components
 
+import androidx.compose.animation.BoundsTransform
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -191,6 +194,10 @@ private fun resolveLinkedInUrl(value: String): String? {
     return if (isValidHandle(handle)) "https://www.linkedin.com/in/$handle" else null
 }
 
+private val SharedElementBoundsTransform = BoundsTransform { _, _ ->
+    tween(durationMillis = 300, easing = FastOutSlowInEasing)
+}
+
 /**
  * Returns a modifier that registers an element as part of a hero (shared element) transition
  * when a [SharedTransitionScope] is available (i.e. during navigation between screens).
@@ -203,9 +210,11 @@ private fun resolveLinkedInUrl(value: String): String? {
 fun Modifier.sharedElementModifier(sharedScope: SharedTransitionScope?, boundsKey: String): Modifier {
     val scope = sharedScope ?: return this
     return with(scope) {
-        Modifier.sharedElement(
+        Modifier.sharedBounds(
             sharedContentState = rememberSharedContentState(key = boundsKey),
-            animatedVisibilityScope = LocalNavAnimatedContentScope.current
+            animatedVisibilityScope = LocalNavAnimatedContentScope.current,
+            boundsTransform = SharedElementBoundsTransform,
+            resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
         )
     }
 }

@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.ui.draw.clipToBounds
 import com.olavbg.javazone.model.BackgroundMode
+import com.olavbg.javazone.model.Session
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -112,6 +113,7 @@ fun SessionDetailScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     year: Int? = null,
+    initialSession: Session? = null,
     showLiveBanners: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(),
     sharedScope: SharedTransitionScope? = null,
@@ -121,7 +123,7 @@ fun SessionDetailScreen(
     val sessionFlow = remember(sessionId, effectiveYear) {
         repository.getSessionsFlow(effectiveYear).map { it.find { s -> s.id == sessionId } }
     }
-    val session by sessionFlow.collectAsState(initial = null)
+    val session by sessionFlow.collectAsState(initial = initialSession)
 
     LaunchedEffect(effectiveYear) {
         if (effectiveYear != SessionRepository.CURRENT_YEAR) {
@@ -194,8 +196,7 @@ fun SessionDetailScreen(
                                 Icon(
                                     imageVector = if (s.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = null,
-                                    tint = if (s.isFavorite) FavoriteRed else LocalContentColor.current,
-                                    modifier = Modifier.sharedElementModifier(sharedScope, "session-favorite-${s.id}")
+                                    tint = if (s.isFavorite) FavoriteRed else LocalContentColor.current
                                 )
                             }
                         }
