@@ -168,4 +168,10 @@
     <string name="reminder_body">Starter %1$s i %2$s</string>
     <string name="notification_channel_reminders_name">Påminnelser om foredrag</string>
     <string name="notification_channel_reminders_description">Påminnelser for favorittmarkerte foredrag</string>
+
+    <!-- App Shortcuts -->
+    <string name="shortcut_favorites_short">Favoritter</string>
+    <string name="shortcut_favorites_long">Mine favoritter</string>
+    <string name="shortcut_settings_short">Innstillinger</string>
+    <string name="shortcut_settings_long">Innstillinger</string>
 </resources>

@@ -11,6 +11,8 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -47,6 +49,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -88,6 +91,8 @@ fun JavaZoneApp(
     reminderManager: ReminderManager,
     initialSessionId: String? = null,
     showDonationOnLaunch: Boolean = false,
+    shortcut: String? = null,
+    onShortcutHandled: () -> Unit = {},
     onNavigation: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -110,12 +115,39 @@ fun JavaZoneApp(
     // stack (which would otherwise require extra back presses to unwind).
     var lastPushAt by remember { mutableLongStateOf(0L) }
 
-    val backStack = if (initialSessionId != null) {
-        rememberNavBackStack(
-            NavDestination.Timeline, NavDestination.SessionDetail(initialSessionId)
-        )
-    } else {
-        rememberNavBackStack(NavDestination.Timeline)
+    val initialStack = remember {
+        if (initialSessionId != null) {
+            arrayOf<NavDestination>(
+                NavDestination.Timeline,
+                NavDestination.SessionDetail(initialSessionId)
+            )
+        } else if (shortcut == "settings") {
+            arrayOf<NavDestination>(NavDestination.Timeline, NavDestination.Settings)
+        } else {
+            arrayOf<NavDestination>(NavDestination.Timeline)
+        }
+    }
+    val backStack = rememberNavBackStack(*initialStack)
+
+    LaunchedEffect(shortcut) {
+        when (shortcut) {
+            "favorites" -> {
+                timelineViewModel.setOnlyFavorites(true)
+                while (backStack.size > 1) {
+                    backStack.removeAt(backStack.size - 1)
+                }
+                onShortcutHandled()
+            }
+            "settings" -> {
+                if (backStack.lastOrNull() != NavDestination.Settings) {
+                    while (backStack.size > 1) {
+                        backStack.removeAt(backStack.size - 1)
+                    }
+                    backStack.add(NavDestination.Settings)
+                }
+                onShortcutHandled()
+            }
+        }
     }
 
     val favoriteCount by repository.favoriteCount.collectAsState(initial = null)
@@ -172,15 +204,15 @@ fun JavaZoneApp(
 
     var showDonationDialog by rememberSaveable { mutableStateOf(showDonationOnLaunch) }
 
-    // Reanimate the background on every screen change; the background ignores calls
-    // made while a reanimate is still playing.
-    var isFirstNav by remember { mutableStateOf(true) }
+    // Reanimate the background only on forward navigation (pushing a new destination).
+    // Popping back returns to a previously viewed scene and should not morph the background.
+    var previousStackSize by remember { mutableIntStateOf(backStack.size) }
     LaunchedEffect(backStack.size) {
-        if (isFirstNav) {
-            isFirstNav = false
-            return@LaunchedEffect
+        val newSize = backStack.size
+        if (newSize > previousStackSize) {
+            onNavigation()
         }
-        onNavigation()
+        previousStackSize = newSize
     }
 
     SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {
@@ -194,18 +226,41 @@ fun JavaZoneApp(
             // both screens are visible simultaneously and the shared title ghosts on top of
             // itself. Old scene fades out over 150 ms; new scene fades in over 150 ms.
             transitionSpec = {
-                fadeIn(animationSpec = tween(150, delayMillis = 150)) togetherWith
-                    fadeOut(animationSpec = tween(150))
+                if (targetState.key == NavDestination.Settings) {
+                    (fadeIn(animationSpec = tween(200)) togetherWith ExitTransition.None)
+                        .apply { targetContentZIndex = 1f }
+                } else if (initialState.key == NavDestination.Settings) {
+                    (EnterTransition.None togetherWith fadeOut(animationSpec = tween(200)))
+                        .apply { targetContentZIndex = -1f }
+                } else {
+                    fadeIn(animationSpec = tween(150, delayMillis = 150)) togetherWith
+                        fadeOut(animationSpec = tween(150))
+                }
             },
             popTransitionSpec = {
-                fadeIn(animationSpec = tween(150, delayMillis = 150)) togetherWith
-                    fadeOut(animationSpec = tween(150))
+                if (initialState.key == NavDestination.Settings) {
+                    (EnterTransition.None togetherWith fadeOut(animationSpec = tween(200)))
+                        .apply { targetContentZIndex = -1f }
+                } else if (targetState.key == NavDestination.Settings) {
+                    (fadeIn(animationSpec = tween(200)) togetherWith ExitTransition.None)
+                        .apply { targetContentZIndex = 1f }
+                } else {
+                    fadeIn(animationSpec = tween(150, delayMillis = 150)) togetherWith
+                        fadeOut(animationSpec = tween(150))
+                }
             },
-            // Predictive back re-uses the same fade-through; the default spec scales and
-            // crossfades, which clashes with the shared element transition.
+            // Predictive back re-uses the same spec.
             predictivePopTransitionSpec = { _ ->
-                fadeIn(animationSpec = tween(150, delayMillis = 150)) togetherWith
-                    fadeOut(animationSpec = tween(150))
+                if (initialState.key == NavDestination.Settings) {
+                    (EnterTransition.None togetherWith fadeOut(animationSpec = tween(200)))
+                        .apply { targetContentZIndex = -1f }
+                } else if (targetState.key == NavDestination.Settings) {
+                    (fadeIn(animationSpec = tween(200)) togetherWith ExitTransition.None)
+                        .apply { targetContentZIndex = 1f }
+                } else {
+                    fadeIn(animationSpec = tween(150, delayMillis = 150)) togetherWith
+                        fadeOut(animationSpec = tween(150))
+                }
             },
             modifier = Modifier.fillMaxSize(),
             entryProvider = { key ->

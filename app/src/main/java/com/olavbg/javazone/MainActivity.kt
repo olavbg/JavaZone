@@ -1,12 +1,14 @@
 package com.olavbg.javazone
 
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.mutableStateOf
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -33,10 +35,29 @@ import com.olavbg.javazone.ui.theme.JavaZoneTheme
 import com.olavbg.javazone.ui.timeline.TimelineViewModel
 import com.olavbg.javazone.ui.timeline.TimelineViewModelFactory
 import com.olavbg.javazone.util.AppLocale
+import com.olavbg.javazone.util.AppShortcuts
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 
 class MainActivity : ComponentActivity() {
+    private var pendingShortcut by mutableStateOf<String?>(null)
+
+    private fun extractShortcut(intent: Intent?): String? {
+        if (intent == null) return null
+        return when (intent.action) {
+            "com.olavbg.javazone.action.FAVORITES" -> "favorites"
+            "com.olavbg.javazone.action.SETTINGS" -> "settings"
+            else -> intent.getStringExtra("shortcut")
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        extractShortcut(intent)?.let {
+            pendingShortcut = it
+        }
+    }
 
     // On API < 33 the per-app language override is applied by re-creating the
     // activity through a localized base context (see AppLocale). On API 33+ the
@@ -51,11 +72,15 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        extractShortcut(intent)?.let {
+            pendingShortcut = it
+        }
         // Tie the system splash to the real boot path: it must be installed before
         // super.onCreate() so the starting theme (with the animated icon) is applied,
         // then kept on screen only while data is actually loading.
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        AppShortcuts.updateShortcuts(this)
 
         val db = AppDatabase.getInstance(applicationContext)
         val retrofit = Retrofit.Builder()
@@ -77,10 +102,12 @@ class MainActivity : ComponentActivity() {
         )[TimelineViewModel::class.java]
 
         // Hold the system splash while data is actually loading, with a hard 3 s cap
-        // so a broken network never blocks the app from starting.
+        // so a broken network never blocks the app from starting. If opening settings directly,
+        // do not wait for the timeline session load.
+        val isSettingsShortcut = extractShortcut(intent) == "settings"
         val startedAt = SystemClock.uptimeMillis()
         splashScreen.setKeepOnScreenCondition {
-            timelineViewModel.isLoading.value && SystemClock.uptimeMillis() - startedAt < 3000L
+            !isSettingsShortcut && timelineViewModel.isLoading.value && SystemClock.uptimeMillis() - startedAt < 3000L
         }
 
         val initialSessionId = intent.getStringExtra("session_id")
@@ -123,6 +150,8 @@ class MainActivity : ComponentActivity() {
                         reminderManager,
                         initialSessionId,
                         initialShowDonation,
+                        shortcut = pendingShortcut,
+                        onShortcutHandled = { pendingShortcut = null },
                         onNavigation = { reanimateSignal++ }
                     )
                 }

@@ -65,6 +65,7 @@ object AppLocale {
         } else {
             (context as? Activity)?.recreate()
         }
+        AppShortcuts.updateShortcuts(context)
     }
 
     /** The device's own locale, unaffected by any in-app override. */
