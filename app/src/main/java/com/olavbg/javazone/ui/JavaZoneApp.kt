@@ -49,7 +49,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -204,15 +203,15 @@ fun JavaZoneApp(
 
     var showDonationDialog by rememberSaveable { mutableStateOf(showDonationOnLaunch) }
 
-    // Reanimate the background only on forward navigation (pushing a new destination).
-    // Popping back returns to a previously viewed scene and should not morph the background.
-    var previousStackSize by remember { mutableIntStateOf(backStack.size) }
+    // Reanimate the background on every screen change; the background ignores calls
+    // made while a reanimate is still playing.
+    var isFirstNav by remember { mutableStateOf(true) }
     LaunchedEffect(backStack.size) {
-        val newSize = backStack.size
-        if (newSize > previousStackSize) {
-            onNavigation()
+        if (isFirstNav) {
+            isFirstNav = false
+            return@LaunchedEffect
         }
-        previousStackSize = newSize
+        onNavigation()
     }
 
     SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {
