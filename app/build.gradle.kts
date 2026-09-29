@@ -7,15 +7,15 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
 
-val donationsProperties = Properties().apply {
-    val file = rootProject.file("donations.properties")
-    if (file.exists()) {
-        file.inputStream().use { load(it) }
+val appProperties = Properties().apply {
+    val appPropFile = rootProject.file("application.properties")
+    if (appPropFile.exists()) {
+        appPropFile.inputStream().use { load(it) }
     }
 }
 
-fun donationProp(key: String): String =
-    donationsProperties.getProperty(key)?.trim().orEmpty()
+fun appProp(key: String, default: String = ""): String =
+    appProperties.getProperty(key)?.trim() ?: default
 
 android {
     namespace = "com.olavbg.javazone"
@@ -32,8 +32,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "VIPPS_BOX_URL", "\"${donationProp("vipps.boxUrl")}\"")
-        buildConfigField("String", "BUY_ME_A_COFFEE_USERNAME", "\"${donationProp("buymeacoffee.username")}\"")
+        buildConfigField("String", "VIPPS_BOX_URL", "\"${appProp("vipps.boxUrl")}\"")
+        buildConfigField("String", "BUY_ME_A_COFFEE_USERNAME", "\"${appProp("buymeacoffee.username")}\"")
+        buildConfigField("String", "CRASH_REPORT_EMAIL", "\"${appProp("crashreport.email")}\"")
+        buildConfigField("String", "GITHUB_REPO", "\"${appProp("github.repo", "olavbg/JavaZone")}\"")
     }
 
     buildTypes {

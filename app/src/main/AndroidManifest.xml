@@ -13,6 +13,7 @@
     </queries>
 
     <application
+        android:name=".JavaZoneApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -58,8 +59,14 @@
                 <action android:name="com.olavbg.javazone.action.SETTINGS" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-
         </activity>
+
+        <activity
+            android:name=".crash.CrashActivity"
+            android:exported="false"
+            android:process=":crash"
+            android:theme="@style/Theme.JavaZone"
+            android:launchMode="singleTask" />
     </application>
 
 </manifest>

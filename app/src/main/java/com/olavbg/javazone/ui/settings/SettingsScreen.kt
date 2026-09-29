@@ -61,6 +61,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
@@ -341,18 +342,6 @@ fun SettingsContent(
                             )
                         }
                     }
-                    if (isLocalBuild(context)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-                            TextButton(
-                                onClick = { ConferenceDoneReceiver.showConferenceDoneNotification(context) }
-                            ) {
-                                Text(stringResource(R.string.notification_test_button))
-                            }
-                        }
-                    }
                 }
             }
 
@@ -441,6 +430,48 @@ fun SettingsContent(
                             enabled = simulatedTimeOffset != 0L
                         ) {
                             Text(stringResource(R.string.time_simulation_reset))
+                        }
+                    }
+                }
+
+                SettingsCard(title = stringResource(R.string.settings_section_developer_tools)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                stringResource(R.string.test_notification_description),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        OutlinedButton(
+                            onClick = { ConferenceDoneReceiver.showConferenceDoneNotification(context) }
+                        ) {
+                            Text(stringResource(R.string.test_notification_button))
+                        }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                stringResource(R.string.test_crash_description),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        OutlinedButton(
+                            onClick = { throw RuntimeException("Manuell testkrasj fra innstillinger / Manual test crash from settings") }
+                        ) {
+                            Text(stringResource(R.string.test_crash_button))
                         }
                     }
                 }

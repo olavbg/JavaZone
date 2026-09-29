@@ -174,4 +174,29 @@
     <string name="shortcut_favorites_long">My Favorites</string>
     <string name="shortcut_settings_short">Settings</string>
     <string name="shortcut_settings_long">Settings</string>
+
+    <!-- Crash Reporting -->
+    <string name="crash_title">Something went wrong</string>
+    <string name="crash_description">The app encountered an unexpected error and had to close.</string>
+    <string name="crash_privacy_banner">Nothing is sent automatically. If you would like to help out, reporting the error is greatly appreciated – everything is pre-filled for you.</string>
+    <string name="crash_details_title">Error details</string>
+    <string name="crash_report_github">GitHub</string>
+    <string name="crash_report_email">Send email</string>
+    <string name="crash_restart_app">Restart app</string>
+    <string name="crash_action_github_title">Report on GitHub</string>
+    <string name="crash_action_github_subtitle">Opens a new issue with the pre-filled error log</string>
+    <string name="crash_action_email_title">Send report by email</string>
+    <string name="crash_action_email_subtitle">Sends the pre-filled error log to the developer</string>
+    <string name="crash_action_restart_title">Restart app</string>
+    <string name="crash_action_restart_subtitle">Dismiss the error screen and restart the app</string>
+    <string name="crash_email_subject">JavaZone Android Crash Report</string>
+    <string name="copy_to_clipboard">Copy to clipboard</string>
+    <string name="copied_to_clipboard">Copied to clipboard</string>
+
+    <!-- Developer tools -->
+    <string name="settings_section_developer_tools">Developer Tools</string>
+    <string name="test_crash_description">Trigger an unhandled exception to test the crash reporting screen.</string>
+    <string name="test_crash_button">Simulate crash</string>
+    <string name="test_notification_description">Trigger a test notification for conference completed.</string>
+    <string name="test_notification_button">Send test notification</string>
 </resources>
