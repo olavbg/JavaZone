@@ -469,7 +469,7 @@ fun SettingsContent(
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         OutlinedButton(
-                            onClick = { throw RuntimeException("Manuell testkrasj fra innstillinger / Manual test crash from settings") }
+                            onClick = { triggerTestCrash() }
                         ) {
                             Text(stringResource(R.string.test_crash_button))
                         }
@@ -1228,4 +1228,8 @@ private fun backgroundModeDetail(mode: BackgroundMode): String = when (mode) {
     BackgroundMode.None -> stringResource(R.string.background_mode_none_detail)
     BackgroundMode.Static -> stringResource(R.string.background_mode_static_detail)
     BackgroundMode.Animated -> stringResource(R.string.background_mode_animated_detail)
+}
+
+internal fun triggerTestCrash(): Nothing {
+    throw RuntimeException("Manuell testkrasj fra innstillinger / Manual test crash from settings")
 }
