@@ -139,7 +139,7 @@ fun AgendaListView(
                         pinnedRange = (stickyIndex + 1) until nextStickyIndex,
                         listState = listState,
                         modifier = Modifier
-                            .coldStartAppear(introEnabled && !listState.isScrollInProgress, (stickyIndex % 6) * 35)
+                            .coldStartAppear(introEnabled && !listState.isScrollInProgress, minOf(stickyIndex, 8) * 35)
                             .animateItem(
                                 fadeInSpec = FilterFadeIn,
                                 placementSpec = if (listState.isScrollInProgress) ScrollPlacement else FilterPlacement,
@@ -163,7 +163,7 @@ fun AgendaListView(
                         favoriteDisplay = favoriteDisplay,
                         sharedScope = sharedScope,
                         modifier = Modifier
-                            .coldStartAppear(introEnabled && !listState.isScrollInProgress, ((stickyIndex + 1 + index) % 6) * 35)
+                            .coldStartAppear(introEnabled && !listState.isScrollInProgress, minOf(stickyIndex + 1 + index, 8) * 35)
                             .animateItem(
                                 fadeInSpec = FilterFadeIn,
                                 placementSpec = if (listState.isScrollInProgress) ScrollPlacement else FilterPlacement,

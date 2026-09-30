@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -74,6 +75,8 @@ import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.data.repository.SettingsRepository
 import com.olavbg.javazone.notifications.ReminderManager
 import com.olavbg.javazone.ui.components.DonationButtons
+import com.olavbg.javazone.ui.components.NavigationEasing
+import com.olavbg.javazone.ui.components.NavigationFadeDurationMillis
 import com.olavbg.javazone.ui.detail.SessionDetailScreen
 import com.olavbg.javazone.ui.navigation.NavDestination
 import com.olavbg.javazone.ui.settings.SettingsScreen
@@ -220,10 +223,6 @@ fun JavaZoneApp(
                 backStack = backStack,
                 sceneStrategies = listOf(SinglePaneSceneStrategy()),
                 sharedTransitionScope = this@SharedTransitionLayout,
-            // A fade-through (out-then-in) gives the shared element hero the full ~300 ms it
-            // needs to interpolate bounds, while avoiding the classic crossfade problem where
-            // both screens are visible simultaneously and the shared title ghosts on top of
-            // itself. Old scene fades out over 150 ms; new scene fades in over 150 ms.
             transitionSpec = {
                 if (targetState.key == NavDestination.Settings) {
                     (fadeIn(animationSpec = tween(200)) togetherWith ExitTransition.None)
@@ -232,8 +231,9 @@ fun JavaZoneApp(
                     (EnterTransition.None togetherWith fadeOut(animationSpec = tween(200)))
                         .apply { targetContentZIndex = -1f }
                 } else {
-                    fadeIn(animationSpec = tween(150, delayMillis = 150)) togetherWith
-                        fadeOut(animationSpec = tween(150))
+                    (fadeIn(animationSpec = tween(durationMillis = NavigationFadeDurationMillis, easing = NavigationEasing)) togetherWith
+                        fadeOut(animationSpec = tween(durationMillis = NavigationFadeDurationMillis, easing = NavigationEasing)))
+                        .apply { targetContentZIndex = 1f }
                 }
             },
             popTransitionSpec = {
@@ -244,8 +244,9 @@ fun JavaZoneApp(
                     (fadeIn(animationSpec = tween(200)) togetherWith ExitTransition.None)
                         .apply { targetContentZIndex = 1f }
                 } else {
-                    fadeIn(animationSpec = tween(150, delayMillis = 150)) togetherWith
-                        fadeOut(animationSpec = tween(150))
+                    (fadeIn(animationSpec = tween(durationMillis = NavigationFadeDurationMillis, easing = NavigationEasing)) togetherWith
+                        fadeOut(animationSpec = tween(durationMillis = NavigationFadeDurationMillis, easing = NavigationEasing)))
+                        .apply { targetContentZIndex = -1f }
                 }
             },
             // Predictive back re-uses the same spec.
@@ -257,8 +258,9 @@ fun JavaZoneApp(
                     (fadeIn(animationSpec = tween(200)) togetherWith ExitTransition.None)
                         .apply { targetContentZIndex = 1f }
                 } else {
-                    fadeIn(animationSpec = tween(150, delayMillis = 150)) togetherWith
-                        fadeOut(animationSpec = tween(150))
+                    (fadeIn(animationSpec = tween(durationMillis = NavigationFadeDurationMillis, easing = NavigationEasing)) togetherWith
+                        fadeOut(animationSpec = tween(durationMillis = NavigationFadeDurationMillis, easing = NavigationEasing)))
+                        .apply { targetContentZIndex = -1f }
                 }
             },
             modifier = Modifier.fillMaxSize(),

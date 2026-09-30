@@ -5,6 +5,8 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -194,8 +196,12 @@ private fun resolveLinkedInUrl(value: String): String? {
     return if (isValidHandle(handle)) "https://www.linkedin.com/in/$handle" else null
 }
 
-private val SharedElementBoundsTransform = BoundsTransform { _, _ ->
-    tween(durationMillis = 300, easing = FastOutSlowInEasing)
+const val NavigationHeroDurationMillis = 280
+const val NavigationFadeDurationMillis = 500
+val NavigationEasing = FastOutSlowInEasing
+
+val SharedElementBoundsTransform = BoundsTransform { _, _ ->
+    tween(durationMillis = NavigationHeroDurationMillis, easing = NavigationEasing)
 }
 
 /**
@@ -214,6 +220,8 @@ fun Modifier.sharedElementModifier(sharedScope: SharedTransitionScope?, boundsKe
             sharedContentState = rememberSharedContentState(key = boundsKey),
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
             boundsTransform = SharedElementBoundsTransform,
+            enter = fadeIn(animationSpec = tween(durationMillis = NavigationHeroDurationMillis, easing = NavigationEasing)),
+            exit = fadeOut(animationSpec = tween(durationMillis = NavigationHeroDurationMillis, easing = NavigationEasing)),
             resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
         )
     }
