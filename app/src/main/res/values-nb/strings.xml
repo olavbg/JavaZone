@@ -63,6 +63,8 @@
     <string name="about_paragraph_4">Liker du appen og har du lyst til å støtte videreutviklingen? Da setter jeg pris på et lite, valgfritt bidrag:</string>
     <string name="about_open_source_body">Koden er åpen! Forslag, feilrapporter og pull requests er velkomne.</string>
     <string name="about_open_source_link">github.com/olavbg/JavaZone</string>
+    <string name="about_privacy_policy_title">Personvernerklæring</string>
+    <string name="about_privacy_policy_link">Les personvernerklæringen på GitHub</string>
     <string name="about_privacy_paragraph">Favoritter og innstillinger lagres kun på enheten din, og det brukes ingen analyse- eller sporingsverktøy. Appen henter foredragsprogrammet fra det offentlige JavaZone-API-et.</string>
 
     <!-- Donation dialog -->

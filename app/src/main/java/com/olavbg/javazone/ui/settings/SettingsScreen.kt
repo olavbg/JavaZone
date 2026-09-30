@@ -46,6 +46,7 @@ import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -115,6 +116,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 private const val GITHUB_URL = "https://github.com/olavbg/JavaZone"
+private const val PRIVACY_POLICY_URL = "https://github.com/olavbg/JavaZone/blob/main/PRIVACY.md"
 
 private enum class SettingsDialog { LeadTime, Theme, Language, Background }
 
@@ -526,6 +528,36 @@ fun SettingsContent(
                         )
                         Text(
                             stringResource(R.string.about_open_source_link),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { openBrowser(PRIVACY_POLICY_URL) }
+                        .padding(vertical = 4.dp)
+                ) {
+                    Icon(
+                        Icons.Rounded.PrivacyTip,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            stringResource(R.string.about_privacy_policy_title),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            stringResource(R.string.about_privacy_policy_link),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
