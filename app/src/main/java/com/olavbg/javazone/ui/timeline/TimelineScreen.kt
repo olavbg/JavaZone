@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import com.olavbg.javazone.R
 import com.olavbg.javazone.data.repository.SessionRepository
 import com.olavbg.javazone.util.extractRoomNumber
+import com.olavbg.javazone.util.isFormatLikeRoom
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -102,7 +103,7 @@ fun TimelineScreen(
 
     val roomsList = remember(groupedSessions, availableRooms) {
         availableRooms.ifEmpty { 
-            groupedSessions.flatMap { it.sessions }.asSequence().map { it.room }.filter { it.isNotBlank() }.distinct().sortedWith(compareBy({ extractRoomNumber(it) }, { it })).toList()
+            groupedSessions.flatMap { it.sessions }.asSequence().map { it.room }.filter { it.isNotBlank() && !isFormatLikeRoom(it) }.distinct().sortedWith(compareBy({ extractRoomNumber(it) }, { it })).toList()
         }
     }
 

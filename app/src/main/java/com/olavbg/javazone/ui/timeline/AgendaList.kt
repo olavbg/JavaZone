@@ -30,7 +30,10 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,6 +50,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -235,6 +239,9 @@ fun TimelineStickyTimeHeader(
         animationSpec = tween(durationMillis = 250),
         label = "stickyHeaderBg"
     )
+    val hasTime = timeSlot.isNotBlank()
+    val displayTimeSlot = if (hasTime) timeSlot else stringResource(R.string.missing_time)
+
     Surface(
         color = MaterialTheme.colorScheme.background.copy(alpha = bgAlpha),
         tonalElevation = 2.dp,
@@ -249,10 +256,18 @@ fun TimelineStickyTimeHeader(
             ) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = if (isLiveSlot) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primaryContainer,
+                    color = when {
+                        isLiveSlot -> MaterialTheme.colorScheme.secondaryContainer
+                        hasTime -> MaterialTheme.colorScheme.primaryContainer
+                        else -> MaterialTheme.colorScheme.surfaceVariant
+                    },
                     border = BorderStroke(
                         1.dp,
-                        if (isLiveSlot) MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                        when {
+                            isLiveSlot -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+                            hasTime -> MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                            else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        }
                     ),
                     shadowElevation = if (isLiveSlot) 2.dp else 0.dp
                 ) {
@@ -260,11 +275,24 @@ fun TimelineStickyTimeHeader(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
+                        if (!hasTime) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
                         Text(
-                            text = timeSlot,
+                            text = displayTimeSlot,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Black,
-                            color = if (isLiveSlot) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
+                            fontWeight = if (hasTime) FontWeight.Black else FontWeight.Bold,
+                            color = when {
+                                isLiveSlot -> MaterialTheme.colorScheme.onSecondaryContainer
+                                hasTime -> MaterialTheme.colorScheme.onPrimaryContainer
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                            }
                         )
                         if (isLiveSlot) {
                             Spacer(modifier = Modifier.width(6.dp))

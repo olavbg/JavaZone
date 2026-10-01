@@ -134,6 +134,30 @@ fun extractRoomNumber(room: String): Int {
     return digits.toIntOrNull() ?: Int.MAX_VALUE
 }
 
+private val FORMAT_LIKE_ROOM_NAMES = setOf(
+    "lyntale", "lyntaler", "lynforedrag",
+    "lightning talk", "lightning-talk", "lightning", "lightning talks",
+    "presentation", "presentasjon", "foredrag",
+    "workshop", "workshops"
+)
+
+fun isFormatLikeRoom(room: String?, format: String? = null): Boolean {
+    val r = room?.trim()?.lowercase() ?: return false
+    if (r.isEmpty()) return false
+    if (r in FORMAT_LIKE_ROOM_NAMES) return true
+    if (format != null) {
+        val f = format.trim().lowercase().replace("-", " ")
+        val rClean = r.replace("-", " ")
+        if (rClean == f) return true
+    }
+    return false
+}
+
+fun sanitizeRoom(room: String?, format: String? = null): String {
+    val r = room?.trim() ?: return ""
+    return if (isFormatLikeRoom(r, format)) "" else r
+}
+
 /** Milliseconds remaining until the wall clock reaches the next whole minute. */
 fun millisUntilNextMinute(): Long = 60_000L - (System.currentTimeMillis() % 60_000L)
 

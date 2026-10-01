@@ -133,6 +133,7 @@
     <string name="starts_banner">Starts in %1$d minutes in %2$s</string>
     <string name="recording_from_year">Recording from JavaZone %1$d</string>
     <string name="missing_time">Time missing</string>
+    <string name="missing_room">Room missing</string>
     <string name="about_talk">About this talk</string>
     <string name="intended_audience">Intended audience</string>
     <string name="keywords">Tags</string>

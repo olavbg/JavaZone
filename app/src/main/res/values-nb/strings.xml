@@ -133,6 +133,7 @@
     <string name="starts_banner">Starter om %1$d minutter i %2$s</string>
     <string name="recording_from_year">Opptak fra JavaZone %1$d</string>
     <string name="missing_time">Mangler tidspunkt</string>
+    <string name="missing_room">Mangler rom</string>
     <string name="about_talk">Om foredraget</string>
     <string name="intended_audience">Passer for</string>
     <string name="keywords">Emneknagger</string>

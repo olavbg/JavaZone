@@ -9,6 +9,7 @@ import com.olavbg.javazone.data.repository.TimelineFilters
 import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.util.NetworkMonitor
 import com.olavbg.javazone.util.extractRoomNumber
+import com.olavbg.javazone.util.isFormatLikeRoom
 import com.olavbg.javazone.util.minuteTicks
 import com.olavbg.javazone.util.shortDayName
 import kotlinx.coroutines.Dispatchers
@@ -150,7 +151,7 @@ class TimelineViewModel(
     val availableRooms: StateFlow<List<String>> = daySessions.map { list ->
         list.asSequence()
             .map { it.room }
-            .filter { it.isNotBlank() }
+            .filter { it.isNotBlank() && !isFormatLikeRoom(it) }
             .distinct()
             .sortedWith(compareBy({ extractRoomNumber(it) }, { it }))
             .toList()
@@ -208,9 +209,10 @@ class TimelineViewModel(
 val groupedSessions: StateFlow<List<AgendaGroup>> = sessions.map { sessionList ->
         val grouped = sessionList
             .sortedWith(
-                compareBy<Session> { it.startTimeZulu }
+                compareBy<Session> { it.startTimeZulu.ifBlank { "9999" } }
                     .thenBy { extractRoomNumber(it.room) }
-                    .thenBy { it.room },
+                    .thenBy { it.room }
+                    .thenBy { it.title },
             )
             .groupBy { session ->
                 val date = session.start?.atZone(OSLO_ZONE)?.toLocalDate()

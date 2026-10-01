@@ -51,6 +51,7 @@ import com.olavbg.javazone.ui.theme.FavoriteRed
 import com.olavbg.javazone.ui.theme.LocalJavaZoneThemeTokens
 import com.olavbg.javazone.util.calculateSessionDurationMinutes
 import com.olavbg.javazone.util.formatTime
+import com.olavbg.javazone.util.isFormatLikeRoom
 import java.time.Duration
 import java.time.Instant
 
@@ -112,14 +113,25 @@ fun DetailedSessionCard(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                 }
-                RoomTag(room = session.room)
-                Spacer(modifier = Modifier.width(8.dp))
-                FormatBadge(
-                    format = session.format,
-                    modifier = Modifier.sharedElementModifier(sharedScope, "session-format-$id")
-                )
+                val showRoom = session.room.isNotBlank() && !isFormatLikeRoom(session.room, session.format)
+                if (showRoom) {
+                    RoomTag(room = session.room)
+                }
+                val showFormat = !(session.format.contains("workshop", ignoreCase = true) &&
+                    session.room.contains("workshop", ignoreCase = true))
+                if (showFormat) {
+                    if (showRoom) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    FormatBadge(
+                        format = session.format,
+                        modifier = Modifier.sharedElementModifier(sharedScope, "session-format-$id")
+                    )
+                }
                 if (session.language != null) {
-                    Spacer(modifier = Modifier.width(6.dp))
+                    if (showRoom || showFormat) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
                     Text(
                         text = if (session.language.contains("no", ignoreCase = true)) "🇳🇴" else "🇬🇧",
                         style = MaterialTheme.typography.bodyMedium,
@@ -220,8 +232,9 @@ fun DetailedSessionCard(
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
-            } else if (!isPast) {
+            } else if (!isPast && session.start != null) {
                 val minsUntil = calculateMinutesUntilStart(session, currentTime)
+                val startsSoon = currentTime.isBefore(session.start) && minsUntil <= 60
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -243,7 +256,7 @@ fun DetailedSessionCard(
                             fontSize = 11.sp
                         )
                     }
-                    if (minsUntil <= 60 && !isSessionPast(session, currentTime)) {
+                    if (startsSoon) {
                         Surface(
                             shape = RoundedCornerShape(4.dp),
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)

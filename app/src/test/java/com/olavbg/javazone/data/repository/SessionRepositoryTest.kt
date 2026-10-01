@@ -158,4 +158,26 @@ class SessionRepositoryTest {
             .find { it.id == "does-not-exist" }
         assertNull(missing)
     }
+
+    @Test
+    fun archiveYear_formatLikeRoomIsSanitized() = runTest {
+        val archiveYear = 2009
+        val talkWithFormatAsRoom = testSessionDto(
+            id = "arch-2009-1",
+            title = "Lyntale om Java",
+            abstract = "Kort innføring",
+            room = "Lyntale",
+            startTimeZulu = "",
+            format = "lightning-talk"
+        )
+        val api = FakeSleepingPillApi(
+            currentYearSessions = currentYearSessions,
+            archiveSessionsByYear = mapOf(archiveYear to listOf(talkWithFormatAsRoom))
+        )
+        val repository = SessionRepository(api, FakeSessionDao())
+        repository.loadArchiveSessions(archiveYear)
+
+        val session = repository.getSessionsFlow(archiveYear).first { it.isNotEmpty() }.first()
+        assertEquals("", session.room)
+    }
 }

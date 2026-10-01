@@ -10,6 +10,7 @@ import com.olavbg.javazone.model.Session
 import com.olavbg.javazone.model.Speaker
 import com.olavbg.javazone.notifications.ReminderScheduler
 import com.olavbg.javazone.notifications.handleConferenceDoneReminder
+import com.olavbg.javazone.util.sanitizeRoom
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -204,7 +205,7 @@ class SessionRepository(
                     id = dto.id,
                     title = dto.title ?: "",
                     abstract = dto.abstract ?: "",
-                    room = dto.room ?: "",
+                    room = sanitizeRoom(dto.room, dto.format),
                     startTimeZulu = dto.startTimeZulu ?: "",
                     endTimeZulu = dto.endTimeZulu ?: "",
                     format = dto.format ?: "",
@@ -226,7 +227,7 @@ class SessionRepository(
         id = id,
         title = title ?: "",
         abstractText = abstract ?: "",
-        room = room ?: "",
+        room = sanitizeRoom(room, format),
         startTimeZulu = startTimeZulu ?: "",
         endTimeZulu = endTimeZulu ?: "",
         format = format ?: "",

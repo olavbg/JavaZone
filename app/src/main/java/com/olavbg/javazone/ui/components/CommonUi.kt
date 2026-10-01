@@ -28,6 +28,7 @@ import com.olavbg.javazone.ui.theme.LightningAmber
 import com.olavbg.javazone.ui.theme.PresentationBlue
 import com.olavbg.javazone.ui.theme.RoomAccentColors
 import com.olavbg.javazone.ui.theme.WorkshopPurple
+import com.olavbg.javazone.util.isFormatLikeRoom
 import kotlin.math.abs
 
 private val ROOM_NUMBER_REGEX = Regex("[^0-9]")
@@ -69,6 +70,7 @@ fun roomAccentColor(room: String, fallback: Color): Color {
 
 @Composable
 fun RoomTag(room: String, modifier: Modifier = Modifier) {
+    if (room.isBlank() || isFormatLikeRoom(room)) return
     val fallbackColor = MaterialTheme.colorScheme.primary
     val color = remember(room, fallbackColor) { roomAccentColor(room, fallbackColor) }
 

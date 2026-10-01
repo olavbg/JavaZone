@@ -267,4 +267,31 @@ class TimelineViewModelTest {
         assertEquals(listOf("cur-2"), ids)
         dispose(viewModel)
     }
+
+    @Test
+    fun archiveSessions_withoutTimeOrRoom_areGroupedCleanly() = runTest(mainDispatcherRule.testDispatcher) {
+        val untimedTestSessions = listOf(
+            testSessionDto(
+                id = "arch-old-1",
+                title = "Gammelt foredrag",
+                abstract = "Uten tid og rom",
+                room = "",
+                startTimeZulu = "",
+                endTimeZulu = "",
+                format = "Presentation",
+                language = "no"
+            )
+        )
+        val api = FakeSleepingPillApi(
+            currentYearSessions = currentYearSessions,
+            archiveSessionsByYear = mapOf(2010 to untimedTestSessions)
+        )
+        val (viewModel, _) = buildViewModel(api)
+        viewModel.setYear(2010)
+
+        val groups = viewModel.groupedSessions.first { it.isNotEmpty() && it.first().sessions.any { s -> s.id == "arch-old-1" } }
+        assertEquals(1, groups.size)
+        assertEquals("", groups.first().headerLabel)
+        dispose(viewModel)
+    }
 }

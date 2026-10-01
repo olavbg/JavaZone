@@ -97,6 +97,7 @@ import com.olavbg.javazone.util.calculateSessionDurationMinutes
 import com.olavbg.javazone.util.formatDay
 import com.olavbg.javazone.util.formatFullDay
 import com.olavbg.javazone.util.formatTime
+import com.olavbg.javazone.util.isFormatLikeRoom
 import com.olavbg.javazone.util.millisUntilNextMinute
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
@@ -422,9 +423,9 @@ fun SessionDetailScreen(
                                     modifier = Modifier.size(28.dp),
                                     tint = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
-                                Spacer(modifier = Modifier.width(16.dp))
+                                val roomText = s.room.ifBlank { stringResource(R.string.missing_room) }
                                 Text(
-                                    text = stringResource(R.string.live_banner, s.room, minutesRemaining),
+                                    text = stringResource(R.string.live_banner, roomText, minutesRemaining),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -447,8 +448,9 @@ fun SessionDetailScreen(
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
+                                val roomText = s.room.ifBlank { stringResource(R.string.missing_room) }
                                 Text(
-                                    text = stringResource(R.string.starts_banner, minutesUntilStart, s.room),
+                                    text = stringResource(R.string.starts_banner, minutesUntilStart, roomText),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -578,7 +580,10 @@ fun SessionDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    val timeLabel = if (s.startTimeZulu.isBlank()) {
+                                    val hasTime = !s.startTimeZulu.isBlank()
+                                    val hasRoom = !s.room.isBlank() && !isFormatLikeRoom(s.room, s.format)
+
+                                    val timeLabel = if (!hasTime) {
                                         stringResource(R.string.missing_time)
                                     } else if (effectiveYear == SessionRepository.CURRENT_YEAR) {
                                         "${formatDay(s.startTimeZulu)}, ${formatTime(s.startTimeZulu)} – ${formatTime(s.endTimeZulu)}"
@@ -586,21 +591,33 @@ fun SessionDetailScreen(
                                         "${formatFullDay(s.startTimeZulu) ?: formatDay(s.startTimeZulu)}, ${formatTime(s.startTimeZulu)} – ${formatTime(s.endTimeZulu)}"
                                     }
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                        Icon(
+                                            Icons.Default.Schedule,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                            tint = if (hasTime) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                        )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = timeLabel,
                                             style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = if (hasTime) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (hasTime) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.secondary)
+                                        Icon(
+                                            Icons.Default.LocationOn,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                            tint = if (hasRoom) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                        )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = s.room,
+                                            text = if (hasRoom) s.room else stringResource(R.string.missing_room),
                                             style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = if (hasRoom) FontWeight.Normal else FontWeight.Medium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
