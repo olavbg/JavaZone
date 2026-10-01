@@ -1,6 +1,6 @@
 # Privacy Policy for JavaZone Android App
 
-*Last updated: September 2026*
+*Last updated: October 2026*
 
 This is the privacy policy for the **JavaZone Android application**, developed as an open-source project for the community ([github.com/olavbg/JavaZone](https://github.com/olavbg/JavaZone)).
 
@@ -100,7 +100,7 @@ If you have questions, feedback, or concerns regarding this privacy policy or th
 
 # Personvernerklæring for JavaZone Android-appen (Norsk)
 
-*Sist oppdatert: September 2026*
+*Sist oppdatert: Oktober 2026*
 
 Dette er personvernerklæringen for **JavaZone Android-applikasjonen**, utviklet som et åpent kildekodeprosjekt for fellesskapet ([github.com/olavbg/JavaZone](https://github.com/olavbg/JavaZone)).
 
