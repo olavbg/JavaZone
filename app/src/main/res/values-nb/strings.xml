@@ -57,8 +57,8 @@
     <!-- About -->
     <string name="settings_section_about">Om</string>
     <string name="settings_section_open_source">Åpen kildekode og personvern</string>
-    <string name="about_paragraph_1">Dette er en helt uoffisiell app, laget av en JavaZone-fan med et hobbyprosjekt som har fått eget liv. Målet er å utforske nye teknologier på fritiden, og å leke med AI.</string>
-    <string name="about_paragraph_2">Ja, appen er hovedsakelig vibe-kodet: AI-assistentene har banket på tastaturet mens jeg har stått bak og sagt «Det ser bra ut!». Mesteparten av tiden fungerer det overraskende bra. Resten av tiden er jeg glad for at dette kun er et hobbyprosjekt.</string>
+    <string name="about_paragraph_1">Dette er et hobbyprosjekt laget av en JavaZone-fan for å skape en rask, moderne og skreddersydd konferanseopplevelse. Målet er å utforske nye teknologier på fritiden, leke med AI og gi deltakerne en skikkelig god app!</string>
+    <string name="about_paragraph_2">Appen er et eksperiment i AI-parprogrammering: AI har stått for mye av grovarbeidet og tastetrykkene, mens jeg har hatt rollen som arkitekt, tester og streng tech lead. Mesteparten av tiden fungerer dette samspillet overraskende bra – resten av tiden er jeg glad for at dette er et hobbyprosjekt.</string>
     <string name="about_paragraph_3">Uten JavaZone og JavaBin sine åpne API-er ville dette bare vært en god idé uten innhold. Takk for at dere deler!</string>
     <string name="about_paragraph_4">Liker du appen og har du lyst til å støtte videreutviklingen? Da setter jeg pris på et lite, valgfritt bidrag:</string>
     <string name="about_open_source_body">Koden er åpen! Forslag, feilrapporter og pull requests er velkomne.</string>
@@ -66,6 +66,7 @@
     <string name="about_privacy_policy_title">Personvernerklæring</string>
     <string name="about_privacy_policy_link">Les personvernerklæringen på GitHub</string>
     <string name="about_privacy_paragraph">Favoritter og innstillinger lagres kun på enheten din, og det brukes ingen analyse- eller sporingsverktøy. Appen henter foredragsprogrammet fra det offentlige JavaZone-API-et.</string>
+    <string name="about_disclaimer">Ansvarsfraskrivelse: Dette er en uoffisiell app laget for fellesskapet. Den er verken tilknyttet, godkjent av eller sponset av javaBin eller JavaZone. JavaZone og javaBin er registrerte varemerker for javaBin.</string>
 
     <!-- Donation dialog -->
     <string name="donation_dialog_title">Takk for i år!</string>

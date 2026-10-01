@@ -2,7 +2,7 @@
 
 *Last updated: September 2026*
 
-This is the privacy policy for the unofficial **JavaZone Android application**, developed as an open-source community project ([github.com/olavbg/JavaZone](https://github.com/olavbg/JavaZone)).
+This is the privacy policy for the **JavaZone Android application**, developed as an open-source project for the community ([github.com/olavbg/JavaZone](https://github.com/olavbg/JavaZone)).
 
 ---
 
@@ -12,6 +12,11 @@ This is the privacy policy for the unofficial **JavaZone Android application**, 
 - **Everything Stays on Your Device:** Your favorited talks, settings, and reminders are stored exclusively on your phone.
 - **Transparent Permissions:** Permissions (like notifications and exact alarms) are only used to notify you before your favorite talks start.
 - **Open Source:** Every line of code is open and verifiable by the community on GitHub.
+
+---
+
+### Disclaimer & Trademark Notice
+This is an unofficial open-source project created for the community. It is not affiliated with, endorsed by, sponsored by, or officially associated with javaBin or JavaZone. JavaZone and javaBin are registered trademarks of javaBin. All conference schedule data and materials are owned by their respective rights holders and javaBin.
 
 ---
 
@@ -97,13 +102,18 @@ If you have questions, feedback, or concerns regarding this privacy policy or th
 
 *Sist oppdatert: September 2026*
 
-Dette er personvernerklæringen for den uoffisielle **JavaZone Android-applikasjonen**, utviklet som et åpent kildekodeprosjekt ([github.com/olavbg/JavaZone](https://github.com/olavbg/JavaZone)).
+Dette er personvernerklæringen for **JavaZone Android-applikasjonen**, utviklet som et åpent kildekodeprosjekt for fellesskapet ([github.com/olavbg/JavaZone](https://github.com/olavbg/JavaZone)).
 
 ### Kort oppsummert
 - **Ingen sporing:** Vi samler ikke inn, lagrer ikke og deler ikke dine personopplysninger. Appen har ingen brukerkonto, ingen analyseverktøy og ingen reklame.
 - **Alt blir på enheten din:** Favorittforedragene dine, innstillinger og påminnelser lagres utelukkende lokalt på telefonen.
 - **Tydelige tillatelser:** Tillatelser (som varsler og eksakte alarmer) brukes kun til å gi deg beskjed før favorittsesjonene dine starter.
 - **Åpen kildekode:** All kildekode er offentlig tilgjengelig og kan verifiseres av hvem som helst på GitHub.
+
+---
+
+### Ansvarsfraskrivelse og varemerker
+Dette er et uoffisielt prosjekt med åpen kildekode laget for fellesskapet. Det er verken tilknyttet, godkjent av, sponset av eller offisielt assosiert med javaBin eller JavaZone. JavaZone er et registrert varemerke tilhørende javaBin. Alt programinnhold og materiell tilhører sine respektive rettighetshavere og javaBin.
 
 ### Hva lagres lokalt på telefonen?
 - **Favoritter:** Foredrag du stjernemerker lagres i en lokal database på enheten (Room).

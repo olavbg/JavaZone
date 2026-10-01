@@ -57,8 +57,8 @@
     <!-- About -->
     <string name="settings_section_about">About</string>
     <string name="settings_section_open_source">Open source &amp; privacy</string>
-    <string name="about_paragraph_1">This is a completely unofficial app, made by a JavaZone fan whose hobby project has taken on a life of its own. The goal is to explore new technologies in my spare time, and to play around with AI.</string>
-    <string name="about_paragraph_2">Yes, the app is mostly vibe-coded: the AI assistants have done the typing while I stood behind them saying &#8220;Looks good!&#8221;. Most of the time it works surprisingly well. The rest of the time I&#8217;m glad this is only a hobby project.</string>
+    <string name="about_paragraph_1">This is a hobby project created by a JavaZone fan to create a fast, modern, and tailored conference companion. The goal is to explore new technologies in my spare time, play around with AI, and give attendees a smooth app experience!</string>
+    <string name="about_paragraph_2">The app is an experiment in AI pair-programming: AI handled much of the typing and grunt work, while I took on the role of architect, tester, and strict tech lead. Most of the time this synergy works surprisingly well — the rest of the time I&#8217;m glad this is only a hobby project.</string>
     <string name="about_paragraph_3">Without JavaZone and JavaBin&#8217;s open APIs, this would just have been a good idea with no content. Thanks for sharing!</string>
     <string name="about_paragraph_4">Enjoying the app and want to support its development? I&#8217;d appreciate a small, optional contribution:</string>
     <string name="about_open_source_body">The code is open! Suggestions, bug reports and pull requests are welcome.</string>
@@ -66,6 +66,7 @@
     <string name="about_privacy_policy_title">Privacy policy</string>
     <string name="about_privacy_policy_link">Read our privacy policy on GitHub</string>
     <string name="about_privacy_paragraph">Your favorites and settings are stored only on your device, and no analytics or tracking are used. The app fetches the conference schedule from the public JavaZone API.</string>
+    <string name="about_disclaimer">Disclaimer: This is an unofficial app made for the community. It is not affiliated with, endorsed by, or sponsored by javaBin or JavaZone. JavaZone and javaBin are registered trademarks of javaBin.</string>
 
     <!-- Donation dialog -->
     <string name="donation_dialog_title">What a year!</string>
