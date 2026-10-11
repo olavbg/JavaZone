@@ -16,3 +16,9 @@ local.properties
 .opencode/
 *.artifact.md
 /AGENTS.md
+
+# Signing & Keystores
+*.jks
+*.keystore
+*.pem
+key.properties

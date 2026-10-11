@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500" width="1024" height="500">
+  <defs>
+    <!-- 
+      Mint diagonal band: Subtle ambient glow (~0.30 peak opacity).
+      Sharp parallel edges along length, smooth fade-out toward ends.
+    -->
+    <linearGradient id="mintBandGradientClean" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8FDFBA" stop-opacity="0" />
+      <stop offset="20%" stop-color="#8FDFBA" stop-opacity="0.10" />
+      <stop offset="40%" stop-color="#8FDFBA" stop-opacity="0.24" />
+      <stop offset="55%" stop-color="#8FDFBA" stop-opacity="0.30" />
+      <stop offset="70%" stop-color="#8FDFBA" stop-opacity="0.22" />
+      <stop offset="85%" stop-color="#8FDFBA" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#8FDFBA" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- 
+      Blue diagonal band: Subtle secondary accent (~0.18 peak opacity).
+    -->
+    <linearGradient id="blueBandGradientClean" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#9FC2F0" stop-opacity="0" />
+      <stop offset="20%" stop-color="#9FC2F0" stop-opacity="0.06" />
+      <stop offset="45%" stop-color="#9FC2F0" stop-opacity="0.14" />
+      <stop offset="60%" stop-color="#9FC2F0" stop-opacity="0.18" />
+      <stop offset="75%" stop-color="#9FC2F0" stop-opacity="0.12" />
+      <stop offset="90%" stop-color="#9FC2F0" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#9FC2F0" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Canvas clip boundary -->
+    <clipPath id="canvasClip">
+      <rect width="1024" height="500" />
+    </clipPath>
+  </defs>
+
+  <!-- Solid graphite background (#212529) -->
+  <rect width="1024" height="500" fill="#212529" />
+
+  <!-- 
+    Diagonal bands concentrated on the right/upper-right side, 
+    leaving the left/center-left area clean and undisturbed for logo and title.
+  -->
+  <g clip-path="url(#canvasClip)">
+    <!-- Primary Mint Band: Angled over the right half (x: 740, y: 310) -->
+    <g transform="translate(740, 310) rotate(-34)">
+      <rect x="-650" y="-80" width="1500" height="160" fill="url(#mintBandGradientClean)" />
+    </g>
+
+    <!-- Secondary Blue Band: Soft ambient tone in the upper-right area (x: 820, y: 130) -->
+    <g transform="translate(820, 130) rotate(16)">
+      <rect x="-650" y="-60" width="1400" height="120" fill="url(#blueBandGradientClean)" />
+    </g>
+  </g>
+</svg>

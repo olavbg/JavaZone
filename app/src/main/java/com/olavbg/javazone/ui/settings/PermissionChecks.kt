@@ -119,14 +119,5 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 }
 
 internal fun isLocalBuild(context: Context): Boolean {
-    if ((context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) return true
-    val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        runCatching {
-            context.packageManager.getInstallSourceInfo(context.packageName).installingPackageName
-        }.getOrNull()
-    } else {
-        @Suppress("DEPRECATION")
-        context.packageManager.getInstallerPackageName(context.packageName)
-    }
-    return installer != "com.android.vending"
-}
+    return (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+}

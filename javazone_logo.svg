@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="215 155 705 670" width="100%" height="100%">
+  <defs>
+    <!-- Cup body gradient -->
+    <linearGradient id="cupGradient" x1="240" y1="500" x2="828" y2="801" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#A5E8CD" />
+      <stop offset="100%" stop-color="#61CDB5" />
+    </linearGradient>
+
+    <!-- Steam 1 gradient (mint) -->
+    <linearGradient id="steam1Gradient" x1="0" y1="190" x2="0" y2="500" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#A5E8CD" />
+      <stop offset="100%" stop-color="#58C9B5" />
+    </linearGradient>
+
+    <!-- Steam 2 gradient (blue) -->
+    <linearGradient id="steam2Gradient" x1="0" y1="190" x2="0" y2="500" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#9FC2F0" />
+      <stop offset="100%" stop-color="#4D9FD5" />
+    </linearGradient>
+
+    <!-- Steam 3 gradient (rose / purple) -->
+    <linearGradient id="steam3Gradient" x1="0" y1="190" x2="0" y2="500" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E2AFBB" />
+      <stop offset="100%" stop-color="#A97AC3" />
+    </linearGradient>
+  </defs>
+
+  <g id="javazone-logo">
+    <!-- Handle -->
+    <path
+      fill="#4E6E78"
+      fill-rule="evenodd"
+      d="M770 534 C852 499 896 545 896 624 C896 710 833 752 680 742 Z M792 594 C832 574 858 593 858 624 C858 662 832 684 779 675 Z" />
+
+    <!-- Cup Body -->
+    <path
+      fill="url(#cupGradient)"
+      d="M240 500 C248 638 276 715 354 758 C433 801 635 801 714 758 C792 715 820 638 828 500 Z" />
+
+    <!-- Solid lower bowl shadow -->
+    <path
+      fill="#4E6E78"
+      d="M286 660 C359 696 452 709 535 709 C630 709 720 693 780 657 C759 711 734 741 697 762 C614 806 443 804 365 764 C324 742 300 708 286 660 Z" />
+
+    <!-- Rim -->
+    <path
+      fill="#A5E8CD"
+      d="M534 418 a294 82 0 1 0 0 164 a294 82 0 1 0 0 -164 z" />
+
+    <!-- Coffee surface -->
+    <path
+      fill="#0D2028"
+      d="M534 456 a251 49 0 1 0 0 98 a251 49 0 1 0 0 -98 z" />
+
+    <!-- Colored steam lines -->
+    <g stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path
+        stroke="url(#steam1Gradient)"
+        stroke-width="47"
+        d="M430 476 L408 379 L459 312 L448 206" />
+      <path
+        stroke="url(#steam2Gradient)"
+        stroke-width="47"
+        d="M553 479 L526 390 L579 328 L566 250" />
+      <path
+        stroke="url(#steam3Gradient)"
+        stroke-width="43"
+        d="M654 470 L638 402 L690 353 L678 296" />
+    </g>
+
+    <!-- Accent dot -->
+    <path
+      fill="#8FDFBA"
+      d="M357 277 a20 20 0 1 0 0 40 a20 20 0 1 0 0 -40 z" />
+  </g>
+</svg>

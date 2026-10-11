@@ -17,6 +17,13 @@ val appProperties = Properties().apply {
 fun appProp(key: String, default: String = ""): String =
     appProperties.getProperty(key)?.trim() ?: default
 
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
 android {
     namespace = "com.olavbg.javazone"
     compileSdk {
@@ -38,17 +45,37 @@ android {
         buildConfigField("String", "GITHUB_REPO", "\"${appProp("github.repo", "olavbg/JavaZone")}\"")
     }
 
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                val storeFilePath = keystoreProperties.getProperty("storeFile")
+                if (!storeFilePath.isNullOrBlank()) {
+                    storeFile = rootProject.file(storeFilePath)
+                }
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Signed with the debug keystore so release APKs can be installed via adb
-            // (no production signing keystore is configured yet).
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
 
             // AGP 9.3+ optimization DSL: enables R8 code shrinking + optimized resource
             // shrinking. Default Android keep rules are included automatically; custom
             // rules live in src/main/keepRules/*.keep.
             optimization {
                 enable = true
+            }
+
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
             }
         }
     }
